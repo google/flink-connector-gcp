@@ -10,8 +10,8 @@ cluster_name=
 # Optional parameters
 region="us-central1"
 project_id=
-auto_confirm_deletion="false"
-async="false"
+auto_confirm_deletion=false
+async=false
 
 # Flag parsing with getopts
 while getopts "c:p:r:ya" opt; do 
@@ -19,8 +19,8 @@ while getopts "c:p:r:ya" opt; do
     c) cluster_name=$OPTARG ;; 
     r) region=$OPTARG ;;
     p) project_id=$OPTARG ;;
-    y) auto_confirm_deletion="true" ;;
-    a) async="true" ;;
+    y) auto_confirm_deletion=true ;;
+    a) async=true ;;
 
     \?)
        echo "Invalid option: -$OPTARG" >&2
@@ -42,12 +42,12 @@ else
 fi
 
 AUTO_CONFIRM=""
-if [[ $auto_confirm_deletion == "true" ]]; then
+if [[ $auto_confirm_deletion == true ]]; then
   AUTO_CONFIRM="echo Y |"
 fi
 
 ASYNC=""
-if [[ $async == "true" ]]; then
+if [[ $async == true ]]; then
    ASYNC="--async"
 fi
 
