@@ -11,7 +11,7 @@ function helm_install_handling_errors() {
 
     if [ $exit_code -ne 0 ]; then
         if [[ $output == *"cannot re-use a name that is still in use"* ]]; then
-            echo "Expected error occurred: Already installed. Continuing..."
+            echo "Already installed. Continuing..."
         else
             echo "Unexpected error : $output"
             exit 1
