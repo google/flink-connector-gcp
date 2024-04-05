@@ -2,7 +2,7 @@
 
 # Deletes GMF cluster
 # Command example:
-#   bash scripts/util-scripts/delete_gmf_flink.sh -c <CLUSTER_NAME> -p <PROJECT>  -r <REGION> -y -a
+#   bash scripts/util-scripts/delete_gmf_cluster.sh -c <CLUSTER_NAME> -p <PROJECT>  -r <REGION> -y -a
 
 # Required parameters
 cluster_name=

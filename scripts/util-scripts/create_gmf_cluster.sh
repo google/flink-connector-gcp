@@ -2,7 +2,7 @@
 
 # Creates GMF cluster and installs Certs and Flink-kubernetes-operator.
 # Command example:
-#   bash scripts/util-scripts/create_gmf_flink.sh -c <CLUSTER_NAME> -p <PROJECT>  -r <REGION> -y
+#   bash scripts/util-scripts/create_gmf_cluster.sh -c <CLUSTER_NAME> -p <PROJECT>  -r <REGION>
 
 # Required parameters
 cluster_name=
@@ -39,13 +39,16 @@ fi
 
 
 # Create cluster
+echo "Creating cluster...this may take a few minutes"
 create_cluster=$(gcloud container clusters create-auto $cluster_name --region=$region $PROJECT 2>&1)
 exit_code=$?
-if [ $exit_code -ne 0 ] && [[ $create_cluster == *"Already exists"* ]]; then
+if [ $exit_code -ne 0 ]; then
+  if [[ $create_cluster == *"Already exists"* ]]; then
     echo "Cluster $cluster_name already exists, skipping creation"
-else
+  else
     echo "Unexpected error occurred: $create_cluster"
     exit 1
+  fi
 fi
 
 # Install Certs and Flink K8s Operator
