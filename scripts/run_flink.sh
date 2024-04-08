@@ -7,8 +7,6 @@
 #       -f <FLINK_VERSION> -e <ENTRY_CLASS> -a "--arg1 value1 --arg2=value2 --arg3 value3"  \
 #       -B -C -D -F -M -P -W
 
-
-
 set -e
 
 # Required parameters
@@ -124,7 +122,6 @@ if [[ $create_docker == true ]] && [[ !${#full_image} -ge 1 ]]; then
   -n "$repo_name" -m "$image_name" -t "$image_tag" \
    $USE_CLOUD_BUILD $BUILD_MAVEN $INSTALL_PLUGINS
 fi
-
 
 if [[ $create_flink_deployment == true ]]; then
   if [[ ${#full_image} -ge 1 ]]; then
