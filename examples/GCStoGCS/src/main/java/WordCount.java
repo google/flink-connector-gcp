@@ -35,6 +35,7 @@ public class WordCount {
     FileSource<String> source =
         FileSource.forRecordStreamFormat(new TextLineInputFormat(), new Path(inputPath)).build();
 
+    // Sink
     final FileSink<String> sink =
         FileSink.forRowFormat(new Path(outputPath), new SimpleStringEncoder<String>("UTF-8"))
             .withOutputFileConfig(
