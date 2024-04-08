@@ -3,7 +3,7 @@
 # Creates a Flink deployment
 # Command example:
 #   bash scripts/util-scripts/create_flink_deployment.sh -i <IMAGE> -j <JAR> -d <DEPLOYMENT_NAME> \
-#       -f <FLINK_VERSION> -e <ENTRY_CLASS> -a "--arg1 value1 --arg2=value2 --arg3 value3"
+#       -f <FLINK_VERSION> -e <ENTRY_CLASS> -a "--arg1 value1 --arg2=value2 --arg3 value3" -q  <PARALLELISM>
 
 # Required parameters
 image=
@@ -12,10 +12,11 @@ image=
 jar_uri="local:///opt/flink/usrlib/gmf-examples.jar"
 deployment_name="wordcount"
 flink_version="v1_18"
+parallelism=1
 args=
 entry_class=
 
-while getopts "a:d:e:f:i:j:" opt; do 
+while getopts "a:d:e:f:i:j:q:" opt; do 
   case $opt in
     # Strings
     a) args=$OPTARG ;;
@@ -24,6 +25,7 @@ while getopts "a:d:e:f:i:j:" opt; do
     f) flink_version=$OPTARG ;;
     i) image=$OPTARG ;;
     j) jar_uri=$OPTARG ;;
+    q) parallelism=$OPTARG ;;
 
     \?)
        echo "Invalid option: -$OPTARG" >&2

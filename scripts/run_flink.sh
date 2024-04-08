@@ -3,7 +3,7 @@
 # Creates GMF cluster, builds Dockerimage and starts a Flink deployment
 # Command example:
 #   bash scripts/run_flink.sh -c <CLUSTER_NAME> -p <PROJECT>  -r <REGION> -m <IMAGE_NAME> -t <TAG>\
-#       -n <REPO_NAME> -f <FLINK_VERSION> -i <IMAGE> -j <JAR> -d <DEPLOYMENT_NAME> \
+#       -n <REPO_NAME> -f <FLINK_VERSION> -i <IMAGE> -j <JAR> -d <DEPLOYMENT_NAME> -q <PARALLELISM> \
 #       -f <FLINK_VERSION> -e <ENTRY_CLASS> -a "--arg1 value1 --arg2=value2 --arg3 value3"  \
 #       -B -C -D -F -M -P -W
 
@@ -24,6 +24,7 @@ repo_name="gmf-repo"
 image_name="flink-image"
 image_tag="latest"
 entry_class=WordCount
+parallelism=1
 project_id=
 full_image= 
 args=
@@ -36,7 +37,7 @@ install_plugins=true
 use_cloud_build=false
 
 # Flag parsing with getopts
-while getopts ":a:c:d:e:f:i:j:m:n:p:r:s:t:BCDFMPW" opt; do 
+while getopts ":a:c:d:e:f:i:j:m:n:p:q:r:s:t:BCDFMPW" opt; do 
   case $opt in
     # Strings
     a) args=$OPTARG ;;
@@ -49,9 +50,13 @@ while getopts ":a:c:d:e:f:i:j:m:n:p:r:s:t:BCDFMPW" opt; do
     m) image_name=$OPTARG ;;
     n) repo_name=$OPTARG ;;
     p) project_id=$OPTARG ;;
+    q) parallelism=$OPTARG ;;
     r) region=$OPTARG ;;
     s) service_account=$OPTARG ;;
     t) image_tag=$OPTARG ;;
+
+    # Integers
+    q) parallelism=$OPTARG ;;
 
     # Booleans
     B) use_cloud_build=true ;;
@@ -88,19 +93,16 @@ fi
 
 SCRIPT_PATH=$(pwd)/$(dirname "$0")
 
-CREATE_CLUSTER=""
 if [[ $create_cluster == true ]]; then
   bash "$SCRIPT_PATH"/util-scripts/create_gmf_cluster.sh -c "$cluster_name" \
   -p "$PROJECT" -r "$region"
 fi
 
-WORKLOAD_IDENTITY=""
 if [[ $workload_identity_federation == true ]]; then
   bash "$SCRIPT_PATH"/util-scripts/annotate_workload_identity_federation.sh \
   -p "$PROJECT" -s "$service_account"
 fi
 
-CREATE_DOCKER=""
 if [[ $create_docker == true ]] && [[ !${#full_image} -ge 1 ]]; then
   USE_CLOUD_BUILD=""
   if [[ $use_cloud_build == true ]]; then
@@ -137,5 +139,5 @@ if [[ $create_flink_deployment == true ]]; then
   bash "$SCRIPT_PATH"/util-scripts/create_flink_deployment.sh -i "$IMAGE_FULL_NAME" \
    -j "$jar_uri" -f "$PARSED_FLINK_VERSION" \
    -d "$deployment_name" -a "$args" \
-   -e "$entry_class"
+   -e "$entry_class" -q $parallelism
 fi

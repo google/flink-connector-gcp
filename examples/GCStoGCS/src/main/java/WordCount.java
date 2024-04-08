@@ -25,7 +25,7 @@ public class WordCount {
     env.setRuntimeMode(RuntimeExecutionMode.BATCH);
     env.getConfig().setGlobalJobParameters(parameters);
 
-    String inputPath = parameters.get("input");
+    String inputPath = parameters.get("input", "gs://apache-beam-samples/shakespeare/kinglear.txt");
     String outputPath = parameters.get("output", "outputBounded");
     Integer parallelism = parameters.getInt("parallelism", 1);
 

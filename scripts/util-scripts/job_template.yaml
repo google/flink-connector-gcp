@@ -18,5 +18,6 @@ spec:
       cpu: 1
   job:
     jarURI: $JAR_URI
-    $APP_ARGS
+    parallelism: $PARALLELISM
     $ENTRY_CLASS
+    $APP_ARGS
