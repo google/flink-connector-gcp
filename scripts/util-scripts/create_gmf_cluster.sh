@@ -12,11 +12,12 @@ region="us-central1"
 project_id=
 
 # Flag parsing with getopts
-while getopts ":c:r:p:" opt; do 
+while getopts ":c:p:r:" opt; do 
   case $opt in
+    # String
     c) cluster_name=$OPTARG ;; 
-    r) region=$OPTARG ;;
     p) project_id=$OPTARG ;;
+    r) region=$OPTARG ;;
 
     \?)
        echo "Invalid option: -$OPTARG" >&2

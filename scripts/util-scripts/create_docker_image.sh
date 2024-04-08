@@ -1,26 +1,37 @@
 #!/bin/bash
+
+# Creates a Dockerfile and creates a GCP-available image
+# Command example:
+#   bash scripts/util-scripts/create_docker_image.sh -p <PROJECT>  -r <REGION> -m <IMAGE_NAME> -n <REPO_NAME> \
+#        -t <TAG> -f <FLINK_VERSION> -P -B -M
+
 set -e
 
-# Optional
-region="us-central1"
+# Optional parameters
 project_id=
-install_plugins=true
+region="us-central1"
 flink_version="1.18.1"
 repo_name="gmf-repo"
 image_name="flink-image"
 image_tag="latest"
+install_plugins=true
 use_cloud_build=false
-build_maven=false
+build_maven=true
 
-while getopts ":r:p:t:n:m:xb:" opt; do 
+while getopts ":f:m:n:p:r:t:BMP" opt; do 
   case $opt in
-    r) region=$OPTARG ;;
-    b) use_cloud_build=true;;
-    p) project_id=$OPTARG ;;
-    t) image_tag=$OPTARG ;;
-    n) repo_name=$OPTARG ;;
+    # Strings
+    f) flink_version=$OPTARG ;;
     m) image_name=$OPTARG ;;
-    x) build_maven=true ;;
+    n) repo_name=$OPTARG ;;
+    p) project_id=$OPTARG ;;
+    r) region=$OPTARG ;;
+    t) image_tag=$OPTARG ;;
+
+    # Booleans
+    B) use_cloud_build=true ;;
+    M) build_maven=false ;;
+    P) install_plugins=false ;; 
 
     \?)
        echo "Invalid option: -$OPTARG" >&2
@@ -36,43 +47,43 @@ else
   PROJECT=$(gcloud config get-value project)
 fi
 
-# Create Dockerfile
 SCRIPT_PATH=$(dirname "$0")
 
 cd $SCRIPT_PATH
-FILE="../Dockerfile"
-echo ">> Creating Dockerfile"
+# Dockerfile needs to access compiled JAR
+FILE="../../Dockerfile"
+echo "Creating Dockerfile"
 GCS_PLUGIN_URL=https://repo1.maven.org/maven2/org/apache/flink/flink-gs-fs-hadoop/$flink_version/flink-gs-fs-hadoop-$flink_version.jar
 echo "FROM flink:$flink_version" > "$FILE"
 
 
-if [[ $install_plugins==true ]]; then
-  echo ">> Adding plugins to Dockerfile"
+if [[ $install_plugins == true ]]; then
+  echo "Adding plugins to Dockerfile"
   echo "
   RUN mkdir /opt/flink/plugins/gs-fs-hadoop/
   RUN wget -q -O /opt/flink/plugins/gs-fs-hadoop/flink-gs-fs-hadoop-$flink_version.jar ${GCS_PLUGIN_URL}
   " >> "$FILE"
 fi
 
-if [[ $build_maven==true ]]; then
-  echo ">> Building JAR"
-  mvn -f ../flink/ clean package
+if [[ $build_maven == true ]]; then
+  echo "Building JAR"
+  mvn -f ../../examples/GCStoGCS/ clean package
   echo "
   RUN mkdir /opt/flink/usrlib
-  ADD flink/target/gmf-examples.jar /opt/flink/usrlib/gmf-examples.jar
+  ADD examples/GCStoGCS/target/gmf-examples.jar /opt/flink/usrlib/gmf-examples.jar
   RUN chown -R flink:flink /opt/flink
   " >> "$FILE"
 fi
 
 IMAGE_FULL_NAME=$region-docker.pkg.dev/$PROJECT/$repo_name/$image_name
 
-cd ..
-if [[ $use_cloud_build==true ]]; then
-  echo ">> Building image using Cloud Build"
+cd ../..
+if [[ $use_cloud_build == true ]]; then
+  echo "Building image using Cloud Build at $FILE"
   gcloud builds submit --region="$region" --tag "$IMAGE_FULL_NAME":"$image_tag"
 else
-  echo ">> Building image using Docker at $FILE"
-  docker build . -t "$IMAGE_FULL_NAME" --file "$FILE"
-  echo ">> Pushing image using Docker"
+  echo "Building image using Docker at $FILE"
+  docker build . -t "$IMAGE_FULL_NAME":"$image_tag"
+  echo "Pushing image using Docker"
   docker push "$IMAGE_FULL_NAME":"$image_tag"
 fi

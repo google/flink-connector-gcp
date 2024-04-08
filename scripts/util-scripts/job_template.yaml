@@ -1,0 +1,22 @@
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkDeployment
+metadata:
+  name: $FLINK_DEPLOYMENT_NAME
+spec:
+  image: $FLINK_IMAGE
+  flinkVersion: $FLINK_VERSION
+  flinkConfiguration:
+    taskmanager.numberOfTaskSlots: "1"
+  serviceAccount: flink
+  jobManager:
+    resource:
+      memory: "2048m"
+      cpu: 1
+  taskManager:
+    resource:
+      memory: "2048m"
+      cpu: 1
+  job:
+    jarURI: $JAR_URI
+    $APP_ARGS
+    $ENTRY_CLASS
