@@ -62,10 +62,10 @@ while getopts ":a:c:d:e:f:i:j:m:n:p:q:r:s:t:BCDFMPW" opt; do
     B) use_cloud_build=true ;;
     C) create_cluster=false ; echo "Skipping Cluster creation" ;;
     D) create_docker=false ; echo "Skipping creating Docker Image" ;;
-    F) create_flink_deployment=false; echo "Skipping Flink deployment" ;;
+    F) create_flink_deployment=false ; echo "Skipping Flink deployment" ;;
     M) build_maven=false ;;
     P) install_plugins=false ;;
-    W) workload_identity_federation=false; echo "Skipping Workload Identity Federation Annotation" ;;
+    W) workload_identity_federation=false ; echo "Skipping Workload Identity Federation Annotation" ;;
 
     \?)
        echo "Invalid option: -$OPTARG" >&2

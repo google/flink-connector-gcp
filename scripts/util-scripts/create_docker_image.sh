@@ -8,12 +8,12 @@
 set -e
 
 # Optional parameters
-project_id=
 region="us-central1"
 flink_version="1.18.1"
 repo_name="gmf-repo"
 image_name="flink-image"
 image_tag="latest"
+project_id=
 install_plugins=true
 use_cloud_build=false
 build_maven=true
