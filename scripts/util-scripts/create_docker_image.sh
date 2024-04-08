@@ -56,7 +56,6 @@ echo "Creating Dockerfile"
 GCS_PLUGIN_URL=https://repo1.maven.org/maven2/org/apache/flink/flink-gs-fs-hadoop/$flink_version/flink-gs-fs-hadoop-$flink_version.jar
 echo "FROM flink:$flink_version" > "$FILE"
 
-
 if [[ $install_plugins == true ]]; then
   echo "Adding plugins to Dockerfile"
   echo "
