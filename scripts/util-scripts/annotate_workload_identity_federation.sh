@@ -6,10 +6,8 @@
 
 set -e
 
-# Required parameters
-service_account=
-
 # Optional parameters
+service_account=
 project_id=
 
 while getopts "p:s:" opt; do 
@@ -24,11 +22,6 @@ while getopts "p:s:" opt; do
   esac
 done
 
-if [[ ${#service_account} -eq 0 ]]; then
-    echo "Error: Missing required parameter -s for service account." >&2
-    exit 1  
-fi
-
 if [[ ${#project_id} -ge 1 ]]; then
   PROJECT=$project_id
 else
@@ -36,7 +29,13 @@ else
   PROJECT=$(gcloud config get-value project)
 fi
 
-FULL_SERVICE_ACCOUNT=$service_account@$PROJECT.iam.gserviceaccount.com
+if [[ ${#service_account} -ge 1 ]]; then
+  FULL_SERVICE_ACCOUNT=$service_account
+else
+  PROJECT_NUMBER=$(gcloud projects describe $PROJECT --format="value(projectNumber)")
+  FULL_SERVICE_ACCOUNT=$PROJECT_NUMBER-compute@developer.gserviceaccount.com
+  echo "Service account parameter (-s) missing, using Compute Engine default service account $FULL_SERVICE_ACCOUNT"
+fi
 
 gcloud iam service-accounts add-iam-policy-binding "$FULL_SERVICE_ACCOUNT" \
       --role roles/iam.workloadIdentityUser \

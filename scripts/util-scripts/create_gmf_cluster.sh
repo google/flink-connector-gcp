@@ -38,7 +38,6 @@ else
   echo "Using default project to create cluster"
 fi
 
-
 # Create cluster
 echo "Creating cluster...this may take a few minutes"
 create_cluster=$(gcloud container clusters create-auto $cluster_name --region=$region $PROJECT 2>&1)

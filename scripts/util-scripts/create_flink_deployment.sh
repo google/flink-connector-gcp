@@ -25,6 +25,8 @@ while getopts "a:d:e:f:i:j:q:" opt; do
     f) flink_version=$OPTARG ;;
     i) image=$OPTARG ;;
     j) jar_uri=$OPTARG ;;
+
+    # Integers
     q) parallelism=$OPTARG ;;
 
     \?)
@@ -78,6 +80,5 @@ do
     echo "flink-kubernetes-operator is not READY yet $STATUS. Retry $i of $max_retries..."
     sleep 10
 done
-
 
 kubectl apply -f "$SCRIPT_PATH"/deployment.yaml

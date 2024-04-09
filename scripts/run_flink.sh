@@ -11,7 +11,6 @@ set -e
 
 # Required parameters
 cluster_name=
-service_account=
 
 # Optional parameters
 region="us-central1"
@@ -24,6 +23,7 @@ image_tag="latest"
 entry_class="WordCount"
 parallelism=1
 project_id=
+service_account=
 full_image= 
 args=
 build_maven=true
@@ -77,11 +77,6 @@ if [[ ${#cluster_name} -eq 0 ]]; then
     exit 1  
 fi
 
-if [[ ${#service_account} -eq 0 ]] && [[ $workload_identity_federation == true ]]; then
-    echo "Error: Missing required parameter -s for Service Account if annotating with Workload Identity Federation." >&2
-    exit 1  
-fi
-
 if [[ ${#project_id} -ge 1 ]]; then
   PROJECT=$project_id
 else
@@ -94,11 +89,20 @@ SCRIPT_PATH=$(pwd)/$(dirname "$0")
 if [[ $create_cluster == true ]]; then
   bash "$SCRIPT_PATH"/util-scripts/create_gmf_cluster.sh -c "$cluster_name" \
   -p "$PROJECT" -r "$region"
+else
+  echo "Getting context for cluster $cluster_name"
+  gcloud container clusters get-credentials "$cluster_name" --region "$region" --project "$PROJECT"
 fi
 
 if [[ $workload_identity_federation == true ]]; then
-  bash "$SCRIPT_PATH"/util-scripts/annotate_workload_identity_federation.sh \
-  -p "$PROJECT" -s "$service_account"
+  if [[ ${#service_account} -ge 1 ]]; then
+    FULL_SERVICE_ACCOUNT=$service_account
+  else
+    PROJECT_NUMBER=$(gcloud projects describe $PROJECT --format="value(projectNumber)")
+    FULL_SERVICE_ACCOUNT=$PROJECT_NUMBER-compute@developer.gserviceaccount.com
+    echo "Service account parameter (-s) missing, using Compute Engine default service account $FULL_SERVICE_ACCOUNT"
+  fi
+  bash "$SCRIPT_PATH"/util-scripts/annotate_workload_identity_federation.sh -p "$PROJECT" -s "$FULL_SERVICE_ACCOUNT"
 fi
 
 if [[ $create_docker == true ]] && [[ !${#full_image} -ge 1 ]]; then
