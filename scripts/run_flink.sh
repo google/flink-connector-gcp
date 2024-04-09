@@ -48,7 +48,6 @@ while getopts ":a:c:d:e:f:i:j:m:n:p:q:r:s:t:BCDFMPW" opt; do
     m) image_name=$OPTARG ;;
     n) repo_name=$OPTARG ;;
     p) project_id=$OPTARG ;;
-    q) parallelism=$OPTARG ;;
     r) region=$OPTARG ;;
     s) service_account=$OPTARG ;;
     t) image_tag=$OPTARG ;;
@@ -129,6 +128,7 @@ fi
 
 if [[ $create_flink_deployment == true ]]; then
   if [[ ${#full_image} -ge 1 ]]; then
+    echo "Using custom image $full_image"
     IMAGE_FULL_NAME=$full_image
   else
     IMAGE_FULL_NAME=$region-docker.pkg.dev/$PROJECT/$repo_name/$image_name:$image_tag

@@ -45,6 +45,8 @@ exit_code=$?
 if [ $exit_code -ne 0 ]; then
   if [[ $create_cluster == *"Already exists"* ]]; then
     echo "Cluster $cluster_name already exists, skipping creation"
+    echo "Getting context for cluster $cluster_name"
+    gcloud container clusters get-credentials "$cluster_name" --region "$region" --project "$PROJECT"
   else
     echo "Unexpected error occurred: $create_cluster"
     exit 1
