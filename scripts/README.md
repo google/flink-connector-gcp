@@ -40,10 +40,10 @@ There are scripts for each in folder `util-scripts`.
 
 # Examples
 
-## Basic End-to-end
+## Basic End-to-End
 
 The simplest command only needs the name of the cluster (`-c`), it will use the default Project and
-Compute Engine Service Account (`service-<PROJECT NUMBER>)-compute@developer.gserviceaccount.com`).
+Compute Engine Service Account (`service-<PROJECT NUMBER>-compute@developer.gserviceaccount.com`).
 
 ```
 bash run_flink.sh -c my-cluster
@@ -63,7 +63,7 @@ If the cluster already has all the needed settings, you can fully skip the creat
 bash run_flink.sh -c my-existing-cluster -C
 ```
 
-## End-2-end using an existing image
+## End-to-End using an existing image
 
 If you have an existising Docker image and want to use it in a new cluster, you can pass it with parameter `-f`.
 The image has to be available for GMF and the script will skip the creation of a new image:
