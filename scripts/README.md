@@ -51,7 +51,7 @@ bash run_flink.sh -c my-cluster
 
 ## End-to-End with existing cluster
 
-If you have an existing cluster and want to launch a Flink Deployment using Cloud Build. This will install CERTs, `flink-kubernetes-operator` and annotate the Service Account with Workloads Identity Federation. The script will identify the cluster already exists:
+If you have an existing cluster and want to launch a Flink Deployment using Cloud Build. This will install CERTs, `flink-kubernetes-operator` and annotate the Service Account with [Workloads Identity Federation](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity). The script will identify the cluster already exists:
 
 ```
 bash run_flink.sh -c my-existing-cluster
