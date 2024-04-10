@@ -10,7 +10,7 @@ set -e
 # Optional parameters
 region="us-central1"
 flink_version="1.18.1"
-repo_name="gmf-repo"
+repo_name="flink-connector-repo"
 image_name="flink-image"
 image_tag="latest"
 project_id=
@@ -66,10 +66,10 @@ fi
 
 if [[ $build_maven == true ]]; then
   echo "Building JAR"
-  mvn -f ../../examples/GCStoGCS/ clean package
+  mvn -f ../../flink-examples-gcp/ clean package
   echo "
   RUN mkdir /opt/flink/usrlib
-  ADD examples/GCStoGCS/target/gmf-examples.jar /opt/flink/usrlib/gmf-examples.jar
+  ADD flink-examples-gcp/target/flink-examples-gcp-0.0.0-shaded.jar /opt/flink/usrlib/gmf-examples.jar
   RUN chown -R flink:flink /opt/flink
   " >> "$FILE"
 fi
