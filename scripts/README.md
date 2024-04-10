@@ -69,7 +69,7 @@ If you have an existising Docker image and want to use it in a new cluster, you 
 The image has to be available for GMF and the script will skip the creation of a new image:
 
 ```
-bash run_flink.sh -c my-cluster -f us-central1-docker.pkg.dev/<PROJECT>/gmf-repo/flink-image:latest -e MyClass -a "--arg1=value1 --arg2 value2" -j "local:///opt/flink/usrlib/my-job.jar"
+bash run_flink.sh -c my-cluster -f us-central1-docker.pkg.dev/<PROJECT>/flink-connector-repo/flink-image:latest -e MyClass -a "--arg1=value1 --arg2 value2" -j "local:///opt/flink/usrlib/my-job.jar"
 ```
 
 

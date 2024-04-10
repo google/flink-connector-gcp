@@ -59,7 +59,7 @@ if [[ ${#entry_class} -ge 1 ]]; then
     export ENTRY_CLASS="entryClass: $entry_class" 
 fi 
 
-envsubst < "$SCRIPT_PATH"/job_template.yaml > "$SCRIPT_PATH"/deployment.yaml
+envsubst < "$SCRIPT_PATH"/job_template.yaml > "$SCRIPT_PATH"/../../deployment.yaml
 
 desired_status="1/1"
 max_retries=100 
@@ -81,4 +81,4 @@ do
     sleep 10
 done
 
-kubectl apply -f "$SCRIPT_PATH"/deployment.yaml
+kubectl apply -f "$SCRIPT_PATH"/../../deployment.yaml
