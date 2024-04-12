@@ -138,8 +138,23 @@ under the License.
                         </transformers>
                         <artifactSet>
                             <includes>
+                                <!-- Most of these are required for the BQ connector built from source. When the connector is available in maven, these should be removed. -->
+                                <include>joda-time:*</include>
+                                <include>org.json:*</include>
                                 <include>org.apache.flink:flink-connector-bigquery</include>
-                                <include>flink.connector.gcp:*</include>
+                                <include>org.apache.flink:flink-metrics-dropwizard</include>
+                                <include>commons-codec:commons-codec</include>    
+                                <include>dev.failsafe:*</include>                                
+                                <include>org.apache.httpcomponents:*</include>
+                                <include>org.codehaus.mojo:animal-sniffer-annotations</include>
+                                <include>org.conscrypt:*</include>
+                                <include>com.fasterxml.jackson.*:*</include>
+                                <include>org.threeten:*</include>
+                                <include>org.checkerframework:*</include>
+                                <include>io.dropwizard.metrics:*</include>
+                                <include>io.grpc:*</include>
+                                <include>io.opencensus:*</include>
+                                <include>io.perfmark:*</include>                                <include>flink.connector.gcp:*</include>
                                 <include>org.apache.flink:flink-connector-kafka:*</include>
                                 <include>org.apache.kafka:kafka-clients:*</include>
                                 <include>org.apache.flink:flink-connector-datagen:*</include>
