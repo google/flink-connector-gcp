@@ -33,7 +33,7 @@ spec:
       cpu: 1
   job:
     entryClass: flink.connector.gcp.GMKToBQWordCount
-    jarURI: local:///opt/flink/usrlib/gmf-examples.jar
+    jarURI: local:///opt/flink/usrlib/flink-examples-gcp-0.0.jar
     # Replace these with your values:
     args: ["--brokers", "bootstrap.<gmk-cluster-name>.us-central1.managedkafka-<env>.<project-name>.cloud-staging.goog:9092",
           "--gmk-username", "<service-account-name>@<project-name>.iam.gserviceaccount.com",
@@ -41,5 +41,5 @@ spec:
           "--project-id", "<project-name>",
           "--dataset-name", "<dataset-name>",
           "--table-name", "<table-name>"]
-    parallelism: 5
+    parallelism: 1
     upgradeMode: stateless

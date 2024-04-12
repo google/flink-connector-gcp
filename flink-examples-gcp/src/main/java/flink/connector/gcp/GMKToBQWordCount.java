@@ -51,12 +51,14 @@ public class GMKToBQWordCount {
         String projectId = parameters.get("project-id");
         String datasetName = parameters.get("dataset-name");
         String tableName = parameters.get("table-name");
-        String bqWordFieldName = parameters.get("bq-word-field-name", "word");
-        String bqCountFieldName = parameters.get("bq-count-field-name", "countStr");
+        String bqFieldName = parameters.get("bq-field-name", "foo");
         Long checkpointInterval = parameters.getLong("checkpoint-interval", 60000L);
+        Integer bqSinkParallelism = parameters.getInt("bq-sink-parallelism", 5);
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        env.getConfig().disableGenericTypes();
         env.getConfig().setGlobalJobParameters(parameters);
+        env.getConfig().enableForceAvro();
         env.enableCheckpointing(checkpointInterval);
 
         KafkaSource<String> source =
@@ -85,6 +87,7 @@ public class GMKToBQWordCount {
                 BigQuerySinkConfig.newBuilder()
                         .connectOptions(sinkConnectOptions)
                         .deliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
+                        .parallelism(bqSinkParallelism)
                         .schemaProvider(schemaProvider)
                         .serializer(new AvroToProtoSerializer())
                         .build();
@@ -95,11 +98,12 @@ public class GMKToBQWordCount {
                 .sum(1)
                 .map(
                         kv -> {
+                            String countedStr = String.format("Word: %s Count: %s", kv.f0, kv.f1);
                             GenericRecord rec =
                                     new GenericRecordBuilder(schemaProvider.getAvroSchema())
-                                            .set(bqWordFieldName, kv.f0)
-                                            .set(bqCountFieldName, kv.f1.toString())
+                                            .set(bqFieldName, countedStr)
                                             .build();
+                            rec.put(0, countedStr);
                             return rec;
                         })
                 .returns(
@@ -110,7 +114,6 @@ public class GMKToBQWordCount {
         env.execute();
     }
 
-    /** Splits tokens. */
     public static final class PrepareWC
             implements FlatMapFunction<String, Tuple2<String, Integer>> {
 
