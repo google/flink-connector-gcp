@@ -52,7 +52,7 @@ under the License.
             <url>${distMgmtSnapshotsUrl}</url>
         </pluginRepository>
     </pluginRepositories>
-
+  
     <modules>
         <module>flink-examples-gcp</module>
     </modules>  
