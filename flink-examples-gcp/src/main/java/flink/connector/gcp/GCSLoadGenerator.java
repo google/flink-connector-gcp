@@ -1,4 +1,4 @@
-package org.myorg.gcsbenchmark;
+package flink.connector.gcp;
 
 import java.text.SimpleDateFormat;
 import java.time.Duration;
@@ -32,22 +32,24 @@ import org.apache.flink.util.Collector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ReadWriteTextUnbounded {
-  private static final Logger LOG = LoggerFactory.getLogger(ReadWriteTextUnbounded.class);
+public class GCSLoadGenerator {
+  private static final Logger LOG = LoggerFactory.getLogger(GCSLoadGenerator.class);
+  private static final int KB = 1024;
   private static final int MB = 1024 * 1024;
 
   public static void main(String[] args) throws Exception {
     final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
     final ParameterTool parameters = ParameterTool.fromArgs(args);
 
-    env.setParallelism(1);
-    // This is not needed with AUTOMATIC detection, but to show this is STREAMING
     env.setRuntimeMode(RuntimeExecutionMode.STREAMING);
-    env.disableOperatorChaining();
     env.getConfig().setGlobalJobParameters(parameters);
 
-    String outputPath = parameters.get("output", "outputUnbounded");
-    String outputPath2 = parameters.get("output2", "gs://chengedward-loadtest/finalOutput/");
+    String outputPath = parameters.get("output", "gs://source/");
+    int load = parameters.getInt("kbload", 1000);
+    int rate = parameters.getInt("ratePerSecond", 100);
+    int paralellism = parameters.getInt("parallelism", 100);
+    System.out.println(String.format("Message load: %d; Rate Per Sec: %d; Paralellism: %d", load, rate, paralellism));
+    env.setParallelism(paralellism);
 
     // Add checkpointing, this is needed for files to leave the "in progress state"
     Configuration config = new Configuration();
@@ -58,13 +60,7 @@ public class ReadWriteTextUnbounded {
     GeneratorFunction<Long, Long> generatorFunction = n -> n;
     DataGeneratorSource<Long> generatorSource =
         new DataGeneratorSource<>(
-            generatorFunction, Long.MAX_VALUE, RateLimiterStrategy.perSecond(1), Types.LONG);
-
-    // Source 2 (Unbounded Read)
-    FileSource<String> textUnboundedSource =
-        FileSource.forRecordStreamFormat(new TextLineInputFormat(), new Path(outputPath))
-            .monitorContinuously(Duration.ofSeconds(30))
-            .build();
+            generatorFunction, Long.MAX_VALUE, RateLimiterStrategy.perSecond(rate), Types.LONG);
 
     // Sink
     final FileSink<String> sink =
@@ -78,49 +74,26 @@ public class ReadWriteTextUnbounded {
                 DefaultRollingPolicy.builder().withRolloverInterval(Duration.ofSeconds(5)).build())
             .enableCompact(
                 FileCompactStrategy.Builder.newBuilder()
-                        .setSizeThreshold(100 * MB)
+                        .setSizeThreshold(20 * MB)
                         .enableCompactionOnCheckpoint(10)
                         .build(),
                 new RecordWiseFileCompactor<>(
                         new DecoderBasedReader.Factory<>(SimpleStringDecoder::new)))
             .build();
     
-    final FileSink<String> sink2 =
-        FileSink.forRowFormat(new Path(outputPath2), new SimpleStringEncoder<String>("UTF-8"))
-            .withOutputFileConfig(
-                OutputFileConfig.builder()
-                    .withPartPrefix("finalBenchmarkOutput")
-                    .withPartSuffix(".txt")
-                    .build())
-            .withRollingPolicy(
-                DefaultRollingPolicy.builder().withRolloverInterval(Duration.ofSeconds(5)).build())
-            // .enableCompact(
-            //     FileCompactStrategy.Builder.newBuilder()
-            //             .setSizeThreshold(100 * MB)
-            //             .enableCompactionOnCheckpoint(10)
-            //             .build(),
-            //     new RecordWiseFileCompactor<>(
-            //             new DecoderBasedReader.Factory<>(SimpleStringDecoder::new)))
-            .build();
-
-    // Start Pipeline
-    // Data Stream to Sink
     DataStreamSource<Long> generator =
         env.fromSource(generatorSource, WatermarkStrategy.noWatermarks(), "Data Generator");
 
-    generator.flatMap(new GCSLoadGenerator()).sinkTo(sink).uid("writer");
+    generator.flatMap(new LoadGenerator(load * KB)).sinkTo(sink).uid("writer");
 
-    // Continuously read the written stream
-    DataStreamSource<String> readUnbounded =
-        env.fromSource(textUnboundedSource, WatermarkStrategy.noWatermarks(), "Unbounded Read");
-
-    readUnbounded.filter(s -> !s.isEmpty()).map(new AddTimeString()).sinkTo(sink2).uid("gcsToGcsWriter");
-
-    // Execute
-    env.execute("Read / Write to Text Unbounded");
+    env.execute("Write to Text Unbounded");
   }
 
-  public static final class GCSLoadGenerator implements FlatMapFunction<Long, String>{
+  public static final class LoadGenerator implements FlatMapFunction<Long, String>{
+    int load;
+    public LoadGenerator(int l) {
+      load = l;
+    }
     static final byte[] RANDOM_STR =
         ("13VhL5nTJp1SvToxTcFeNdBdDKpw6Js3dFwXgohhRifPyLw3Zaf5wXihLC9EkLEhyyozxbPAg0OsFSvPkaQXxSKKS"
                 + "WZWqvp0F54vudCAAPsVSaMTnARHcTqk21pLQM0Hc5NaenbSEcVCC3tZMxs6gVLBOKziQX9qC4Wh1DKyS4HWap"
@@ -135,6 +108,8 @@ public class ReadWriteTextUnbounded {
             .getBytes();
 
     public static byte[] makePseudoRandomBytes(int sizeBytes) {
+      // since it the bytes will be converted with UTF-16 encoding
+      sizeBytes = sizeBytes/2;
       byte[] result = new byte[sizeBytes];
       int current = 0;
       int remaining = sizeBytes;
@@ -148,38 +123,12 @@ public class ReadWriteTextUnbounded {
     }
 
     public String randomStringOfSize(int sizeBytes) {
-        return new String(makePseudoRandomBytes(sizeBytes));
+      return new String(makePseudoRandomBytes(sizeBytes));
     }
 
     @Override
     public void flatMap(Long value, Collector<String> out) {
-      out.collect(randomStringOfSize(1 * MB));
-    }
-  }
-
-//   public static final class FindDivisorsWithTime implements FlatMapFunction<Long, String> {
-
-//     @Override
-//     public void flatMap(Long value, Collector<String> out) {
-//       Long sum = LongStream.rangeClosed(1, value + 1).filter(x -> value % x == 0).sum();
-//       Date currentDate = new Date();
-//       SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-//       String currentDateTime = dateFormat.format(currentDate);
-//       String s =
-//           String.format(
-//               "Number %d has divisor sum %d. Generated at %s", value, sum, currentDateTime);
-//       out.collect(s);
-//     }
-//   }
-
-  public static final class AddTimeString implements MapFunction<String, String> {
-    @Override
-    public String map(String element) throws Exception {
-      Date currentDate = new Date();
-      SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-      String currentDateTime = dateFormat.format(currentDate);
-      // int endInd = Math.min(element.length(), 10);
-      return String.format("Unbounded read at %s of element\n\t\t==> %s", currentDateTime, element);
+      out.collect(randomStringOfSize(load));
     }
   }
 }

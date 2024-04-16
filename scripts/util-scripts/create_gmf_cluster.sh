@@ -12,11 +12,12 @@ region="us-central1"
 project_id=
 
 # Flag parsing with getopts
-while getopts ":c:r:p:" opt; do 
+while getopts ":c:p:r:" opt; do 
   case $opt in
+    # String
     c) cluster_name=$OPTARG ;; 
-    r) region=$OPTARG ;;
     p) project_id=$OPTARG ;;
+    r) region=$OPTARG ;;
 
     \?)
        echo "Invalid option: -$OPTARG" >&2
@@ -37,7 +38,6 @@ else
   echo "Using default project to create cluster"
 fi
 
-
 # Create cluster
 echo "Creating cluster...this may take a few minutes"
 create_cluster=$(gcloud container clusters create-auto $cluster_name --region=$region $PROJECT 2>&1)
@@ -45,6 +45,8 @@ exit_code=$?
 if [ $exit_code -ne 0 ]; then
   if [[ $create_cluster == *"Already exists"* ]]; then
     echo "Cluster $cluster_name already exists, skipping creation"
+    echo "Getting context for cluster $cluster_name"
+    gcloud container clusters get-credentials "$cluster_name" --region "$region" --project "$PROJECT"
   else
     echo "Unexpected error occurred: $create_cluster"
     exit 1

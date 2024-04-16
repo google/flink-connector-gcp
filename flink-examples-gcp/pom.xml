@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.google.flink.connector.gcp</groupId>
+    <artifactId>flink-connector-gcp-parent</artifactId>
+    <version>0.0.0</version>
+  </parent>
+
+  <artifactId>flink-examples-gcp</artifactId>
+  <packaging>jar</packaging>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.source>1.7</maven.compiler.source>
+    <maven.compiler.target>1.7</maven.compiler.target>
+    <flink.version>1.19.0</flink.version>
+    <kafka.connector.version>3.1-SNAPSHOT</kafka.connector.version>
+    <flink-connector-bigquery.version>0.1.0-preview</flink-connector-bigquery.version>
+  </properties>
+
+      <repositories>
+        <repository>
+            <id>central</id>
+            <name>Central Repository</name>
+            <url>https://repo.maven.apache.org/maven2</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+		<repository>
+			<id>example-repo</id>
+			<name>Example Repository</name>
+			<url>file:///usr/local/google/home/${USER}/.m2/repository</url>
+		</repository>
+	</repositories>
+
+ <dependencies>
+    <dependency>
+        <groupId>com.google.cloud.flink</groupId>
+        <artifactId>flink-connector-bigquery</artifactId>
+        <!-- This connector has yet to be released and, therefore, this dependency requires a locally built version. -->
+        <version>${flink-connector-bigquery.version}</version>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.flink</groupId>
+        <artifactId>flink-connector-kafka</artifactId>
+        <version>${kafka.connector.version}</version>
+        <scope>compile</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.flink</groupId>
+        <artifactId>flink-connector-files</artifactId>
+        <version>${flink.version}</version>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.flink</groupId>
+        <artifactId>flink-streaming-java</artifactId>
+        <version>${flink.version}</version>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.flink</groupId>
+        <artifactId>flink-clients</artifactId>
+        <version>${flink.version}</version>
+    </dependency>
+    <!-- https://mvnrepository.com/artifact/org.apache.flink/flink-connector-datagen -->
+    <dependency>
+        <groupId>org.apache.flink</groupId>
+        <artifactId>flink-connector-datagen</artifactId>
+        <version>${flink.version}</version>
+    </dependency>
+    <!-- Client Dependency -->
+    <dependency>
+        <groupId>org.apache.kafka</groupId>
+        <artifactId>kafka-clients</artifactId>
+        <version>3.4.0</version>
+        <scope>compile</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.flink</groupId>
+        <artifactId>flink-avro</artifactId>
+        <version>1.13.6</version>
+    </dependency>
+ </dependencies>
+
+
+  <build>
+    <plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-deploy-plugin</artifactId>
+            <configuration>
+                <skip>true</skip>
+            </configuration>
+        </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+            <executions>
+                <execution>
+                    <id>shade-flink</id>
+                    <phase>package</phase>
+                    <goals>
+                        <goal>shade</goal>
+                    </goals>
+                    <configuration>
+                        <shadedArtifactAttached>true</shadedArtifactAttached>
+                        <createDependencyReducedPom>false</createDependencyReducedPom>
+                        <resources>
+                            <resource>
+                                <directory>src/test/resources</directory>
+                            </resource>
+                        </resources>
+                        <transformers>
+                            <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                <mainClass>flink.connector.gcp.GMKLoadGenerator</mainClass>
+                            </transformer>
+                        </transformers>
+                        <artifactSet>
+                            <includes>
+                                <!-- Most of these are required for the BQ connector built from source. When the connector is available in maven, these should be removed. -->
+                                <include>joda-time:*</include>
+                                <include>org.json:*</include>
+                                <include>org.apache.flink:flink-connector-bigquery</include>
+                                <include>org.apache.flink:flink-metrics-dropwizard</include>
+                                <include>commons-codec:commons-codec</include>    
+                                <include>dev.failsafe:*</include>                                
+                                <include>org.apache.httpcomponents:*</include>
+                                <include>org.codehaus.mojo:animal-sniffer-annotations</include>
+                                <include>org.conscrypt:*</include>
+                                <include>com.fasterxml.jackson.*:*</include>
+                                <include>org.threeten:*</include>
+                                <include>org.checkerframework:*</include>
+                                <include>io.dropwizard.metrics:*</include>
+                                <include>io.grpc:*</include>
+                                <include>io.opencensus:*</include>
+                                <include>io.perfmark:*</include>                                <include>flink.connector.gcp:*</include>
+                                <include>org.apache.flink:flink-connector-kafka:*</include>
+                                <include>org.apache.kafka:kafka-clients:*</include>
+                                <include>org.apache.flink:flink-connector-datagen:*</include>
+                                <include>org.apache.flink:flink-avro:*</include>
+                                <include>com.google.*:*</include>
+                                <include>org.apache.avro:*</include>
+                            </includes>
+                        </artifactSet>
+                        <filters>
+                            <filter>
+                                <artifact>com.google.flink.connector.gcp:flink-examples-gcp*</artifact>
+                                <includes>
+                                    <include>flink/connector/gcp/**</include>
+                                    <include>org/apache/flink/flink-connector-kafka/**</include>
+                                    <include>org/apache/flink/flink-avro/**</include>
+                                    <include>org/apache/kafka/kafka-clients/**</include>
+                                    <include>org/apache/flink/connector/datagen/source/DataGeneratorSource/**</include>
+                                </includes>
+                            </filter>
+                        </filters>
+                    </configuration>
+                </execution>
+            </executions>
+        </plugin>
+    </plugins>
+  </build>
+</project>

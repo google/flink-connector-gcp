@@ -2,7 +2,7 @@
 
 # Deletes GMF cluster
 # Command example:
-#   bash scripts/util-scripts/delete_gmf_cluster.sh -c <CLUSTER_NAME> -p <PROJECT>  -r <REGION> -y -a
+#   bash scripts/util-scripts/delete_gmf_cluster.sh -c <CLUSTER_NAME> -p <PROJECT>  -r <REGION> -Y -A
 
 # Required parameters
 cluster_name=
@@ -14,13 +14,16 @@ auto_confirm_deletion=false
 async=false
 
 # Flag parsing with getopts
-while getopts "c:p:r:ya" opt; do 
+while getopts "c:p:r:AY" opt; do 
   case $opt in
+    # Strings
     c) cluster_name=$OPTARG ;; 
     r) region=$OPTARG ;;
     p) project_id=$OPTARG ;;
-    y) auto_confirm_deletion=true ;;
-    a) async=true ;;
+
+    # Booleans
+    A) async=true ;;
+    Y) auto_confirm_deletion=true ;;
 
     \?)
        echo "Invalid option: -$OPTARG" >&2

@@ -1,0 +1,8 @@
+.vscode
+target/
+flink-examples-gcp/target/
+Dockerfile
+deployment.yaml
+benchmarks/
+my*.yaml
+*.txt
