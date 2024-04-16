@@ -135,6 +135,7 @@ under the License.
                 <configuration>
                     <suppressionsLocation>/tools/maven/suppressions.xml</suppressionsLocation>
                     <configLocation>/tools/maven/checkstyle.xml</configLocation>
+                    <headerLocation>/tools/maven/LICENSE.txt</headerLocation>
                     <logViolationsToConsole>true</logViolationsToConsole>
                     <failOnViolation>true</failOnViolation>
                     <!-- Limit checkstyle to the actual source directories (by default includes generated sources in target/ -->
