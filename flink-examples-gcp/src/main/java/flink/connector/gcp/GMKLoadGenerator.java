@@ -30,9 +30,7 @@ import org.apache.flink.connector.kafka.sink.KafkaSink;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
-/**
- * Pipeline code for generating load to GCS.
- */
+/** Pipeline code for generating load to GCS. */
 public class GMKLoadGenerator {
     public static void main(String[] args) throws Exception {
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();

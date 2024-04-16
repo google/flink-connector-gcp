@@ -28,9 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 
-/**
- * Creates load with pseudo random bytes and sends to the output GCS bucket.
- */
+/** Creates load with pseudo random bytes and sends to the output GCS bucket. */
 public class GCSLoadGenerator {
     private static final Logger LOG = LoggerFactory.getLogger(GCSLoadGenerator.class);
     private static final int KB = 1024;
@@ -46,10 +44,7 @@ public class GCSLoadGenerator {
         String outputPath = parameters.get("output", "gs://source/");
         int load = parameters.getInt("kbload", 1000);
         int rate = parameters.getInt("ratePerSecond", 100);
-        System.out.println(
-                String.format(
-                        "Message load: %d; Rate Per Sec: %d",
-                        load, rate));
+        System.out.println(String.format("Message load: %d; Rate Per Sec: %d", load, rate));
 
         // Add checkpointing, this is needed for files to leave the "in progress state"
         Configuration config = new Configuration();
@@ -95,9 +90,7 @@ public class GCSLoadGenerator {
         env.execute("Write to Text Unbounded");
     }
 
-    /**
-     * Creates load with pseudo random bytes.
-     */
+    /** Creates load with pseudo random bytes. */
     public static final class LoadGenerator implements FlatMapFunction<Long, String> {
         int load;
 

@@ -110,9 +110,7 @@ public class GMKToBQWordCount {
         env.execute();
     }
 
-    /**
-     * Splits tokens.
-     */
+    /** Splits tokens. */
     public static final class PrepareWC
             implements FlatMapFunction<String, Tuple2<String, Integer>> {
 

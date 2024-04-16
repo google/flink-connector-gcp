@@ -36,9 +36,7 @@ import org.apache.flink.util.Collector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Pipeline code for running word count reading from GCS and writing to GCS.
- */
+/** Pipeline code for running word count reading from GCS and writing to GCS. */
 public class GCStoGCSWordCount {
 
     private static final Logger LOG = LoggerFactory.getLogger(GCStoGCSWordCount.class);
@@ -87,9 +85,7 @@ public class GCStoGCSWordCount {
         env.execute("WordCount");
     }
 
-    /**
-     * Splits tokens.
-     */
+    /** Splits tokens. */
     public static final class PrepareWC
             implements FlatMapFunction<String, Tuple2<String, Integer>> {
 

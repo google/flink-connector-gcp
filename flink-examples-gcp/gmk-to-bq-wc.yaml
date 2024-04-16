@@ -41,5 +41,5 @@ spec:
           "--project-id", "<project-name>",
           "--dataset-name", "<dataset-name>",
           "--table-name", "<table-name>"]
-    parallelism: 1
+    parallelism: 5
     upgradeMode: stateless
