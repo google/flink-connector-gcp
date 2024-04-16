@@ -54,7 +54,6 @@ public class GMKToBQWordCount {
         String bqWordFieldName = parameters.get("bq-word-field-name", "word");
         String bqCountFieldName = parameters.get("bq-count-field-name", "countStr");
         Long checkpointInterval = parameters.getLong("checkpoint-interval", 60000L);
-        Integer bqSinkParallelism = parameters.getInt("bq-sink-parallelism", 5);
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.getConfig().setGlobalJobParameters(parameters);

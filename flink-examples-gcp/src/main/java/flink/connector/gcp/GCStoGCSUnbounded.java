@@ -44,8 +44,6 @@ public class GCStoGCSUnbounded {
 
         String inputPath = parameters.get("input");
         String outputPath = parameters.get("output", "gs://output/");
-        int paralellism = parameters.getInt("parallelism", 1);
-        env.setParallelism(paralellism);
         // Add checkpointing, this is needed for files to leave the "in progress state"
         Configuration config = new Configuration();
         config.set(StateBackendOptions.STATE_BACKEND, "hashmap");

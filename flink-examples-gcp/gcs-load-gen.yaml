@@ -24,7 +24,6 @@ spec:
     args: [ 
       "--output", "gs://<your-source-bucket>",
       "--kbload", "1000",
-      "--ratePerSecond", "1000", 
-      "--paralellism", "100" ] 
+      "--ratePerSecond", "1000" ] 
     parallelism: 100
     upgradeMode: stateless
