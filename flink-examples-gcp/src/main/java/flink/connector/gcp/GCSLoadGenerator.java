@@ -51,7 +51,7 @@ public class GCSLoadGenerator {
         config.set(StateBackendOptions.STATE_BACKEND, "hashmap");
         env.enableCheckpointing(Duration.ofSeconds(5).toMillis());
 
-        // Source 1 (Data Generator)
+        // Source (Data Generator)
         GeneratorFunction<Long, Long> generatorFunction = n -> n;
         DataGeneratorSource<Long> generatorSource =
                 new DataGeneratorSource<>(

@@ -50,7 +50,7 @@ public class GCStoGCSUnboundedWC {
         config.set(StateBackendOptions.STATE_BACKEND, "hashmap");
         env.enableCheckpointing(Duration.ofSeconds(5).toMillis());
 
-        // Source 2 (Unbounded Read)
+        // Source (Unbounded Read)
         FileSource<String> textUnboundedSource =
                 FileSource.forRecordStreamFormat(new TextLineInputFormat(), new Path(inputPath))
                         .monitorContinuously(Duration.ofSeconds(30))
