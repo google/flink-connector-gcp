@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package flink.connector.gcp;
 
 import org.apache.flink.api.common.RuntimeExecutionMode;
@@ -31,66 +32,70 @@ import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.filesystem.OutputFileConfig;
 import org.apache.flink.util.Collector;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/*
- * Pipeline code for running word count reading from GCS and writing to GCS.
- */
+/** Pipeline code for running word count reading from GCS and writing to GCS. */
 public class GCStoGCSWordCount {
 
-  private static final Logger LOG = LoggerFactory.getLogger(GCStoGCSWordCount.class);
+    private static final Logger LOG = LoggerFactory.getLogger(GCStoGCSWordCount.class);
 
-  public static void main(String[] args) throws Exception {
-    final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-    final ParameterTool parameters = ParameterTool.fromArgs(args);
-    env.setRuntimeMode(RuntimeExecutionMode.BATCH);
-    env.getConfig().setGlobalJobParameters(parameters);
+    public static void main(String[] args) throws Exception {
+        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        final ParameterTool parameters = ParameterTool.fromArgs(args);
+        env.setRuntimeMode(RuntimeExecutionMode.BATCH);
+        env.getConfig().setGlobalJobParameters(parameters);
 
-    String inputPath = parameters.get("input", "gs://apache-beam-samples/shakespeare/kinglear.txt");
-    String outputPath = parameters.get("output", "outputBounded");
-    Integer parallelism = parameters.getInt("parallelism", 1);
+        String inputPath =
+                parameters.get("input", "gs://apache-beam-samples/shakespeare/kinglear.txt");
+        String outputPath = parameters.get("output", "outputBounded");
+        Integer parallelism = parameters.getInt("parallelism", 1);
 
-    env.setParallelism(parallelism);
+        env.setParallelism(parallelism);
 
-    // Source
-    FileSource<String> source =
-        FileSource.forRecordStreamFormat(new TextLineInputFormat(), new Path(inputPath)).build();
+        // Source
+        FileSource<String> source =
+                FileSource.forRecordStreamFormat(new TextLineInputFormat(), new Path(inputPath))
+                        .build();
 
-    // Sink
-    final FileSink<String> sink =
-        FileSink.forRowFormat(new Path(outputPath), new SimpleStringEncoder<String>("UTF-8"))
-            .withOutputFileConfig(
-                OutputFileConfig.builder()
-                    .withPartPrefix("bounded_write")
-                    .withPartSuffix(".txt")
-                    .build())
-            .build();
+        // Sink
+        final FileSink<String> sink =
+                FileSink.forRowFormat(
+                                new Path(outputPath), new SimpleStringEncoder<String>("UTF-8"))
+                        .withOutputFileConfig(
+                                OutputFileConfig.builder()
+                                        .withPartPrefix("bounded_write")
+                                        .withPartSuffix(".txt")
+                                        .build())
+                        .build();
 
-    //  Start Pipeline
-    DataStreamSource<String> read =
-        env.fromSource(source, WatermarkStrategy.noWatermarks(), "Read files");
+        //  Start Pipeline
+        DataStreamSource<String> read =
+                env.fromSource(source, WatermarkStrategy.noWatermarks(), "Read files");
 
-    read.flatMap(new PrepareWC())
-        .keyBy(tuple -> tuple.f0)
-        .sum(1)
-        .map(kv -> String.format("Word: %s Count: %s", kv.f0, kv.f1))
-        .sinkTo(sink)
-        .uid("writer");
+        read.flatMap(new PrepareWC())
+                .keyBy(tuple -> tuple.f0)
+                .sum(1)
+                .map(kv -> String.format("Word: %s Count: %s", kv.f0, kv.f1))
+                .sinkTo(sink)
+                .uid("writer");
 
-    // Execute
-    env.execute("WordCount");
-  }
-
-  public static final class PrepareWC implements FlatMapFunction<String, Tuple2<String, Integer>> {
-
-    @Override
-    public void flatMap(String value, Collector<Tuple2<String, Integer>> out) {
-      for (String split : value.split("[^\\p{L}]+")) {
-        if (!split.equals(",") && !split.isEmpty()) {
-          out.collect(new Tuple2<>(split.toLowerCase(), 1));
-        }
-      }
+        // Execute
+        env.execute("WordCount");
     }
-  }
+
+    /** Split words and outputs a tuple for the Wordcount. */
+    public static final class PrepareWC
+            implements FlatMapFunction<String, Tuple2<String, Integer>> {
+
+        @Override
+        public void flatMap(String value, Collector<Tuple2<String, Integer>> out) {
+            for (String split : value.split("[^\\p{L}]+")) {
+                if (!split.equals(",") && !split.isEmpty()) {
+                    out.collect(new Tuple2<>(split.toLowerCase(), 1));
+                }
+            }
+        }
+    }
 }
