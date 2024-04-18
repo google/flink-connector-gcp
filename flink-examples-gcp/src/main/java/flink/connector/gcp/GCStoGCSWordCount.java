@@ -85,7 +85,7 @@ public class GCStoGCSWordCount {
         env.execute("WordCount");
     }
 
-    /** Splits tokens. */
+    /** Split words and outputs a tuple for the Wordcount. */
     public static final class PrepareWC
             implements FlatMapFunction<String, Tuple2<String, Integer>> {
 
