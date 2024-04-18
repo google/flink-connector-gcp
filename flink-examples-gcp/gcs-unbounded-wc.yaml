@@ -1,0 +1,26 @@
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkDeployment
+metadata:
+  name: gcs-unbounded-wc
+spec:
+  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/gcs-load-gen:latest
+  flinkVersion: v1_19
+  flinkConfiguration:
+    taskmanager.numberOfTaskSlots: "1"
+  serviceAccount: flink
+  jobManager:
+    resource:
+      memory: "2048m"
+      cpu: 1
+  taskManager:
+    resource:
+      memory: "2048m"
+      cpu: 1
+  job:
+    entryClass: flink.connector.gcp.GCStoGCSUnboundedWC
+    jarURI: local:///opt/flink/usrlib/gmf-examples.jar
+    args: [ 
+      "--input", "gs://<your-source-bucket>",
+      "--output", "gs://<your-sink-bucket>" ] 
+    parallelism: 1
+    upgradeMode: stateless

@@ -1,0 +1,29 @@
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkDeployment
+metadata:
+  name: gcs-load-gen
+spec:
+  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/gcs-load-gen:latest
+  imagePullPolicy: "Always"
+  flinkVersion: v1_19
+  flinkConfiguration:
+    taskmanager.numberOfTaskSlots: "1"
+  serviceAccount: flink
+  jobManager:
+    resource:
+      memory: "8192m"
+      cpu: 1
+  taskManager:
+    resource:
+      memory: "8192m"
+      cpu: 1
+  job:
+    entryClass: flink.connector.gcp.GCSLoadGenerator
+    jarURI: local:///opt/flink/usrlib/gmf-examples.jar
+    # Replace with your own values
+    args: [ 
+      "--output", "gs://<your-source-bucket>",
+      "--kbload", "1000",
+      "--ratePerSecond", "1000" ] 
+    parallelism: 100
+    upgradeMode: stateless

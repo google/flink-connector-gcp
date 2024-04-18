@@ -54,7 +54,6 @@ public class GMKToBQWordCount {
         String bqWordFieldName = parameters.get("bq-word-field-name", "word");
         String bqCountFieldName = parameters.get("bq-count-field-name", "countStr");
         Long checkpointInterval = parameters.getLong("checkpoint-interval", 60000L);
-        Integer bqSinkParallelism = parameters.getInt("bq-sink-parallelism", 5);
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.getConfig().setGlobalJobParameters(parameters);
@@ -86,7 +85,6 @@ public class GMKToBQWordCount {
                 BigQuerySinkConfig.newBuilder()
                         .connectOptions(sinkConnectOptions)
                         .deliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
-                        .parallelism(bqSinkParallelism)
                         .schemaProvider(schemaProvider)
                         .serializer(new AvroToProtoSerializer())
                         .build();
@@ -112,6 +110,7 @@ public class GMKToBQWordCount {
         env.execute();
     }
 
+    /** Splits tokens. */
     public static final class PrepareWC
             implements FlatMapFunction<String, Tuple2<String, Integer>> {
 

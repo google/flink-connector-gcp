@@ -3,3 +3,5 @@ target/
 flink-examples-gcp/target/
 Dockerfile
 deployment.yaml
+my*.yaml
+*.txt
