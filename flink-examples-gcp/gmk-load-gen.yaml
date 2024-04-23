@@ -9,15 +9,16 @@ kind: FlinkDeployment
 metadata:
   name: gmk-load-gen
 spec:
-  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/gmk-load-gen:latest
+  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/gmk-load-gen:latest2
   flinkVersion: v1_19
   flinkConfiguration:
     taskmanager.numberOfTaskSlots: "1"
+    taskmanager.memory.framework.heap.size: "4096m"
   serviceAccount: flink
   jobManager:
     resource:
-      memory: "2048m"
-      cpu: 1
+      memory: "32768m"
+      cpu: 8
     podTemplate:
       apiVersion: v1
       kind: Pod
@@ -35,14 +36,14 @@ spec:
                   key: password
   taskManager:
     resource:
-      memory: "2048m"
-      cpu: 1
+      memory: "32768m"
+      cpu: 8
   job:
     entryClass: flink.connector.gcp.GMKLoadGenerator
     jarURI: local:///opt/flink/usrlib/gmf-examples.jar
     # Replace these with your values:
-    args: ["--brokers", "bootstrap.<gmk-cluster-name>.us-central1.managedkafka-<env>.<project-name>.cloud-staging.goog:9092",
-          "--gmk-username", "<service-account-name>@<project-name>.iam.gserviceaccount.com",
-          "--kafka-topic", "my-topic"]
-    parallelism: 10
+    args: ["--brokers",  "bootstrap.gmf-load-test-clstr.us-central1.managedkafka.managed-flink-shared-dev.cloud.goog:9092",
+          "--gmk-username", "clairemccarthy-srvc-accnt@managed-flink-shared-dev.iam.gserviceaccount.com",
+          "--kafka-topic", "load-test-topic"]
+    parallelism: 1
     upgradeMode: stateless

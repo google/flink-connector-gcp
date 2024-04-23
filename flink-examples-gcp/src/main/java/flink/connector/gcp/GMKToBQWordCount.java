@@ -59,7 +59,6 @@ public class GMKToBQWordCount {
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.getConfig().setGlobalJobParameters(parameters);
         env.enableCheckpointing(checkpointInterval);
-
         KafkaSource<String> source =
                 KafkaSource.<String>builder()
                         .setBootstrapServers(brokers)
@@ -117,9 +116,10 @@ public class GMKToBQWordCount {
 
         @Override
         public void flatMap(String value, Collector<Tuple2<String, Integer>> out) {
-            for (String split : value.split(" ")) {
-                if (!split.equals(",") && !split.isEmpty()) {
-                    out.collect(new Tuple2<>(split.toLowerCase(), 1));
+            String cleanStr = value.replaceAll("\\p{Punct}", " ");
+            for (String split : cleanStr.split(" ")) {
+                if (!split.isEmpty()) {
+                    out.collect(new Tuple2<String, Integer>(split.toLowerCase(), 1));
                 }
             }
         }
