@@ -1,0 +1,14 @@
+{
+  "type": "service_account",
+  "project_id": "managed-flink-shared-dev",
+  "private_key_id": "0685a145dc8b2d6af258996bbf64dc6a473f361a",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC9K/ls/g89Yfd1\n3txz6ky2HCaQciCZ+I0pkGv0r66+Y0k8KwTRkMV3T3rSez6YljeR6wAo9gOco+h0\n/UMMaVwo/MI6lRhuvH6eRdGmmIWprC9fdwneYY6ZDdXaN/AQOvW6vone6WAgFgzf\nXn883h6QIbkGOqrrjeS114B25Pn/XqFoah6l4WpV4ZQuWGPK7erbJSP0QxkmhOgy\nxUDJ4hKiIvt96Lasjf1GJApNRkaN1LhnHya/y2J8v+s5vdNVf1kGjVxNHV6Mgrtn\nenQLSRCnS+/fnmYk/0/SQA3gcRcnXNaYBoipUudmQ5zxHK9sYpCtP3BiwlSOoNSa\nYc9FAOJzAgMBAAECggEABpJl53DRm/LryqttrrxNMVNZV+9N10GsWDvtRqdVpgCD\neR6P74YELFPaYd3eiDisD7NfE75yD4X2hZPIr8BQDQR5sbF4TnCKk7VZiw17k5KB\neFmPaXBc92NRCxG2HNyx94BAnetC3fMcT65AR4IhyRGbdtqNEYyiFx/CPRBlNv1t\nQ0UMMJ3fNiNszkh6qFOBEMAlTJTedpcuSkAxTxlHUhDet4DGB1HZekNhOSeP9uuv\nP19PdUdnHsqqdtbBXU5KjcYyAB77ubsCBvaue9l7gs/SJ/DVyPrOwAc4lHoSYK9o\ncD3VHtAUefiXX0QFiNlqZeEEpb0vg1C6Anta7OLyQQKBgQDxaKQLAjctVF0DGWan\nf5tHeD0IPyTDp53AGY3Fv+JNKzvOBXNENsH4sQ4E/fgm5VpxKNzyAWW2QVLzw7Oo\n121ptnE7cZ0L13Q2366woH44UmM3P5DoEsqA5S/IklXOcBPcXbR89dzcdnFVjnwh\nGC3AoEwqn4LVz3uhVj5Va8dasQKBgQDImw/Px9RCIAerX6rldeS5FadoCHX9KUxb\ngRd1ceEoZh6Q18dbKnnP+3unsxkiO7FEvLeEcNIN/51C2gJBSPNZgDgbpk05LlKv\nAFsS9wjqJo4bVvnxAXJVsN4+jt4xjgAcboObvfKIgCksd7aFgzhxirlQuzSp9Cw6\n6iMKfQnQYwKBgAo8kLAy0NooOKV3/0VdAN2f+J6P5uQxCFxr+PoIr/Trv2Z2DrQ2\nyjTcdSa7CjnEAfjIbc4JRyHaVUUm6Ehhki8oYFbP84PcB/6Hr6WnuJJ00+Y02NUu\nbs3WahdMNT1CvWTbyFqAJnRmxVmGaDcTCmWfpnssNmUQnkJyIMSIhHSRAoGAPyNm\n15vqd6GDKHIk5LG1eneRSBIZqMOdz9MSohlkp4V0q1vu2AfHbSmW4tJg38Bv69WF\n4T5tLpC8W3UobonaZdoQTsuJ1Kx6w6/V+mMcQC5AXeSDKFKvPL89Q+1Ni8VIzaoO\n7C7drg7AZsmK/fyuADaMWxeA3NkILsbQnpV6SEcCgYAWf6iF9hE7pUVHAnNcFRq0\n2Rj6efZqL4ouZglFplwnzQvqKSmbmkhSVgEOh8nJAFPQhlyXhBr/qt6DV41Uh5gB\nxMcftNeehdyITgjGr2vQ9Z0b4jgjk+gn7YXfvlnlNsh4Fd/BkIE9stNNJxyArpbJ\nPoZCcq1E6ZAv1kDxJqetlw==\n-----END PRIVATE KEY-----\n",
+  "client_email": "clairemccarthy-srvc-accnt@managed-flink-shared-dev.iam.gserviceaccount.com",
+  "client_id": "113760419460248851236",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/clairemccarthy-srvc-accnt%40managed-flink-shared-dev.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
+

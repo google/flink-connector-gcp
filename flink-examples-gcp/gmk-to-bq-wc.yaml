@@ -3,7 +3,7 @@ kind: FlinkDeployment
 metadata:
   name: gmk-to-bq-wordcount-load-test
 spec:
-  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/flink-examples-gcp:with-creds
+  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/flink-examples-gcp:bq-repro-0
   flinkVersion: v1_19
   flinkConfiguration:
     taskmanager.numberOfTaskSlots: "1"
@@ -41,6 +41,6 @@ spec:
           "--kafka-topic", "load-test-topic",
           "--project-id", "managed-flink-shared-dev",
           "--dataset-name", "test_ds",
-          "--table-name", "test_table", "--bq-sink-parallelism", "10"]
+          "--table-name", "test_tbl", "--bq-sink-parallelism", "10"]
     parallelism: 1
     upgradeMode: stateless
