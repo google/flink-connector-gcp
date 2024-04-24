@@ -1,0 +1,27 @@
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkDeployment
+metadata:
+  name: gcs-unbounded-wc
+spec:
+  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/gcs-load-gen:c3
+  flinkVersion: v1_19
+  flinkConfiguration:
+    taskmanager.numberOfTaskSlots: "1"
+    taskmanager.memory.framework.heap.size: "8192m"
+  serviceAccount: flink
+  jobManager:
+    resource:
+      memory: "32768m"
+      cpu: 8
+  taskManager:
+    resource:
+      memory: "32768m"
+      cpu: 8
+  job:
+    entryClass: flink.connector.gcp.GCStoGCSWordCount
+    jarURI: local:///opt/flink/usrlib/flink-examples-gcp-0.0.jar
+    args: [ 
+      "--input", "gs://chengedward-gcs-source/",
+      "--output", "gs://chengedward-loadtest/finalOutput/" ] 
+    parallelism: 1
+    upgradeMode: stateless

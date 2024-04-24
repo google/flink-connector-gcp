@@ -3,15 +3,15 @@ kind: FlinkDeployment
 metadata:
   name: gmk-to-bq-wordcount-load-test
 spec:
-  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/flink-examples-gcp:with-creds
+  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/flink-examples-gcp:load-4
   flinkVersion: v1_19
   flinkConfiguration:
     taskmanager.numberOfTaskSlots: "1"
-    taskmanager.memory.framework.heap.size: "8192m"
+    taskmanager.memory.framework.heap.size: "16092m"
   serviceAccount: flink
   jobManager:
     resource:
-      memory: "32768m"
+      memory: "64768m"
       cpu: 8
     podTemplate:
       apiVersion: v1
@@ -30,7 +30,7 @@ spec:
                   key: password
   taskManager:
     resource:
-      memory: "32768m"
+      memory: "64768m"
       cpu: 8
   job:
     entryClass: flink.connector.gcp.GMKToBQWordCount
