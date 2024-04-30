@@ -21,12 +21,17 @@ package flink.connector.gcp;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
+import org.apache.flink.api.common.state.StateTtlConfig;
+import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.utils.MultipleParameterTool;
 import org.apache.flink.connector.base.DeliveryGuarantee;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.formats.avro.typeutils.GenericRecordAvroTypeInfo;
+import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.windowing.assigners.ProcessingTimeSessionWindows;
+import java.time.Duration;
 import org.apache.flink.util.Collector;
 import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.Configuration;
@@ -65,6 +70,10 @@ public class GMKToBQWordCount {
         config.set(CheckpointingOptions.CHECKPOINTS_DIRECTORY, "gs://clairemccarthy-checkpoint/checkpoints/");
         env.configure(config);
         env.enableCheckpointing(checkpointInterval);
+        env.getCheckpointConfig().enableUnalignedCheckpoints();
+        env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.AT_LEAST_ONCE);
+        env.getCheckpointConfig().setMinPauseBetweenCheckpoints(60000L);
+        
         KafkaSource<String> source =
                 KafkaSource.<String>builder()
                         .setBootstrapServers(brokers)
@@ -124,10 +133,21 @@ public class GMKToBQWordCount {
         public void flatMap(String value, Collector<Tuple2<String, Integer>> out) {
             String cleanStr = value.replaceAll("\\p{Punct}", " ");
             for (String split : cleanStr.split(" ")) {
+                if (isNumeric(split)) {
+                    continue;
+                }
                 if (!split.isEmpty()) {
                     out.collect(new Tuple2<String, Integer>(split.toLowerCase(), 1));
                 }
             }
+        }
+        public static boolean isNumeric(String str) { 
+                try {  
+                        Double.parseDouble(str);  
+                        return true;
+                } catch(NumberFormatException e) {  
+                        return false;  
+                }  
         }
     }
 }
