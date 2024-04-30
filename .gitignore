@@ -5,3 +5,4 @@ Dockerfile
 deployment.yaml
 my*.yaml
 *.txt
+!LICENSE.txt
