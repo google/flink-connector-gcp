@@ -21,20 +21,16 @@ package flink.connector.gcp;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
-import org.apache.flink.api.common.state.StateTtlConfig;
-import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.utils.MultipleParameterTool;
+import org.apache.flink.configuration.CheckpointingOptions;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.connector.base.DeliveryGuarantee;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.formats.avro.typeutils.GenericRecordAvroTypeInfo;
 import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.windowing.assigners.ProcessingTimeSessionWindows;
-import java.time.Duration;
 import org.apache.flink.util.Collector;
-import org.apache.flink.configuration.CheckpointingOptions;
-import org.apache.flink.configuration.Configuration;
 
 import com.google.cloud.flink.bigquery.common.config.BigQueryConnectOptions;
 import com.google.cloud.flink.bigquery.sink.BigQuerySink;
@@ -67,13 +63,15 @@ public class GMKToBQWordCount {
         env.getConfig().setGlobalJobParameters(parameters);
         Configuration config = new Configuration();
         config.set(CheckpointingOptions.CHECKPOINT_STORAGE, "filesystem");
-        config.set(CheckpointingOptions.CHECKPOINTS_DIRECTORY, "gs://clairemccarthy-checkpoint/checkpoints/");
+        config.set(
+                CheckpointingOptions.CHECKPOINTS_DIRECTORY,
+                "gs://clairemccarthy-checkpoint/checkpoints/");
         env.configure(config);
         env.enableCheckpointing(checkpointInterval);
         env.getCheckpointConfig().enableUnalignedCheckpoints();
         env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.AT_LEAST_ONCE);
         env.getCheckpointConfig().setMinPauseBetweenCheckpoints(60000L);
-        
+
         KafkaSource<String> source =
                 KafkaSource.<String>builder()
                         .setBootstrapServers(brokers)
@@ -100,7 +98,6 @@ public class GMKToBQWordCount {
                 BigQuerySinkConfig.newBuilder()
                         .connectOptions(sinkConnectOptions)
                         .deliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
-                        .parallelism(bqSinkParallelism)
                         .schemaProvider(schemaProvider)
                         .serializer(new AvroToProtoSerializer())
                         .build();
@@ -108,7 +105,7 @@ public class GMKToBQWordCount {
         env.fromSource(source, WatermarkStrategy.noWatermarks(), "Kafka Source")
                 .flatMap(new PrepareWC())
                 .keyBy(tuple -> tuple.f0)
-                .sum(1)
+                // .sum(1)
                 .map(
                         kv -> {
                             GenericRecord rec =
@@ -126,6 +123,9 @@ public class GMKToBQWordCount {
         env.execute();
     }
 
+    /**
+     * Class for preparing word count.
+     */
     public static final class PrepareWC
             implements FlatMapFunction<String, Tuple2<String, Integer>> {
 
@@ -141,13 +141,14 @@ public class GMKToBQWordCount {
                 }
             }
         }
-        public static boolean isNumeric(String str) { 
-                try {  
-                        Double.parseDouble(str);  
-                        return true;
-                } catch(NumberFormatException e) {  
-                        return false;  
-                }  
+
+        public static boolean isNumeric(String str) {
+            try {
+                Double.parseDouble(str);
+                return true;
+            } catch (NumberFormatException e) {
+                return false;
+            }
         }
     }
 }
