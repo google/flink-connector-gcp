@@ -58,7 +58,7 @@ under the License.
  <dependencies>
     <dependency>
         <groupId>com.google.cloud.flink</groupId>
-        <artifactId>flink-connector-bigquery</artifactId>
+        <artifactId>flink-1.17-connector-bigquery</artifactId>
         <!-- This connector has yet to be released and, therefore, this dependency requires a locally built version. -->
         <version>${flink-connector-bigquery.version}</version>
     </dependency>
