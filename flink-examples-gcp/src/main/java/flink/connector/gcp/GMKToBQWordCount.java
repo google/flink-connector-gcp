@@ -28,7 +28,6 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.connector.base.DeliveryGuarantee;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.formats.avro.typeutils.GenericRecordAvroTypeInfo;
-import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.util.Collector;
 
@@ -56,7 +55,7 @@ public class GMKToBQWordCount {
         String tableName = parameters.get("table-name");
         String bqWordFieldName = parameters.get("bq-word-field-name", "word");
         String bqCountFieldName = parameters.get("bq-count-field-name", "countStr");
-        Long checkpointInterval = parameters.getLong("checkpoint-interval", 60000L);
+        Long checkpointInterval = parameters.getLong("checkpoint-interval", 600000L);
         Integer bqSinkParallelism = parameters.getInt("bq-sink-parallelism", 5);
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -69,14 +68,13 @@ public class GMKToBQWordCount {
         env.configure(config);
         env.enableCheckpointing(checkpointInterval);
         env.getCheckpointConfig().enableUnalignedCheckpoints();
-        env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.AT_LEAST_ONCE);
         env.getCheckpointConfig().setMinPauseBetweenCheckpoints(60000L);
 
         KafkaSource<String> source =
                 KafkaSource.<String>builder()
                         .setBootstrapServers(brokers)
                         .setTopics(kafkaTopic)
-                        .setGroupId("my-group")
+                        .setGroupId("my-group-1")
                         .setValueOnlyDeserializer(new SimpleStringSchema())
                         .setProperty("partition.discovery.interval.ms", "10000")
                         .setProperty("security.protocol", "SASL_SSL")
@@ -114,11 +112,11 @@ public class GMKToBQWordCount {
                                             .set(bqCountFieldName, kv.f1.toString())
                                             .build();
                             return rec;
-                        })
+                        }).setParallelism(bqSinkParallelism)
                 .returns(
                         new GenericRecordAvroTypeInfo(
                                 sinkConfig.getSchemaProvider().getAvroSchema()))
-                .sinkTo(BigQuerySink.get(sinkConfig, env));
+                .sinkTo(BigQuerySink.get(sinkConfig, env)).setParallelism(bqSinkParallelism);
 
         env.execute();
     }
@@ -133,9 +131,9 @@ public class GMKToBQWordCount {
         public void flatMap(String value, Collector<Tuple2<String, Integer>> out) {
             String cleanStr = value.replaceAll("\\p{Punct}", " ");
             for (String split : cleanStr.split(" ")) {
-                if (isNumeric(split)) {
-                    continue;
-                }
+                // if (isNumeric(split)) {
+                //     continue;
+                // }
                 if (!split.isEmpty()) {
                     out.collect(new Tuple2<String, Integer>(split.toLowerCase(), 1));
                 }
