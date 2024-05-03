@@ -1,16 +1,18 @@
 apiVersion: flink.apache.org/v1beta1
 kind: FlinkDeployment
 metadata:
-  name: gmk-to-bq-wordcount
+  name: gmk-to-bq-wordcount-talat
 spec:
-  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/flink-examples-gcp:latest
+  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/flink-examples-gcp:serializer-2
   flinkVersion: v1_19
   flinkConfiguration:
     taskmanager.numberOfTaskSlots: "1"
+    rest.flamegraph.enabled: "true"
+    execution.checkpointing.tolerable-failed-checkpoints: "10000"
   serviceAccount: flink
   jobManager:
     resource:
-      memory: "2048m"
+      memory: "4096m"
       cpu: 1
     podTemplate:
       apiVersion: v1
@@ -29,17 +31,17 @@ spec:
                   key: password
   taskManager:
     resource:
-      memory: "2048m"
+      memory: "4096m"
       cpu: 1
   job:
     entryClass: flink.connector.gcp.GMKToBQWordCount
     jarURI: local:///opt/flink/usrlib/gmf-examples.jar
     # Replace these with your values:
-    args: ["--brokers", "bootstrap.<gmk-cluster-name>.us-central1.managedkafka-<env>.<project-name>.cloud-staging.goog:9092",
-          "--gmk-username", "<service-account-name>@<project-name>.iam.gserviceaccount.com",
-          "--kafka-topic", "my-topic",
-          "--project-id", "<project-name>",
-          "--dataset-name", "<dataset-name>",
-          "--table-name", "<table-name>"]
-    parallelism: 5
+    args: ["--brokers",  "bootstrap.gmf-load-test-clstr.us-central1.managedkafka.managed-flink-shared-dev.cloud.goog:9092",
+          "--gmk-username", "clairemccarthy-srvc-accnt@managed-flink-shared-dev.iam.gserviceaccount.com",
+          "--kafka-topic", "load-test-topic",
+          "--project-id", "managed-flink-shared-dev",
+          "--dataset-name", "test_ds",
+          "--table-name", "test_table", "--bq-sink-parallelism", "1"]
+    parallelism: 1
     upgradeMode: stateless
