@@ -18,8 +18,8 @@ public class ProtoSerializer extends BigQueryProtoSerializer<GenericRecord> {
 
         // Assuming the field order in your MyMessage.proto is: word (1), countStr (2)
         try {
-            codedOutputStream.writeString(1, (String) message.get(1));
-            codedOutputStream.writeString(2, (String) message.get(2));
+            codedOutputStream.writeString(1, (String) message.get(0));
+            codedOutputStream.writeString(2, (String) message.get(1));
             codedOutputStream.flush(); // Ensure everything is written
         } catch (IOException e) {
             throw new BigQuerySerializationException(e.getMessage());
