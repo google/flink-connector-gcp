@@ -86,7 +86,7 @@ public class GMKToBQWordCount {
                         .connectOptions(sinkConnectOptions)
                         .deliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
                         .schemaProvider(schemaProvider)
-                        .serializer(new AvroToProtoSerializer())
+                        .serializer(new ProtoSerializer())
                         .build();
 
         env.fromSource(source, WatermarkStrategy.noWatermarks(), "Kafka Source")
