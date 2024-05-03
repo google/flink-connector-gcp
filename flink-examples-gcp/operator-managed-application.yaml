@@ -1,0 +1,132 @@
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkDeployment
+metadata:
+  creationTimestamp: "2024-04-29T20:25:57Z"
+  finalizers:
+  - flinkdeployments.flink.apache.org/finalizer
+  generation: 6
+  name: operator-managed-application
+  namespace: default
+  ownerReferences:
+  - apiVersion: managedflink.cloud.google.com/v1
+    blockOwnerDeletion: true
+    kind: ManagedFlinkDeployment
+    name: operator-managed-application
+    uid: a3a928e1-621b-453b-8192-826413a5aa58
+  resourceVersion: "3669239"
+  uid: 94bedc55-47ce-4cc8-9182-038428d66dc6
+spec:
+  flinkConfiguration:
+    job.autoscaler.enabled: "false"
+    job.autoscaler.metrics.window: 15m
+    job.autoscaler.stabilization.interval: 1m
+    job.autoscaler.target.utilization: "0.5"
+    job.autoscaler.target.utilization.boundary: "0.3"
+    job.gmf.standaloneAutoscalerEnabled: "false"
+    jobmanager.scheduler: adaptive
+    kubernetes.jobmanager.labels: is-flink-deployment:true
+    kubernetes.taskmanager.labels: is-flink-deployment:true
+    taskmanager.numberOfTaskSlots: "1"
+  flinkVersion: v1_18
+  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/flink-examples-gcp:bq-6
+  imagePullPolicy: Always
+  job:
+    args:
+    - --bq-sink-parallelism
+    - "5"
+    - --brokers
+    - bootstrap.gmf-load-test-clstr.us-central1.managedkafka.managed-flink-shared-dev.cloud.goog:9092
+    - --dataset-name
+    - test_ds
+    - --gmk-username
+    - clairemccarthy-srvc-accnt@managed-flink-shared-dev.iam.gserviceaccount.com
+    - --kafka-topic
+    - load-test-topic
+    - --project-id
+    - managed-flink-shared-dev
+    - --table-name
+    - test_table_not_nullable
+    entryClass: flink.connector.gcp.GMKToBQWordCount
+    jarURI: local:///opt/flink/usrlib/flink-examples-gcp-0.0.jar
+    parallelism: 5
+    upgradeMode: stateless
+  jobManager:
+    podTemplate:
+      spec:
+        containers:
+        - env:
+          - name: GMK_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: password
+                name: gmk-sasl-plain-login
+          name: flink-main-container
+          ports:
+          - containerPort: 9249
+            name: gmf-prometheus
+            protocol: TCP
+          resources: {}
+        - image: us-central1-docker.pkg.dev/managed-flink-shared-dev/ellading-demo/gmf-grpc-proxy:latest
+          imagePullPolicy: Always
+          livenessProbe:
+            failureThreshold: 3
+            grpc:
+              port: 1080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
+          name: proxy
+          ports:
+          - containerPort: 1080
+            protocol: TCP
+          readinessProbe:
+            grpc:
+              port: 1080
+            periodSeconds: 5
+          resources: {}
+        serviceAccount: flink
+    resource:
+      cpu: 1
+      memory: 4096m
+  serviceAccount: flink
+  taskManager:
+    podTemplate:
+      spec:
+        containers:
+        - name: flink-main-container
+          ports:
+          - containerPort: 9249
+            name: gmf-prometheus
+            protocol: TCP
+          resources: {}
+    resource:
+      cpu: 1
+      memory: 4096m
+status:
+  clusterInfo:
+    flink-revision: eaffd22 @ 2024-03-06T15:18:44+01:00
+    flink-version: 1.19.0
+    total-cpu: "6.0"
+    total-memory: "25769803776"
+  jobManagerDeploymentStatus: READY
+  jobStatus:
+    checkpointInfo:
+      lastPeriodicCheckpointTimestamp: 0
+    jobId: 79579888afbe31fcd6940a818bd22a5c
+    jobName: operator-managed-application
+    savepointInfo:
+      lastPeriodicSavepointTimestamp: 0
+      savepointHistory: []
+    startTime: "1714687749133"
+    state: RUNNING
+    updateTime: "1714687784324"
+  lifecycleState: STABLE
+  observedGeneration: 6
+  reconciliationStatus:
+    lastReconciledSpec: '{"spec":{"job":{"jarURI":"local:///opt/flink/usrlib/flink-examples-gcp-0.0.jar","parallelism":5,"entryClass":"flink.connector.gcp.GMKToBQWordCount","args":["--bq-sink-parallelism","5","--brokers","bootstrap.gmf-load-test-clstr.us-central1.managedkafka.managed-flink-shared-dev.cloud.goog:9092","--dataset-name","test_ds","--gmk-username","clairemccarthy-srvc-accnt@managed-flink-shared-dev.iam.gserviceaccount.com","--kafka-topic","load-test-topic","--project-id","managed-flink-shared-dev","--table-name","test_table_not_nullable"],"state":"running","savepointTriggerNonce":null,"initialSavepointPath":null,"checkpointTriggerNonce":null,"upgradeMode":"stateless","allowNonRestoredState":null,"savepointRedeployNonce":null},"restartNonce":null,"flinkConfiguration":{"job.autoscaler.enabled":"false","job.autoscaler.metrics.window":"15m","job.autoscaler.stabilization.interval":"1m","job.autoscaler.target.utilization":"0.5","job.autoscaler.target.utilization.boundary":"0.3","job.gmf.standaloneAutoscalerEnabled":"false","jobmanager.scheduler":"adaptive","kubernetes.jobmanager.labels":"is-flink-deployment:true","kubernetes.taskmanager.labels":"is-flink-deployment:true","taskmanager.numberOfTaskSlots":"1"},"image":"us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/flink-examples-gcp:bq-6","imagePullPolicy":"Always","serviceAccount":"flink","flinkVersion":"v1_18","ingress":null,"podTemplate":null,"jobManager":{"resource":{"cpu":1.0,"memory":"4096m","ephemeralStorage":null},"replicas":1,"podTemplate":{"spec":{"containers":[{"env":[{"name":"GMK_PASSWORD","valueFrom":{"secretKeyRef":{"key":"password","name":"gmk-sasl-plain-login"}}}],"name":"flink-main-container","ports":[{"containerPort":9249,"name":"gmf-prometheus","protocol":"TCP"}],"resources":{}},{"image":"us-central1-docker.pkg.dev/managed-flink-shared-dev/ellading-demo/gmf-grpc-proxy:latest","imagePullPolicy":"Always","livenessProbe":{"failureThreshold":3,"grpc":{"port":1080},"initialDelaySeconds":5,"periodSeconds":5,"timeoutSeconds":5},"name":"proxy","ports":[{"containerPort":1080,"protocol":"TCP"}],"readinessProbe":{"grpc":{"port":1080},"periodSeconds":5},"resources":{}}],"serviceAccount":"flink"}}},"taskManager":{"resource":{"cpu":1.0,"memory":"4096m","ephemeralStorage":null},"replicas":null,"podTemplate":{"spec":{"containers":[{"name":"flink-main-container","ports":[{"containerPort":9249,"name":"gmf-prometheus","protocol":"TCP"}],"resources":{}}]}}},"logConfiguration":null,"mode":null},"resource_metadata":{"apiVersion":"flink.apache.org/v1beta1","metadata":{"generation":6},"firstDeployment":false}}'
+    lastStableSpec: '{"spec":{"job":{"jarURI":"local:///opt/flink/usrlib/flink-examples-gcp-0.0.jar","parallelism":5,"entryClass":"flink.connector.gcp.GMKToBQWordCount","args":["--bq-sink-parallelism","5","--brokers","bootstrap.gmf-load-test-clstr.us-central1.managedkafka.managed-flink-shared-dev.cloud.goog:9092","--dataset-name","test_ds","--gmk-username","clairemccarthy-srvc-accnt@managed-flink-shared-dev.iam.gserviceaccount.com","--kafka-topic","load-test-topic","--project-id","managed-flink-shared-dev","--table-name","test_table_not_nullable"],"state":"running","savepointTriggerNonce":null,"initialSavepointPath":null,"checkpointTriggerNonce":null,"upgradeMode":"stateless","allowNonRestoredState":null,"savepointRedeployNonce":null},"restartNonce":null,"flinkConfiguration":{"job.autoscaler.enabled":"false","job.autoscaler.metrics.window":"15m","job.autoscaler.stabilization.interval":"1m","job.autoscaler.target.utilization":"0.5","job.autoscaler.target.utilization.boundary":"0.3","job.gmf.standaloneAutoscalerEnabled":"false","jobmanager.scheduler":"adaptive","kubernetes.jobmanager.labels":"is-flink-deployment:true","kubernetes.taskmanager.labels":"is-flink-deployment:true","taskmanager.numberOfTaskSlots":"1"},"image":"us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/flink-examples-gcp:bq-6","imagePullPolicy":"Always","serviceAccount":"flink","flinkVersion":"v1_18","ingress":null,"podTemplate":null,"jobManager":{"resource":{"cpu":1.0,"memory":"4096m","ephemeralStorage":null},"replicas":1,"podTemplate":{"spec":{"containers":[{"env":[{"name":"GMK_PASSWORD","valueFrom":{"secretKeyRef":{"key":"password","name":"gmk-sasl-plain-login"}}}],"name":"flink-main-container","ports":[{"containerPort":9249,"name":"gmf-prometheus","protocol":"TCP"}],"resources":{}},{"image":"us-central1-docker.pkg.dev/managed-flink-shared-dev/ellading-demo/gmf-grpc-proxy:latest","imagePullPolicy":"Always","livenessProbe":{"failureThreshold":3,"grpc":{"port":1080},"initialDelaySeconds":5,"periodSeconds":5,"timeoutSeconds":5},"name":"proxy","ports":[{"containerPort":1080,"protocol":"TCP"}],"readinessProbe":{"grpc":{"port":1080},"periodSeconds":5},"resources":{}}],"serviceAccount":"flink"}}},"taskManager":{"resource":{"cpu":1.0,"memory":"4096m","ephemeralStorage":null},"replicas":null,"podTemplate":{"spec":{"containers":[{"name":"flink-main-container","ports":[{"containerPort":9249,"name":"gmf-prometheus","protocol":"TCP"}],"resources":{}}]}}},"logConfiguration":null,"mode":null},"resource_metadata":{"apiVersion":"flink.apache.org/v1beta1","metadata":{"generation":6},"firstDeployment":false}}'
+    reconciliationTimestamp: 1714686984155
+    state: DEPLOYED
+  taskManager:
+    labelSelector: component=taskmanager,app=operator-managed-application
+    replicas: 5

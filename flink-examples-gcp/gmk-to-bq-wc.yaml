@@ -1,19 +1,18 @@
 apiVersion: flink.apache.org/v1beta1
 kind: FlinkDeployment
 metadata:
-  name: gmk-to-bq-wordcount-load-test
+  name: gmk-to-bq-wordcount-baseline
 spec:
   image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/flink-examples-gcp:bq-6
   flinkVersion: v1_19
   flinkConfiguration:
-    taskmanager.numberOfTaskSlots: "10"
-    taskmanager.memory.framework.heap.size: "8192m"
+    taskmanager.numberOfTaskSlots: "1"
     rest.flamegraph.enabled: "true"
   serviceAccount: flink
   jobManager:
     resource:
-      memory: "32768m"
-      cpu: 8
+      memory: "4096m"
+      cpu: 1
     podTemplate:
       apiVersion: v1
       kind: Pod
@@ -31,8 +30,8 @@ spec:
                   key: password
   taskManager:
     resource:
-      memory: "32768m"
-      cpu: 8
+      memory: "4096m"
+      cpu: 1
   job:
     entryClass: flink.connector.gcp.GMKToBQWordCount
     jarURI: local:///opt/flink/usrlib/flink-examples-gcp-0.0.jar
@@ -42,6 +41,6 @@ spec:
           "--kafka-topic", "load-test-topic",
           "--project-id", "managed-flink-shared-dev",
           "--dataset-name", "test_ds",
-          "--table-name", "test_table_not_nullable", "--bq-sink-parallelism", "10"]
+          "--table-name", "test_table", "--bq-sink-parallelism", "1"]
     parallelism: 1
     upgradeMode: stateless
