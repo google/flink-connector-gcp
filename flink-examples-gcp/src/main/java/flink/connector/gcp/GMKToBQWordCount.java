@@ -76,6 +76,7 @@ public class GMKToBQWordCount {
                         .setTopics(kafkaTopic)
                         .setGroupId("my-group-1")
                         .setValueOnlyDeserializer(new SimpleStringSchema())
+                        .setProperty("check.crcs", "false")
                         .setProperty("partition.discovery.interval.ms", "10000")
                         .setProperty("security.protocol", "SASL_SSL")
                         .setProperty("sasl.mechanism", "PLAIN")

@@ -3,7 +3,7 @@ kind: FlinkDeployment
 metadata:
   name: gmk-to-bq-wordcount-baseline
 spec:
-  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/flink-examples-gcp:bq-6
+  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/flink-examples-gcp:bq-7
   flinkVersion: v1_19
   flinkConfiguration:
     taskmanager.numberOfTaskSlots: "1"
