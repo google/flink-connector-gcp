@@ -22,31 +22,36 @@ import com.google.cloud.flink.bigquery.sink.exceptions.BigQuerySerializationExce
 import com.google.cloud.flink.bigquery.sink.serializer.BigQueryProtoSerializer;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.CodedOutputStream;
-import org.apache.avro.generic.GenericRecord;
-
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import org.apache.avro.generic.GenericRecord;
 
 /**
  * ProtoSerializer class.
  */
 public class ProtoSerializer extends BigQueryProtoSerializer<GenericRecord> {
-
     @Override
     public ByteString serialize(GenericRecord message) throws BigQuerySerializationException {
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        CodedOutputStream codedOutputStream = CodedOutputStream.newInstance(byteArrayOutputStream);
+        ByteString.Output output = ByteString.newOutput();
+        CodedOutputStream codedOutputStream = CodedOutputStream.newInstance(output);
 
         // Assuming the field order in your MyMessage.proto is: word (1), countStr (2)
         try {
-            codedOutputStream.writeString(1, (String) message.get(0));
-            codedOutputStream.writeString(2, (String) message.get(1));
+            codedOutputStream.writeInt64(1, (long) message.get(0));
+            codedOutputStream.writeDouble(2, (double) message.get(1));
+            codedOutputStream.writeString(3, (String) message.get(2));
+            codedOutputStream.writeBool(4, (boolean) message.get(3));
+            codedOutputStream.writeInt64(5, (long) message.get(4));
+            codedOutputStream.writeDouble(6, (double) message.get(5));
+            codedOutputStream.writeString(7, (String) message.get(6));
+            codedOutputStream.writeBool(8, (boolean) message.get(7));
+            codedOutputStream.writeString(9, (String) message.get(8));
+            codedOutputStream.writeString(10, (String) message.get(9));
             codedOutputStream.flush(); // Ensure everything is written
         } catch (IOException e) {
             throw new BigQuerySerializationException(e.getMessage());
         }
 
         // Convert ByteArrayOutputStream to ByteString
-        return ByteString.copyFrom(byteArrayOutputStream.toByteArray());
+        return output.toByteString();
     }
 }
