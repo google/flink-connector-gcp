@@ -21,6 +21,7 @@ spec:
     jarURI: local:///opt/flink/usrlib/gmf-examples.jar
     args: [ 
       "--input", "gs://<your-source-bucket>",
-      "--output", "gs://<your-sink-bucket>" ] 
+      "--output", "gs://<your-sink-bucket>",
+      "--checkpoint", "gs://<your-checkpoint-bucket>/checkpoints/" ] 
     parallelism: 1
     upgradeMode: stateless

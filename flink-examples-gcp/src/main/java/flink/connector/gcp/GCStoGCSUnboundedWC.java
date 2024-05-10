@@ -65,13 +65,14 @@ public class GCStoGCSUnboundedWC {
 
         String inputPath = parameters.get("input");
         String outputPath = parameters.get("output", "gs://output/");
+        String checkpointDir = parameters.get("checkpoint");
         // Add checkpointing, this is needed for files to leave the "in progress state"
         Configuration config = new Configuration();
         config.set(StateBackendOptions.STATE_BACKEND, "hashmap");
         config.set(CheckpointingOptions.CHECKPOINT_STORAGE, "filesystem");
         config.set(
                 CheckpointingOptions.CHECKPOINTS_DIRECTORY,
-                "gs://chengedward-checkpoint/checkpoints/");
+                checkpointDir);
         env.configure(config);
         env.getCheckpointConfig().enableUnalignedCheckpoints();
         env.getCheckpointConfig().setMinPauseBetweenCheckpoints(60000L);
