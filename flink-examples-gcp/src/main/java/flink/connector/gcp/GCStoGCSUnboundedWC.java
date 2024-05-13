@@ -75,8 +75,8 @@ public class GCStoGCSUnboundedWC {
                 checkpointDir);
         env.configure(config);
         env.getCheckpointConfig().enableUnalignedCheckpoints();
-        env.getCheckpointConfig().setMinPauseBetweenCheckpoints(60000L);
-        env.enableCheckpointing(Duration.ofSeconds(5).toMillis());
+        env.getCheckpointConfig().setMinPauseBetweenCheckpoints(10000L);
+        env.enableCheckpointing(Duration.ofSeconds(10).toMillis());
 
         // Source (Unbounded Read)
         FileSource<String> textUnboundedSource =
