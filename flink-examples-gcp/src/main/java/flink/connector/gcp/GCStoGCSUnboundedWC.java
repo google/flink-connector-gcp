@@ -40,7 +40,6 @@ import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.filesystem.OutputFileConfig;
 import org.apache.flink.streaming.api.functions.sink.filesystem.rollingpolicies.DefaultRollingPolicy;
-import org.apache.flink.streaming.api.windowing.assigners.TumblingProcessingTimeWindows;
 import org.apache.flink.util.Collector;
 
 import org.slf4j.Logger;
@@ -70,13 +69,16 @@ public class GCStoGCSUnboundedWC {
         Configuration config = new Configuration();
         config.set(StateBackendOptions.STATE_BACKEND, "hashmap");
         config.set(CheckpointingOptions.CHECKPOINT_STORAGE, "filesystem");
-        config.set(
-                CheckpointingOptions.CHECKPOINTS_DIRECTORY,
-                checkpointDir);
+        config.set(CheckpointingOptions.CHECKPOINTS_DIRECTORY, checkpointDir);
         env.configure(config);
+        env.enableCheckpointing(10000L);
         env.getCheckpointConfig().enableUnalignedCheckpoints();
+        env.getCheckpointConfig().setAlignedCheckpointTimeout(Duration.ofMillis(10000L));
+        env.getCheckpointConfig().setMaxConcurrentCheckpoints(1);
         env.getCheckpointConfig().setMinPauseBetweenCheckpoints(10000L);
-        env.enableCheckpointing(Duration.ofSeconds(10).toMillis());
+        env.getCheckpointConfig().setCheckpointTimeout(600000L);
+        env.getCheckpointConfig().setTolerableCheckpointFailureNumber(Integer.MAX_VALUE);
+        env.getConfig().setUseSnapshotCompression(true);
 
         // Source (Unbounded Read)
         FileSource<String> textUnboundedSource =
@@ -115,7 +117,7 @@ public class GCStoGCSUnboundedWC {
         readUnbounded
                 .flatMap(new PrepareWC())
                 .keyBy(tuple -> tuple.f0)
-                .window(TumblingProcessingTimeWindows.of(Duration.ofSeconds(30)))
+                // .window(TumblingProcessingTimeWindows.of(Duration.ofSeconds(30)))
                 .sum(1)
                 .map(kv -> String.format("Word: %s Count: %s", kv.f0, kv.f1))
                 .sinkTo(sink)
