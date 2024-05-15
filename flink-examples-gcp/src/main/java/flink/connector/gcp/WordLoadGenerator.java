@@ -28,16 +28,16 @@ import java.nio.file.Paths;
 /** Creates load from a set list of words. */
 public class WordLoadGenerator implements FlatMapFunction<Long, String> {
     private int load;
-    private byte[] WORDS_STR;
+    private byte[] wordStr;
     static Path path = Paths.get("words.txt");
 
     public WordLoadGenerator(int l) {
         load = l;
         try {
-            WORDS_STR = Files.readAllBytes(path);
+            wordStr = Files.readAllBytes(path);
         } catch (Exception e) {
             System.out.println("Could not read words.txt file");
-            WORDS_STR =
+            wordStr =
                     ("Release, Ornamental, Cosmetic, Cement, Mud, Cleave, Zephyr, "
                                     + "Unusual, Receive, Atmosphere, Corrupt, Taboo, Cousin, Robotic, "
                                     + "Tramp, Heavyset, Current, Whisper, Alert, Approval, Forsake, Wind, "
@@ -55,8 +55,8 @@ public class WordLoadGenerator implements FlatMapFunction<Long, String> {
         int current = 0;
         int remaining = sizeBytes;
         while (remaining > 0) {
-            int len = Math.min(WORDS_STR.length, remaining);
-            System.arraycopy(WORDS_STR, 0, result, current, len);
+            int len = Math.min(wordStr.length, remaining);
+            System.arraycopy(wordStr, 0, result, current, len);
             current += len;
             remaining -= len;
         }
