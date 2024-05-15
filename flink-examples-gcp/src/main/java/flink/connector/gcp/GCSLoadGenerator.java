@@ -60,7 +60,7 @@ public class GCSLoadGenerator {
         env.getConfig().setGlobalJobParameters(parameters);
 
         String outputPath = parameters.get("output", "gs://source/");
-        int load = parameters.getInt("kbload", 1000);
+        int load = parameters.getInt("kbload", 10);
         int rate = parameters.getInt("ratePerSecond", 100);
         System.out.println(String.format("Message load: %d; Rate Per Sec: %d", load, rate));
 
@@ -108,7 +108,7 @@ public class GCSLoadGenerator {
         env.execute("Write to Text Unbounded");
     }
 
-    /** Creates load with pseudo random bytes. */
+    /** Creates load with a Shakespeare passage. */
     public static final class LoadGenerator implements FlatMapFunction<Long, String> {
         int load;
 
@@ -117,16 +117,39 @@ public class GCSLoadGenerator {
         }
 
         static final byte[] RANDOM_STR =
-                ("13VhL5nTJp1SvToxTcFeNdBdDKpw6Js3dFwXgohhRifPyLw3Zaf5wXihLC9EkLEhyyozxbPAg0OsFSvPkaQXxSKKS"
-                                + "WZWqvp0F54vudCAAPsVSaMTnARHcTqk21pLQM0Hc5NaenbSEcVCC3tZMxs6gVLBOKziQX9qC4Wh1DKyS4HWap"
-                                + "ITlOyltRedxLPZgIVBX1EiCaAAg3ULGY6Bkstl7oZUSYf1LzbE24WpnKgIA0IzaOIPNn7ATS8esGm8KIFU22p"
-                                + "Ac9LIDkt9yp5rBMyLfuYbRZ9iw6mZ7QsHmVMozuhEOFB0dOL7fDqnnKmZcFcmfYzUs9m0knoBdh0HsMg4IUg9"
-                                + "fkRQqQgYOQRh6ekf15Kl0GV7yPJrPjfSAXuQCkvIunOmeQsYDkZ13VhL5nTJp1SvToxTcFeNdBdDKpw6Js3dF"
-                                + "XgohhRifPyLw3Zaf5wXihLC9EkLEhyyozxbPAg0OsFSvPkaQXxSKKSFrWZWqvp0F54vudCAAPsVSaMTnARHcT"
-                                + "NOuWqk21pLQM0Hc5NaenbSEcVCC3tZMxs6gVLBOKziQX9qC4Wh1DKyS4HWapITlOyltRedxLPZgIVBX1EiCaA"
-                                + "Ag3ULGY6Bkstl7oZUSYf1LzbE24WpnKgIA0IzaOIPNn7ATS8esGm8KIFU22pNAc9LIDkt9yp5rBMyLfuYbRZ9"
-                                + "iw6mZ7QsHmVMozuhEOFB0dOL7fDqnnKmZcFcmfYzUs9m0knoBdh0HsMg4IUg9oUfkRQqQgYOQRh6ekf15Kl0G"
-                                + "V7yPJrPjfSAXuQCkvIunOmeQsYDkZ")
+                ("To be, or not to be, that is the question:"
+                + "Whether 'tis nobler in the mind to suffer"
+                + "The slings and arrows of outrageous fortune,"
+                + "Or to take arms against a sea of troubles"
+                + "And by opposing end them. To die—to sleep,"
+                + "No more; and by a sleep to say we end"
+                + "The heart-ache and the thousand natural shocks"
+                + "That flesh is heir to: 'tis a consummation"
+                + "Devoutly to be wish'd. To die, to sleep;"
+                + "To sleep, perchance to dream—ay, there's the rub:"
+                + "For in that sleep of death what dreams may come,"
+                + "When we have shuffled off this mortal coil,"
+                + "Must give us pause—there's the respect"
+                + "That makes calamity of so long life."
+                + "For who would bear the whips and scorns of time,"
+                + "Th'oppressor's wrong, the proud man's contumely,"
+                + "The pangs of dispriz'd love, the law's delay,"
+                + "The insolence of office, and the spurns"
+                + "That patient merit of th'unworthy takes,"
+                + "When he himself might his quietus make"
+                + "With a bare bodkin? Who would fardels bear,"
+                + "To grunt and sweat under a weary life,"
+                + "But that the dread of something after death,"
+                + "The undiscovere'd country, from whose bourn"
+                + "No traveller returns, puzzles the will,"
+                + "And makes us rather bear those ills we have"
+                + "Than fly to others that we know not of?"
+                + "Thus conscience doth make cowards of us all,"
+                + "And thus the native hue of resolution"
+                + "Is sicklied o'er with the pale cast of thought,"
+                + "And enterprises of great pith and moment"
+                + "With this regard their currents turn awry"
+                + "And lose the name of action.")
                         .getBytes();
 
         public static byte[] makePseudoRandomBytes(int sizeBytes) {
