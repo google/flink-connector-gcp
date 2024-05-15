@@ -44,7 +44,7 @@ spec:
     args: ["--brokers", "bootstrap.<gmk-cluster-name>.us-central1.managedkafka-<env>.<project-name>.cloud-staging.goog:9092",
           "--gmk-username", "<service-account-name>@<project-name>.iam.gserviceaccount.com",
           "--kafka-topic", "my-topic",
-          "--kbload", "10",
-          "--msgRate", "1000"]
+          "--messageSizeKB", "10",
+          "--messagesPerSecond", "1000"]
     parallelism: 10
     upgradeMode: stateless
