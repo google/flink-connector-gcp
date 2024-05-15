@@ -101,7 +101,7 @@ public class GCSLoadGenerator {
         DataStreamSource<Long> generator =
                 env.fromSource(generatorSource, WatermarkStrategy.noWatermarks(), "Data Generator");
 
-        generator.flatMap(new ShakespeareLoadGenerator(load * KB)).sinkTo(sink).uid("writer");
+        generator.flatMap(new WordLoadGenerator(load * KB)).sinkTo(sink).uid("writer");
 
         env.execute("Write to Text Unbounded");
     }
