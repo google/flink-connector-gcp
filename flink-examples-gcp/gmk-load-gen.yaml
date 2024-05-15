@@ -16,7 +16,7 @@ spec:
   serviceAccount: flink
   jobManager:
     resource:
-      memory: "2048m"
+      memory: "4096m"
       cpu: 1
     podTemplate:
       apiVersion: v1
@@ -35,7 +35,7 @@ spec:
                   key: password
   taskManager:
     resource:
-      memory: "2048m"
+      memory: "4096m"
       cpu: 1
   job:
     entryClass: flink.connector.gcp.GMKLoadGenerator
@@ -45,6 +45,6 @@ spec:
           "--gmk-username", "<service-account-name>@<project-name>.iam.gserviceaccount.com",
           "--kafka-topic", "my-topic",
           "--kbload", "10",
-          "--rate", "1000"]
+          "--msgRate", "1000"]
     parallelism: 10
     upgradeMode: stateless
