@@ -48,8 +48,8 @@ public class WordLoadGenerator implements FlatMapFunction<Long, String> {
         }
     }
 
-    public byte[] makePseudoRandomBytes(int sizeBytes) {
-        // since it the bytes will be converted with UTF-16 encoding
+    public byte[] makeBytesOfSize(int sizeBytes) {
+        // since the bytes will be converted with UTF-16 encoding
         sizeBytes = sizeBytes / 2;
         byte[] result = new byte[sizeBytes];
         int current = 0;
@@ -63,12 +63,12 @@ public class WordLoadGenerator implements FlatMapFunction<Long, String> {
         return result;
     }
 
-    public String randomStringOfSize(int sizeBytes) {
-        return new String(makePseudoRandomBytes(sizeBytes));
+    public String randomWordStringOfSize(int sizeBytes) {
+        return new String(makeBytesOfSize(sizeBytes));
     }
 
     @Override
     public void flatMap(Long value, Collector<String> out) {
-        out.collect(randomStringOfSize(load));
+        out.collect(randomWordStringOfSize(load));
     }
 }
