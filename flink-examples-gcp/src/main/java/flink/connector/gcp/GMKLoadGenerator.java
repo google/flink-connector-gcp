@@ -45,7 +45,7 @@ public class GMKLoadGenerator {
         String gmkUsername = parameters.get("gmk-username");
         String kafkaTopic = parameters.get("kafka-topic", "my-topic");
         int load = parameters.getInt("kbload", 10);
-        double rate = parameters.getDouble("rate", 1_000);
+        double rate = parameters.getDouble("rate", 1000);
         Long maxRecords = parameters.getLong("max-records", 1_000_000_000L);
 
         env.getConfig().setGlobalJobParameters(parameters);

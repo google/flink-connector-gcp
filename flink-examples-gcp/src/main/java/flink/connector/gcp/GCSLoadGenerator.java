@@ -61,7 +61,7 @@ public class GCSLoadGenerator {
 
         String outputPath = parameters.get("output", "gs://source/");
         int load = parameters.getInt("kbload", 10);
-        int rate = parameters.getInt("ratePerSecond", 100);
+        int rate = parameters.getInt("rate", 1000);
         System.out.println(String.format("Message load: %d; Rate Per Sec: %d", load, rate));
 
         // Add checkpointing, this is needed for files to leave the "in progress state"

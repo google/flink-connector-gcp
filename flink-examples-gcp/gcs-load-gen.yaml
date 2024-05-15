@@ -23,7 +23,7 @@ spec:
     # Replace with your own values
     args: [ 
       "--output", "gs://<your-source-bucket>",
-      "--kbload", "1000",
-      "--ratePerSecond", "1000" ] 
+      "--kbload", "10",
+      "--rate", "1000" ] 
     parallelism: 100
     upgradeMode: stateless
