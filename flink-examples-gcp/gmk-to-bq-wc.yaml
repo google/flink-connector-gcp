@@ -1,9 +1,9 @@
 apiVersion: flink.apache.org/v1beta1
 kind: FlinkDeployment
 metadata:
-  name: gmk-to-bq-wordcount-baseline
+  name: gmk-to-bq-wordcount-non-nullable-table-schema
 spec:
-  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/flink-examples-gcp:bq-7
+  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/flink-examples-gcp:bq-10
   flinkVersion: v1_19
   flinkConfiguration:
     taskmanager.numberOfTaskSlots: "1"
@@ -30,17 +30,17 @@ spec:
                   key: password
   taskManager:
     resource:
-      memory: "4096m"
-      cpu: 1
+      memory: "8102m"
+      cpu: 2
   job:
     entryClass: flink.connector.gcp.GMKToBQWordCount
     jarURI: local:///opt/flink/usrlib/flink-examples-gcp-0.0.jar
     # Replace these with your values:
-    args: ["--brokers",  "bootstrap.gmf-load-test-clstr.us-central1.managedkafka.managed-flink-shared-dev.cloud.goog:9092",
+    args: ["--brokers",  "bootstrap.gmf-load-test-clstr-3.us-central1.managedkafka.managed-flink-shared-dev.cloud.goog:9092",
           "--gmk-username", "clairemccarthy-srvc-accnt@managed-flink-shared-dev.iam.gserviceaccount.com",
           "--kafka-topic", "load-test-topic",
           "--project-id", "managed-flink-shared-dev",
           "--dataset-name", "test_ds",
-          "--table-name", "test_table", "--bq-sink-parallelism", "1"]
+          "--table-name", "test_table_not_nullable"]
     parallelism: 1
     upgradeMode: stateless

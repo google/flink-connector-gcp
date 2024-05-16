@@ -27,8 +27,10 @@ import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.connector.base.DeliveryGuarantee;
 import org.apache.flink.connector.kafka.source.KafkaSource;
+import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.formats.avro.typeutils.GenericRecordAvroTypeInfo;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.windowing.assigners.TumblingProcessingTimeWindows;
 import org.apache.flink.util.Collector;
 
 import com.google.cloud.flink.bigquery.common.config.BigQueryConnectOptions;
@@ -40,6 +42,8 @@ import com.google.cloud.flink.bigquery.sink.serializer.BigQuerySchemaProviderImp
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericRecordBuilder;
+
+import java.time.Duration;
 
 /** Pipeline code for running word count reading from GMK and writing to BQ. */
 public class GMKToBQWordCount {
@@ -55,8 +59,6 @@ public class GMKToBQWordCount {
         String tableName = parameters.get("table-name");
         String bqWordFieldName = parameters.get("bq-word-field-name", "word");
         String bqCountFieldName = parameters.get("bq-count-field-name", "countStr");
-        Long checkpointInterval = parameters.getLong("checkpoint-interval", 600000L);
-        Integer bqSinkParallelism = parameters.getInt("bq-sink-parallelism", 5);
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.getConfig().setGlobalJobParameters(parameters);
@@ -66,9 +68,14 @@ public class GMKToBQWordCount {
                 CheckpointingOptions.CHECKPOINTS_DIRECTORY,
                 "gs://clairemccarthy-checkpoint/checkpoints/");
         env.configure(config);
-        env.enableCheckpointing(checkpointInterval);
+        env.enableCheckpointing(10000L);
+        env.getCheckpointConfig().setAlignedCheckpointTimeout(Duration.ofMillis(10000L));
+        env.getCheckpointConfig().setMaxConcurrentCheckpoints(1);
+        env.getCheckpointConfig().setMinPauseBetweenCheckpoints(10000L);
+        env.getCheckpointConfig().setCheckpointTimeout(600000L);
+        env.getCheckpointConfig().setTolerableCheckpointFailureNumber(Integer.MAX_VALUE);
+        env.getConfig().setUseSnapshotCompression(true);
         env.getCheckpointConfig().enableUnalignedCheckpoints();
-        env.getCheckpointConfig().setMinPauseBetweenCheckpoints(60000L);
 
         KafkaSource<String> source =
                 KafkaSource.<String>builder()
@@ -76,6 +83,7 @@ public class GMKToBQWordCount {
                         .setTopics(kafkaTopic)
                         .setGroupId("my-group-1")
                         .setValueOnlyDeserializer(new SimpleStringSchema())
+                        .setStartingOffsets(OffsetsInitializer.latest())
                         .setProperty("check.crcs", "false")
                         .setProperty("partition.discovery.interval.ms", "10000")
                         .setProperty("security.protocol", "SASL_SSL")
@@ -104,7 +112,8 @@ public class GMKToBQWordCount {
         env.fromSource(source, WatermarkStrategy.noWatermarks(), "Kafka Source")
                 .flatMap(new PrepareWC())
                 .keyBy(tuple -> tuple.f0)
-                // .sum(1)
+                .window(TumblingProcessingTimeWindows.of(Duration.ofMinutes(1)))
+                .sum(1)
                 .map(
                         kv -> {
                             GenericRecord rec =
@@ -113,18 +122,16 @@ public class GMKToBQWordCount {
                                             .set(bqCountFieldName, kv.f1.toString())
                                             .build();
                             return rec;
-                        }).setParallelism(bqSinkParallelism)
+                        })
                 .returns(
                         new GenericRecordAvroTypeInfo(
                                 sinkConfig.getSchemaProvider().getAvroSchema()))
-                .sinkTo(BigQuerySink.get(sinkConfig, env)).setParallelism(bqSinkParallelism);
+                .sinkTo(BigQuerySink.get(sinkConfig, env));
 
         env.execute();
     }
 
-    /**
-     * Class for preparing word count.
-     */
+    /** Class for preparing word count. */
     public static final class PrepareWC
             implements FlatMapFunction<String, Tuple2<String, Integer>> {
 

@@ -46,39 +46,7 @@ public class GMKLoadGenerator {
         DataGeneratorSource<String> generatorSource =
                 new DataGeneratorSource<>(
                         n ->
-                                "To be, or not to be, that is the question:"
-                                        + "Whether 'tis nobler in the mind to suffer"
-                                        + "The slings and arrows of outrageous fortune,"
-                                        + "Or to take arms against a sea of troubles"
-                                        + "And by opposing end them. To die—to sleep,"
-                                        + "No more; and by a sleep to say we end"
-                                        + "The heart-ache and the thousand natural shocks"
-                                        + "That flesh is heir to: 'tis a consummation"
-                                        + "Devoutly to be wish'd. To die, to sleep;"
-                                        + "To sleep, perchance to dream—ay, there's the rub:"
-                                        + "For in that sleep of death what dreams may come,"
-                                        + "When we have shuffled off this mortal coil,"
-                                        + "Must give us pause—there's the respect"
-                                        + "That makes calamity of so long life."
-                                        + "For who would bear the whips and scorns of time,"
-                                        + "Th'oppressor's wrong, the proud man's contumely,"
-                                        + "The pangs of dispriz'd love, the law's delay,"
-                                        + "The insolence of office, and the spurns"
-                                        + "That patient merit of th'unworthy takes,"
-                                        + "When he himself might his quietus make"
-                                        + "With a bare bodkin? Who would fardels bear,"
-                                        + "To grunt and sweat under a weary life,"
-                                        + "But that the dread of something after death,"
-                                        + "The undiscovere'd country, from whose bourn"
-                                        + "No traveller returns, puzzles the will,"
-                                        + "And makes us rather bear those ills we have"
-                                        + "Than fly to others that we know not of?"
-                                        + "Thus conscience doth make cowards of us all,"
-                                        + "And thus the native hue of resolution"
-                                        + "Is sicklied o'er with the pale cast of thought,"
-                                        + "And enterprises of great pith and moment"
-                                        + "With this regard their currents turn awry"
-                                        + "And lose the name of action.",
+                                "Release, Ornamental, Cosmetic, Cement, Mud, Cleave, Zephyr, Unusual, Receive, Atmosphere, Corrupt, Taboo, Cousin, Robotic, Tramp, Heavyset, Current, Whisper, Alert, Approval, Forsake, Wind, Consult, Women, Pitch, Easier, Shirk, Fighter, Disastrous, Basis, Vanish, Freezing, Soar, Old-fashioned, Blankly, Closed, Parade, Prophetic, Sponge, Moldy, Ransom, Identical, Tremor, Bearskin, Shout, Hook, Blackheart, Travel, Quit, Faulty, Cheerful, Dope, Cast, Admiral, Pen, Phenomenal, Acquire, Bird, Gentle, Selective, Bone, Scissors, Knowing, Begin, Guidebook, Stupid, Insurance, Conflict, Lace, Rule, Righteous, Warrior, Hundred, Coercion, Wiry, Aroma, Absorb, Homicide, Curve, Hammer, Fireman, Jump, Fake, Communication, Glance, Gushing, Ferment, Propellant, Enter, Kangaroo, Harplike, Scenic, Economics, Ignorant, Dirt, Elimination, Dozen, Dear, Mew, Vomit, Eruption, Reception, Arch, Security, Dynamite, Cynical, Murmur, Machine, Educated, Eternity, Manufacturer, Audience, Engine, Granite, Icicle, Loose, Guilty, Driving, Afraid, Crowd, Sugar, Harmonious, Airplane, Rerun, Fabulous, Balloon, Giddy, Smut, Bronze, Curfew, Harmonic, Death, Blimp, Calculate, Decade, Satisfy, Virus, Banana, Manage, Grand, Appetite, Celebrate, Beeswax, Recording, Dime, Speed, Round, Dignitary, Contemn, Serum, Pet, Absent, Confidence, Crispy, Hangman, Collide, Guilt, Cannibalism, Berserk, Agreement, Implant, Sable, Sass, Bludgeon, Construe, Indulge, Grin, Crazy, Boring, Spider, Animatronic, Stealthy, Discipline, Slimy, Quince, Blooper, Plucky, Civilization, Morning, Pandemic, Front, Wood, Industry, Makeshift, Zesty, World, Fugitive, Reflective, Horses, Baby, Tall, Adopter, Puffy, Squeeze, Baseball, Minipill, Dazzling, Aftertaste, Omniscient, Purring, Abducted, Retain, Essence, Link, Piano, Courage, Identify, Purpose, Whole, Appearance, Chain, Shrill, Alcohol, Sadistic, Erase, Entropy, Flight, Endorse, Crisp, Digest, Bed, Brass, Rat, Gainsay, Stir, Drop, Spiders, Blankness, Diplomat, Republic, Circuitry, Sphere, Honest, Augmentation, Cemetery, Recite, Bloke, Rustic, Hairless, Closing, Belligerent, Devastation, Religion, Inner, Pony, Left, Imitate, Falling, Domineering, Cigarette, Benevolent, Crafty, Affair, Freak, Alleged, Mice, Wish, Council, Animal, Contamination, Pick, Abnormality, Entity, Carnival, Youth, Press, Jade, Torpedo, Tend, Analyst, Uptown, Call, Far-flung, Useless, Sideways, Drone, Frequent, Hatch, Absurd, Participate, Magenta, Oafish, Werewolf, Roll, Texture, Glove, Dim, Ambiguous, Curvy, Frightening, Companion, Uproot, Ajar",
                         maxRecords,
                         RateLimiterStrategy.perSecond(rate),
                         Types.STRING);
@@ -104,7 +72,7 @@ public class GMKLoadGenerator {
                                                 + gmkUsername
                                                 + "\'"
                                                 + " password=\'"
-                                                + System.getenv("GMK_PASSWORD")))
+                                                + System.getenv("GMK_PASSWORD") + "\';"))
                         .build();
 
         streamSource.sinkTo(sink);

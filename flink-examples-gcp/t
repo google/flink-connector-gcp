@@ -1,0 +1,75 @@
+NAME
+    gcloud container clusters - deploy and teardown Google Kubernetes Engine
+        clusters
+
+SYNOPSIS
+    gcloud container clusters COMMAND
+        [--location=LOCATION | --region=REGION | --zone=ZONE, -z ZONE]
+        [GCLOUD_WIDE_FLAG ...]
+
+DESCRIPTION
+    The gcloud container clusters command group lets you deploy and teardown
+    Google Kubernetes Engine clusters.
+
+    See $ gcloud docker --help for information about deploying docker images to
+    clusters.
+
+FLAGS
+     At most one of these can be specified:
+
+       --location=LOCATION
+          Compute zone or region (e.g. us-central1-a or us-central1) for the
+          cluster.
+
+       --region=REGION
+          Compute region (e.g. us-central1) for the cluster.
+
+       --zone=ZONE, -z ZONE
+          Compute zone (e.g. us-central1-a) for the cluster. Overrides the
+          default compute/zone property value for this command invocation.
+
+GCLOUD WIDE FLAGS
+    These flags are available to all commands: --help.
+
+    Run $ gcloud help for details.
+
+COMMANDS
+    COMMAND is one of the following:
+
+     check-autopilot-compatibility
+        Check autopilot compatibility of a running cluster.
+
+     create
+        Create a cluster for running containers.
+
+     create-auto
+        Create an Autopilot cluster for running containers.
+
+     delete
+        Delete an existing cluster for running containers.
+
+     describe
+        Describe an existing cluster for running containers.
+
+     get-credentials
+        Fetch credentials for a running cluster.
+
+     list
+        List existing clusters for running containers.
+
+     resize
+        Resizes an existing cluster for running containers.
+
+     update
+        Update cluster settings for an existing container cluster.
+
+     upgrade
+        Upgrade the Kubernetes version of an existing container cluster.
+
+NOTES
+    These variants are also available:
+
+        $ gcloud alpha container clusters
+
+        $ gcloud beta container clusters
+
