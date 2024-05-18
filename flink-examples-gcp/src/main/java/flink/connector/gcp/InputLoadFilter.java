@@ -42,7 +42,6 @@ public class InputLoadFilter implements FilterFunction<Long> {
         if (this.pattern.equals("sin")) {
             ratePercentageToPassThrough = Math.sin(Math.toRadians((double) seconds / (double) this.period));
         }
-        System.out.println(pattern);
         double probOfPassing = Math.random();
         return ratePercentageToPassThrough > probOfPassing;
     }
