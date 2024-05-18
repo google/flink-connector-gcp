@@ -36,7 +36,7 @@ under the License.
     <maven.compiler.target>1.7</maven.compiler.target>
     <flink.version>1.19.0</flink.version>
     <kafka.connector.version>3.1-SNAPSHOT</kafka.connector.version>
-    <flink-connector-bigquery.version>0.2-SNAPSHOT</flink-connector-bigquery.version>
+    <flink-connector-bigquery.version>0.2.0</flink-connector-bigquery.version>
   </properties>
 
       <repositories>
@@ -59,7 +59,6 @@ under the License.
     <dependency>
         <groupId>com.google.cloud.flink</groupId>
         <artifactId>flink-1.17-connector-bigquery</artifactId>
-        <!-- This connector has yet to be released and, therefore, this dependency requires a locally built version. -->
         <version>${flink-connector-bigquery.version}</version>
     </dependency>
     <dependency>

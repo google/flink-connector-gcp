@@ -16,7 +16,7 @@ spec:
   serviceAccount: flink
   jobManager:
     resource:
-      memory: "2048m"
+      memory: "4096m"
       cpu: 1
     podTemplate:
       apiVersion: v1
@@ -35,7 +35,7 @@ spec:
                   key: password
   taskManager:
     resource:
-      memory: "2048m"
+      memory: "4096m"
       cpu: 1
   job:
     entryClass: flink.connector.gcp.GMKLoadGenerator
@@ -43,6 +43,8 @@ spec:
     # Replace these with your values:
     args: ["--brokers", "bootstrap.<gmk-cluster-name>.us-central1.managedkafka-<env>.<project-name>.cloud-staging.goog:9092",
           "--gmk-username", "<service-account-name>@<project-name>.iam.gserviceaccount.com",
-          "--kafka-topic", "my-topic"]
+          "--kafka-topic", "my-topic",
+          "--messageSizeKB", "10",
+          "--messagesPerSecond", "1000"]
     parallelism: 10
     upgradeMode: stateless

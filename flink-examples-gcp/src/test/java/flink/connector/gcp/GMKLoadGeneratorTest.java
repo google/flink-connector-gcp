@@ -32,6 +32,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Testing data generation logic. */
 public class GMKLoadGeneratorTest {
@@ -43,19 +44,19 @@ public class GMKLoadGeneratorTest {
                     .build());
 
     // create a testing sink
-    private static class CollectSink implements SinkFunction<String> {
+    private static class CollectSink implements SinkFunction<Long> {
 
         // must be static
-        public static final List<String> VALUES = Collections.synchronizedList(new ArrayList<>());
+        public static final List<Long> VALUES = Collections.synchronizedList(new ArrayList<>());
 
         @Override
-        public void invoke(String value, SinkFunction.Context context) throws Exception {
+        public void invoke(Long value, SinkFunction.Context context) throws Exception {
             VALUES.add(value);
         }
     }
 
     @Test
-    public void testGeneratorPipeline() throws Exception {
+    public void testSinGenerator() throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
         // configure your test environment
@@ -64,16 +65,35 @@ public class GMKLoadGeneratorTest {
         CollectSink.VALUES.clear();
 
         // create a stream of custom elements and apply transformations
-        env.fromData("word1", "word2", "word2")
-                .filter(new SineWaveFilter(10))
+        env.fromData(1L, 2L, 3L)
+                .filter(new InputLoadFilter(7200, "sin"))
                 .addSink(new CollectSink());
 
         // execute
         env.execute();
 
-        // verify your results
-        System.out.println("test result: ");
-        System.out.println(CollectSink.VALUES.toString());
-        assertFalse(CollectSink.VALUES.containsAll(Arrays.asList("word1", "word2", "word2")));
+        // test
+        assertFalse(CollectSink.VALUES.containsAll(Arrays.asList(1L, 2L, 3L)));
+    }
+
+    @Test
+    public void testStaticGenerator() throws Exception {
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+
+        // configure your test environment
+        env.setParallelism(2);
+        // values are collected in a static variable
+        CollectSink.VALUES.clear();
+
+        // create a stream of custom elements and apply transformations
+        env.fromData(1L, 2L, 3L)
+                .filter(new InputLoadFilter(7200, "static"))
+                .addSink(new CollectSink());
+
+        // execute
+        env.execute();
+
+        // test
+        assertTrue(CollectSink.VALUES.containsAll(Arrays.asList(1L, 2L, 3L)));
     }
 }

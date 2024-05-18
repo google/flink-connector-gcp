@@ -11,11 +11,11 @@ spec:
   serviceAccount: flink
   jobManager:
     resource:
-      memory: "8192m"
+      memory: "4096m"
       cpu: 1
   taskManager:
     resource:
-      memory: "8192m"
+      memory: "4096m"
       cpu: 1
   job:
     entryClass: flink.connector.gcp.GCSLoadGenerator
@@ -23,7 +23,7 @@ spec:
     # Replace with your own values
     args: [ 
       "--output", "gs://<your-source-bucket>",
-      "--kbload", "1000",
-      "--ratePerSecond", "1000" ] 
-    parallelism: 100
+      "--messageSizeKB", "10",
+      "--messagesPerSec", "1000" ] 
+    parallelism: 10
     upgradeMode: stateless

@@ -16,30 +16,36 @@
  * limitations under the License.
  */
 
- package flink.connector.gcp;
+package flink.connector.gcp;
 
 import org.apache.flink.api.common.functions.FilterFunction;
 
 import java.time.Instant;
 
-/** Filter to convert static load to sine wave load. */
-public class SineWaveFilter implements FilterFunction<String> {
+/** Filter to convert static load to different load patterns. */
+public class InputLoadFilter implements FilterFunction<Long> {
+    private String pattern = "static"; // sin, static.
     private long period = 3600; // load period for each sine wave in seconds
     private long currentTimeSeconds;
 
-    public SineWaveFilter(long period) {
+    public InputLoadFilter(long period, String pattern) {
         this.period = period;
+        this.pattern = pattern;
         this.currentTimeSeconds = Instant.now().getEpochSecond();
     }
 
     @Override
-    public boolean filter(String value) throws Exception {
+    public boolean filter(Long value) throws Exception {
         // Started from a roughly const value.
         long seconds = Instant.now().getEpochSecond() - currentTimeSeconds;
-        // Compute sin value.
-        double sinRatePercentageToPassThrough =
-            Math.sin(Math.toRadians((double) seconds / (double) this.period));
+        double ratePercentageToPassThrough = 1;
+        if (this.pattern.equals("sin")) {
+            ratePercentageToPassThrough = Math.sin(Math.toRadians((double) seconds / (double) this.period));
+        }
+        System.out.println(pattern);
         double probOfPassing = Math.random();
-        return sinRatePercentageToPassThrough > probOfPassing;
+        return ratePercentageToPassThrough > probOfPassing;
     }
 }
+
+// @AutoBuilder(ofClass = InputLoadFilter.class)
