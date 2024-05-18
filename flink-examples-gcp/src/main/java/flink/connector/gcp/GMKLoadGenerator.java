@@ -28,9 +28,10 @@ import org.apache.flink.connector.datagen.source.DataGeneratorSource;
 import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchema;
 import org.apache.flink.connector.kafka.sink.KafkaSink;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
+import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
-/** Pipeline code for generating load to GCS. */
+/** Pipeline code for generating load to Managed Kafka. */
 public class GMKLoadGenerator {
     public static void main(String[] args) throws Exception {
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
@@ -40,6 +41,7 @@ public class GMKLoadGenerator {
         String kafkaTopic = parameters.get("kafka-topic", "my-topic");
         double rate = parameters.getDouble("rate", 1_000_000_000);
         Long maxRecords = parameters.getLong("max-records", 1_000_000_000L);
+        Long loadPeriod = parameters.getLong("load-period-in-second", 3600);
 
         env.getConfig().setGlobalJobParameters(parameters);
 
@@ -87,6 +89,9 @@ public class GMKLoadGenerator {
         DataStreamSource<String> streamSource =
                 env.fromSource(generatorSource, WatermarkStrategy.noWatermarks(), "Data Generator");
 
+        // Apply the sine wave filter.
+        SingleOutputStreamOperator<String> filteredStream = streamSource.filter(new SineWaveFilter(loadPeriod));
+
         KafkaSink<String> sink =
                 KafkaSink.<String>builder()
                         .setBootstrapServers(brokers)
@@ -109,7 +114,7 @@ public class GMKLoadGenerator {
                                                 + System.getenv("GMK_PASSWORD")))
                         .build();
 
-        streamSource.sinkTo(sink);
+        filteredStream.sinkTo(sink);
 
         // Execute
         env.execute();
