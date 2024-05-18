@@ -85,7 +85,7 @@ public class GMKLoadGenerator {
         DataStreamSource<Long> generator =
                 env.fromSource(generatorSource, WatermarkStrategy.noWatermarks(), "Data Generator");
         // Apply the input load filter.
-        SingleOutputStreamOperator<Long> filteredGenerator = generator.filter(new InputLoadFilter(loadPeriod, pattern));
+        SingleOutputStreamOperator<Long> filteredGenerator = generator.filter(new InputLoadFilter(loadPeriod, pattern)).uid(pattern.concat(" filter"));
         filteredGenerator.flatMap(new WordLoadGenerator(load * KB)).sinkTo(sink).uid("writer");
         // Execute
         env.execute();
