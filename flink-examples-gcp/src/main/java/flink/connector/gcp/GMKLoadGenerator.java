@@ -47,7 +47,7 @@ public class GMKLoadGenerator {
         int rate = parameters.getInt("messagesPerSecond", 1000);
         Long maxRecords = parameters.getLong("max-records", 1_000_000_000L);
         Long loadPeriod = parameters.getLong("load-period-in-second", 3600);
-        String pattern = parameters.get("static");
+        String pattern = parameters.get("pattern", "static");
 
         env.getConfig().setGlobalJobParameters(parameters);
 
