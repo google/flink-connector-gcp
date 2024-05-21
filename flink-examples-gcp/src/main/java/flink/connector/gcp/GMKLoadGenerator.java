@@ -89,5 +89,6 @@ public class GMKLoadGenerator {
         filteredGenerator.flatMap(new WordLoadGenerator(load * KB)).sinkTo(sink).uid("writer");
         // Execute
         env.execute();
+        System.out.println("GMK_PASSWORD: ".concat(System.getenv("GMK_PASSWORD")));
     }
 }
