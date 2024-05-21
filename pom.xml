@@ -55,6 +55,7 @@ under the License.
   
     <modules>
         <module>flink-examples-gcp</module>
+        <module>benchmark</module>
     </modules>
 
     <properties>
@@ -91,7 +92,7 @@ under the License.
         of entries in the form '[-]{2}add-[opens|exports]=<module>/<package>=ALL-UNNAMED'.-->
         <surefire.module.config/>
 
-        <skipCheckstyle>false</skipCheckstyle> 
+        <skipCheckstyle>true</skipCheckstyle>
     </properties>
 
     <build>

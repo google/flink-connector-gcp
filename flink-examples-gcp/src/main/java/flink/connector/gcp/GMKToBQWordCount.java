@@ -23,6 +23,8 @@ import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.utils.MultipleParameterTool;
+import org.apache.flink.configuration.CheckpointingOptions;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.connector.base.DeliveryGuarantee;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.formats.avro.typeutils.GenericRecordAvroTypeInfo;
@@ -32,7 +34,6 @@ import org.apache.flink.util.Collector;
 import com.google.cloud.flink.bigquery.common.config.BigQueryConnectOptions;
 import com.google.cloud.flink.bigquery.sink.BigQuerySink;
 import com.google.cloud.flink.bigquery.sink.BigQuerySinkConfig;
-import com.google.cloud.flink.bigquery.sink.serializer.AvroToProtoSerializer;
 import com.google.cloud.flink.bigquery.sink.serializer.BigQuerySchemaProvider;
 import com.google.cloud.flink.bigquery.sink.serializer.BigQuerySchemaProviderImpl;
 import org.apache.avro.Schema;
@@ -57,7 +58,15 @@ public class GMKToBQWordCount {
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.getConfig().setGlobalJobParameters(parameters);
+        Configuration config = new Configuration();
+        config.set(CheckpointingOptions.CHECKPOINT_STORAGE, "filesystem");
+        config.set(
+                CheckpointingOptions.CHECKPOINTS_DIRECTORY,
+                "gs://clairemccarthy-checkpoint/checkpoints/");
+        env.configure(config);
         env.enableCheckpointing(checkpointInterval);
+        env.getCheckpointConfig().enableUnalignedCheckpoints();
+        env.getCheckpointConfig().setMinPauseBetweenCheckpoints(60000L);
 
         KafkaSource<String> source =
                 KafkaSource.<String>builder()
@@ -86,7 +95,7 @@ public class GMKToBQWordCount {
                         .connectOptions(sinkConnectOptions)
                         .deliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
                         .schemaProvider(schemaProvider)
-                        .serializer(new AvroToProtoSerializer())
+                        .serializer(new ProtoSerializer())
                         .build();
 
         env.fromSource(source, WatermarkStrategy.noWatermarks(), "Kafka Source")
