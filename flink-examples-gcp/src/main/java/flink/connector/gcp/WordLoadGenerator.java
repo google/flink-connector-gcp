@@ -21,22 +21,33 @@ package flink.connector.gcp;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.util.Collector;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 
 /** Creates load from a set list of words. */
 public class WordLoadGenerator implements FlatMapFunction<Long, String> {
     private int load;
     private byte[] wordStr;
-    static Path path = Paths.get("words.txt");
 
     public WordLoadGenerator(int l) {
         load = l;
-        try {
-            wordStr = Files.readAllBytes(path);
-        } catch (Exception e) {
-            System.out.println("Could not read words.txt file");
+        String resourcePath = "words.txt"; // No leading slash
+
+        // Using the ClassLoader to load the resource
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        System.out.println(System.getProperty("java.class.path"));
+        try (InputStream inputStream = classLoader.getResourceAsStream(resourcePath)) {
+            if (inputStream == null) {
+                throw new IOException("Resource not found: " + resourcePath);
+            }
+
+            // Read the InputStream into a byte array
+            wordStr = inputStream.readAllBytes();
+
+        } catch (IOException e) {
+            System.out.println(new File("").getAbsolutePath());
+            System.out.println("Could not read words.txt file, using the head of the file instead");
             wordStr =
                     ("Release, Ornamental, Cosmetic, Cement, Mud, Cleave, Zephyr, "
                                     + "Unusual, Receive, Atmosphere, Corrupt, Taboo, Cousin, Robotic, "
@@ -45,6 +56,7 @@ public class WordLoadGenerator implements FlatMapFunction<Long, String> {
                                     + "Vanish, Freezing, Soar, Old-fashioned, Blankly, Closed, Parade, "
                                     + "Prophetic, Sponge, Moldy")
                             .getBytes();
+            e.printStackTrace();
         }
     }
 
