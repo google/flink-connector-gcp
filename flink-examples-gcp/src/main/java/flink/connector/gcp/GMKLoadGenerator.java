@@ -61,6 +61,7 @@ public class GMKLoadGenerator {
                         maxRecords,
                         RateLimiterStrategy.perSecond(rate),
                         Types.LONG);
+        java.util.Base64.Encoder encoder = java.util.Base64.getEncoder();
 
         KafkaSink<String> sink =
                 KafkaSink.<String>builder()
@@ -80,10 +81,9 @@ public class GMKLoadGenerator {
                                         + gmkUsername
                                         + "\'"
                                         + " password=\'"
-                                        + System.getenv("GMK_PASSWORD")
+                                        + encoder.encodeToString(System.getenv("GMK_PASSWORD").getBytes("UTF-8"))
                                         + "\';")
                         .build();
-
         DataStreamSource<Long> generator =
                 env.fromSource(generatorSource, WatermarkStrategy.noWatermarks(), "Data Generator");
         // Apply the input load filter.
@@ -91,6 +91,5 @@ public class GMKLoadGenerator {
         filteredGenerator.flatMap(new WordLoadGenerator(load * KB)).sinkTo(sink).uid("writer");
         // Execute
         env.execute();
-        System.out.println("GMK_PASSWORD: ".concat(System.getenv("GMK_PASSWORD")));
     }
 }
