@@ -54,10 +54,13 @@ public class GMKToBQWordCount {
         String bqWordFieldName = parameters.get("bq-word-field-name", "word");
         String bqCountFieldName = parameters.get("bq-count-field-name", "countStr");
         Long checkpointInterval = parameters.getLong("checkpoint-interval", 60000L);
+        String jobName = parameters.get("job-name", "GMK-BQ-word-count");
+        System.out.println("Starting job ".concat(jobName));
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.getConfig().setGlobalJobParameters(parameters);
         env.enableCheckpointing(checkpointInterval);
+        java.util.Base64.Encoder encoder = java.util.Base64.getEncoder();
 
         KafkaSource<String> source =
                 KafkaSource.<String>builder()
@@ -72,7 +75,7 @@ public class GMKToBQWordCount {
                                 "sasl.jaas.config",
                                 String.format(
                                         "org.apache.kafka.common.security.plain.PlainLoginModule required username=\'%s\' password=\"%s\";",
-                                        gmkUsername, System.getenv("GMK_PASSWORD")))
+                                        gmkUsername, encoder.encodeToString(System.getenv("GMK_PASSWORD").getBytes("UTF-8"))))
                         .build();
         BigQueryConnectOptions sinkConnectOptions =
                 BigQueryConnectOptions.builder()
