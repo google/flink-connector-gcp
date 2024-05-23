@@ -29,9 +29,10 @@ import org.apache.flink.connector.datagen.source.GeneratorFunction;
 import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchema;
 import org.apache.flink.connector.kafka.sink.KafkaSink;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
+import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
-/** Pipeline code for generating load to GCS. */
+/** Pipeline code for generating load to Managed Kafka. */
 public class GMKLoadGenerator {
     private static final int KB = 1024;
     private static final int MB = 1024 * 1024;
@@ -45,6 +46,10 @@ public class GMKLoadGenerator {
         int load = parameters.getInt("messageSizeKB", 10);
         int rate = parameters.getInt("messagesPerSecond", 1000);
         Long maxRecords = parameters.getLong("max-records", 1_000_000_000L);
+        Long loadPeriod = parameters.getLong("load-period-in-second", 3600);
+        String pattern = parameters.get("pattern", "static");
+        String jobName = parameters.get("job-name", "GMKLoadGenerator");
+        System.out.println("Starting job ".concat(jobName));
 
         env.getConfig().setGlobalJobParameters(parameters);
 
@@ -56,6 +61,7 @@ public class GMKLoadGenerator {
                         maxRecords,
                         RateLimiterStrategy.perSecond(rate),
                         Types.LONG);
+        java.util.Base64.Encoder encoder = java.util.Base64.getEncoder();
 
         KafkaSink<String> sink =
                 KafkaSink.<String>builder()
@@ -75,13 +81,14 @@ public class GMKLoadGenerator {
                                         + gmkUsername
                                         + "\'"
                                         + " password=\'"
-                                        + System.getenv("GMK_PASSWORD")
+                                        + encoder.encodeToString(System.getenv("GMK_PASSWORD").getBytes("UTF-8"))
                                         + "\';")
                         .build();
-
         DataStreamSource<Long> generator =
                 env.fromSource(generatorSource, WatermarkStrategy.noWatermarks(), "Data Generator");
-        generator.flatMap(new WordLoadGenerator(load * KB)).sinkTo(sink).uid("writer");
+        // Apply the input load filter.
+        SingleOutputStreamOperator<Long> filteredGenerator = generator.filter(new InputLoadFilter(loadPeriod, pattern)).uid(pattern.concat(" filter"));
+        filteredGenerator.flatMap(new WordLoadGenerator(load * KB)).sinkTo(sink).uid("writer");
         // Execute
         env.execute();
     }
