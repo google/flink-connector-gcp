@@ -55,27 +55,6 @@ public class GMKLoadGeneratorTest {
         }
     }
 
-    // @Test
-    // public void testSinGenerator() throws Exception {
-    //     StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-
-    //     // configure your test environment
-    //     env.setParallelism(2);
-    //     // values are collected in a static variable
-    //     CollectSink.VALUES.clear();
-
-    //     // create a stream of custom elements and apply transformations
-    //     env.fromData(1L, 2L, 3L)
-    //             .filter(new InputLoadFilter(7200, "sin"))
-    //             .addSink(new CollectSink());
-
-    //     // execute
-    //     env.execute();
-
-    //     // test
-    //     assertFalse(CollectSink.VALUES.containsAll(Arrays.asList(1L, 2L, 3L)));
-    // }
-
     @Test
     public void testStaticGenerator() throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
