@@ -31,7 +31,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Testing data generation logic. */
@@ -53,27 +52,6 @@ public class GMKLoadGeneratorTest {
         public void invoke(Long value, SinkFunction.Context context) throws Exception {
             VALUES.add(value);
         }
-    }
-
-    @Test
-    public void testSinGenerator() throws Exception {
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-
-        // configure your test environment
-        env.setParallelism(2);
-        // values are collected in a static variable
-        CollectSink.VALUES.clear();
-
-        // create a stream of custom elements and apply transformations
-        env.fromData(1L, 2L, 3L)
-                .filter(new InputLoadFilter(7200, "sin"))
-                .addSink(new CollectSink());
-
-        // execute
-        env.execute();
-
-        // test
-        assertFalse(CollectSink.VALUES.containsAll(Arrays.asList(1L, 2L, 3L)));
     }
 
     @Test

@@ -26,21 +26,19 @@ import java.time.Instant;
 public class InputLoadFilter implements FilterFunction<Long> {
     private String pattern = "static"; // sin, static.
     private long period = 3600; // load period for each sine wave in seconds
-    private long currentTimeSeconds;
 
     public InputLoadFilter(long period, String pattern) {
         this.period = period;
         this.pattern = pattern;
-        this.currentTimeSeconds = Instant.now().getEpochSecond();
     }
 
     @Override
     public boolean filter(Long value) throws Exception {
         // Started from a roughly const value.
-        long seconds = Instant.now().getEpochSecond() - currentTimeSeconds;
+        long seconds = Instant.now().getEpochSecond();
         double ratePercentageToPassThrough = 1;
         if (this.pattern.equals("sin")) {
-            ratePercentageToPassThrough = Math.sin(Math.toRadians((double) seconds / (double) this.period));
+            ratePercentageToPassThrough = 0.5 * Math.sin(2 * Math.PI * seconds / this.period) + 0.5;
         }
         double probOfPassing = Math.random();
         return ratePercentageToPassThrough > probOfPassing;
