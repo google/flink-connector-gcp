@@ -54,8 +54,9 @@ public class GMKToBQWordCount {
         String bqWordFieldName = parameters.get("bq-word-field-name", "word");
         String bqCountFieldName = parameters.get("bq-count-field-name", "countStr");
         Long checkpointInterval = parameters.getLong("checkpoint-interval", 60000L);
-        String jobName = parameters.get("jobName", "GMK-BQ-word-count");
-        System.out.println("Starting job ".concat(jobName));
+        String kafkaGroupId = parameters.get("kafka-group-id", "kafka-source-of-".concat(tableName));
+        String jobName = parameters.get("job-name", "GMK-BQ-word-count");
+        System.out.println("Starting job ".concat(jobName).concat(" with Kafka group id: ".concat(kafkaGroupId)));
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.getConfig().setGlobalJobParameters(parameters);
@@ -66,7 +67,7 @@ public class GMKToBQWordCount {
                 KafkaSource.<String>builder()
                         .setBootstrapServers(brokers)
                         .setTopics(kafkaTopic)
-                        .setGroupId("my-group")
+                        .setGroupId(kafkaGroupId)
                         .setValueOnlyDeserializer(new SimpleStringSchema())
                         .setProperty("partition.discovery.interval.ms", "10000")
                         .setProperty("security.protocol", "SASL_SSL")
