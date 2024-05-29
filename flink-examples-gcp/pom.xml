@@ -119,6 +119,11 @@ under the License.
         <artifactId>flink-avro</artifactId>
         <version>1.13.6</version>
     </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>32.1.3-jre</version>
+    </dependency>
  </dependencies>
 
 
