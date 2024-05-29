@@ -25,6 +25,7 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.utils.MultipleParameterTool;
 import org.apache.flink.connector.base.DeliveryGuarantee;
 import org.apache.flink.connector.kafka.source.KafkaSource;
+import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.formats.avro.typeutils.GenericRecordAvroTypeInfo;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.util.Collector;
@@ -54,8 +55,9 @@ public class GMKToBQWordCount {
         String bqWordFieldName = parameters.get("bq-word-field-name", "word");
         String bqCountFieldName = parameters.get("bq-count-field-name", "countStr");
         Long checkpointInterval = parameters.getLong("checkpoint-interval", 60000L);
-        String jobName = parameters.get("jobName", "GMK-BQ-word-count");
-        System.out.println("Starting job ".concat(jobName));
+        String kafkaGroupId = parameters.get("kafka-group-id", "kafka-source-of-".concat(tableName));
+        String jobName = parameters.get("job-name", "GMK-BQ-word-count");
+        System.out.println("Starting job ".concat(jobName).concat(" with Kafka group id: ".concat(kafkaGroupId)));
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.getConfig().setGlobalJobParameters(parameters);
@@ -66,7 +68,8 @@ public class GMKToBQWordCount {
                 KafkaSource.<String>builder()
                         .setBootstrapServers(brokers)
                         .setTopics(kafkaTopic)
-                        .setGroupId("my-group")
+                        .setGroupId(kafkaGroupId)
+                        .setStartingOffsets(OffsetsInitializer.earliest())
                         .setValueOnlyDeserializer(new SimpleStringSchema())
                         .setProperty("partition.discovery.interval.ms", "10000")
                         .setProperty("security.protocol", "SASL_SSL")
@@ -110,7 +113,7 @@ public class GMKToBQWordCount {
                                 sinkConfig.getSchemaProvider().getAvroSchema()))
                 .sinkTo(BigQuerySink.get(sinkConfig, env));
 
-        env.execute();
+        env.execute(jobName);
     }
 
     /** Splits tokens. */

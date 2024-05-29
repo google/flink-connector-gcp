@@ -20,27 +20,48 @@ package flink.connector.gcp;
 
 import org.apache.flink.api.common.functions.FilterFunction;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.util.Random;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /** Filter to convert static load to different load patterns. */
 public class InputLoadFilter implements FilterFunction<Long> {
+    private static final Logger logger = Logger.getLogger(InputLoadFilter.class.getName());
     private String pattern = "static"; // sin, static.
     private long period = 3600; // load period for each sine wave in seconds
+    private Clock clock; // Clock to generate filtering pattern
+    private Random random; // Random number to make the filtering probably undeterministic for each key.
 
-    public InputLoadFilter(long period, String pattern) {
+    public InputLoadFilter(long period, String pattern, Clock clock, Random random) {
         this.period = period;
         this.pattern = pattern;
+        this.clock = clock;
+        this.random = random;
     }
 
     @Override
     public boolean filter(Long value) throws Exception {
         // Started from a roughly const value.
-        long seconds = Instant.now().getEpochSecond();
+        long seconds = Instant.now(clock).getEpochSecond();
         double ratePercentageToPassThrough = 1;
-        if (this.pattern.equals("sin")) {
-            ratePercentageToPassThrough = 0.5 * Math.sin(2 * Math.PI * seconds / this.period) + 0.5;
+        switch (this.pattern) {
+            case "static":
+                break;
+            case "sin":
+                ratePercentageToPassThrough = 0.5 * Math.sin(2 * Math.PI * seconds / this.period) + 0.5;
+                break;
+            case "rampup":
+                ratePercentageToPassThrough = ((double) (seconds % this.period)) / (double) this.period;
+                break;
+            case "rampdown":
+                ratePercentageToPassThrough = ((double) (this.period - seconds % this.period)) / (double) this.period;
+                break;
+            default:
+                logger.log(Level.WARNING, this.pattern.concat(" pattern is not supported, fallback to static"));
         }
-        double probOfPassing = Math.random();
+        double probOfPassing = random.nextDouble();
         return ratePercentageToPassThrough > probOfPassing;
     }
 }
