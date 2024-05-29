@@ -113,7 +113,7 @@ public class GMKToBQWordCount {
                                 sinkConfig.getSchemaProvider().getAvroSchema()))
                 .sinkTo(BigQuerySink.get(sinkConfig, env));
 
-        env.execute();
+        env.execute(jobName);
     }
 
     /** Splits tokens. */
