@@ -40,7 +40,7 @@ public class WordLoadGenerator implements FlatMapFunction<Long, String> {
             Blob blob = storage.get("gmf-samples", "words.txt");
 
             // Read the InputStream into a byte array
-            wordStr = blob.getContent(null);
+            wordStr = blob.getContent();
 
         } catch (Exception e) {
             System.out.println("Could not read words.txt file, using the head of the file instead");
