@@ -24,8 +24,6 @@ import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.utils.MultipleParameterTool;
 import org.apache.flink.connector.base.DeliveryGuarantee;
-import org.apache.flink.connector.kafka.source.KafkaSource;
-import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.formats.avro.typeutils.GenericRecordAvroTypeInfo;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.util.Collector;
@@ -36,50 +34,40 @@ import com.google.cloud.flink.bigquery.sink.BigQuerySinkConfig;
 import com.google.cloud.flink.bigquery.sink.serializer.AvroToProtoSerializer;
 import com.google.cloud.flink.bigquery.sink.serializer.BigQuerySchemaProvider;
 import com.google.cloud.flink.bigquery.sink.serializer.BigQuerySchemaProviderImpl;
+import com.google.pubsub.flink.PubSubDeserializationSchema;
+import com.google.pubsub.flink.PubSubSource;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericRecordBuilder;
 
-/** Pipeline code for running word count reading from GMK and writing to BQ. */
-public class GMKToBQWordCount {
+/** Pipeline code for running word count reading from PubSub and writing to BQ. */
+public class PubSubToBQWordCount {
     static Schema schema;
 
     public static void main(String[] args) throws Exception {
         final MultipleParameterTool parameters = MultipleParameterTool.fromArgs(args);
-        String brokers = parameters.get("brokers", "localhost:9092");
-        String gmkUsername = parameters.get("gmk-username");
-        String kafkaTopic = parameters.get("kafka-topic", "my-topic");
+        String pubsubSub = parameters.get("pubsub-subscription-name");
         String projectId = parameters.get("project-id");
         String datasetName = parameters.get("dataset-name");
         String tableName = parameters.get("table-name");
         String bqWordFieldName = parameters.get("bq-word-field-name", "word");
         String bqCountFieldName = parameters.get("bq-count-field-name", "countStr");
         Long checkpointInterval = parameters.getLong("checkpoint-interval", 60000L);
-        String kafkaGroupId = parameters.get("kafka-group-id", "kafka-source-of-".concat(tableName));
-        String jobName = parameters.get("job-name", "GMK-BQ-word-count");
-        System.out.println("Starting job ".concat(jobName).concat(" with Kafka group id: ".concat(kafkaGroupId)));
+        String jobName = parameters.get("jobName", "PubSub-BQ-word-count");
+        System.out.println("Starting job ".concat(jobName));
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.getConfig().setGlobalJobParameters(parameters);
         env.enableCheckpointing(checkpointInterval);
-        java.util.Base64.Encoder encoder = java.util.Base64.getEncoder();
 
-        KafkaSource<String> source =
-                KafkaSource.<String>builder()
-                        .setBootstrapServers(brokers)
-                        .setTopics(kafkaTopic)
-                        .setGroupId(kafkaGroupId)
-                        .setStartingOffsets(OffsetsInitializer.earliest())
-                        .setValueOnlyDeserializer(new SimpleStringSchema())
-                        .setProperty("partition.discovery.interval.ms", "10000")
-                        .setProperty("security.protocol", "SASL_SSL")
-                        .setProperty("sasl.mechanism", "PLAIN")
-                        .setProperty(
-                                "sasl.jaas.config",
-                                String.format(
-                                        "org.apache.kafka.common.security.plain.PlainLoginModule required username=\'%s\' password=\"%s\";",
-                                        gmkUsername, encoder.encodeToString(System.getenv("GMK_PASSWORD").getBytes("UTF-8"))))
-                        .build();
+    PubSubSource<String> source =
+        PubSubSource.<String>builder()
+            .setDeserializationSchema(
+                PubSubDeserializationSchema.dataOnly(new SimpleStringSchema()))
+            .setProjectName(projectId)
+            .setSubscriptionName(pubsubSub)
+            .build();
+
         BigQueryConnectOptions sinkConnectOptions =
                 BigQueryConnectOptions.builder()
                         .setProjectId(projectId)
@@ -95,7 +83,7 @@ public class GMKToBQWordCount {
                         .serializer(new AvroToProtoSerializer())
                         .build();
 
-        env.fromSource(source, WatermarkStrategy.noWatermarks(), "Kafka Source")
+        env.fromSource(source, WatermarkStrategy.noWatermarks(), "PubSub Source")
                 .flatMap(new PrepareWC())
                 .keyBy(tuple -> tuple.f0)
                 .sum(1)
@@ -113,7 +101,7 @@ public class GMKToBQWordCount {
                                 sinkConfig.getSchemaProvider().getAvroSchema()))
                 .sinkTo(BigQuerySink.get(sinkConfig, env));
 
-        env.execute(jobName);
+        env.execute();
     }
 
     /** Splits tokens. */

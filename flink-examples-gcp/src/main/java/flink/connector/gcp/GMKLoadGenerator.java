@@ -32,6 +32,9 @@ import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
+import java.time.Clock;
+import java.util.Random;
+
 /** Pipeline code for generating load to Managed Kafka. */
 public class GMKLoadGenerator {
     private static final int KB = 1024;
@@ -48,7 +51,7 @@ public class GMKLoadGenerator {
         Long maxRecords = parameters.getLong("max-records", 1_000_000_000L);
         Long loadPeriod = parameters.getLong("load-period-in-second", 3600);
         String pattern = parameters.get("pattern", "static");
-        String jobName = parameters.get("jobName", "GMKLoadGenerator");
+        String jobName = parameters.get("job-name", "GMKLoadGenerator");
         System.out.println("Starting job ".concat(jobName));
 
         env.getConfig().setGlobalJobParameters(parameters);
@@ -82,14 +85,16 @@ public class GMKLoadGenerator {
                                         + "\'"
                                         + " password=\'"
                                         + encoder.encodeToString(System.getenv("GMK_PASSWORD").getBytes("UTF-8"))
-                                        + "\';")
-                        .build();
-        DataStreamSource<Long> generator =
-                env.fromSource(generatorSource, WatermarkStrategy.noWatermarks(), "Data Generator");
+                                                                        + "\';")
+                                        .build();
+        DataStreamSource<Long> generator = env.fromSource(generatorSource, WatermarkStrategy.noWatermarks(),
+                        "Data Generator");
         // Apply the input load filter.
-        SingleOutputStreamOperator<Long> filteredGenerator = generator.filter(new InputLoadFilter(loadPeriod, pattern)).uid(pattern.concat(" filter"));
+        SingleOutputStreamOperator<Long> filteredGenerator = generator
+                        .filter(new InputLoadFilter(loadPeriod, pattern, Clock.systemDefaultZone(), new Random()))
+                        .uid(pattern.concat(" filter")).name("filtered load");
         filteredGenerator.flatMap(new WordLoadGenerator(load * KB)).sinkTo(sink).uid("writer");
         // Execute
-        env.execute();
-    }
+        env.execute(jobName);
+}
 }

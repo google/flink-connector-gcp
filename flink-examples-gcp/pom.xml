@@ -54,8 +54,32 @@ under the License.
 			<url>file:///usr/local/google/home/${USER}/.m2/repository</url>
 		</repository>
 	</repositories>
+<dependencyManagement>
+  <dependencies>
+    <dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>libraries-bom</artifactId>
+      <version>26.39.0</version>
+      <type>pom</type>
+      <scope>import</scope>
+    </dependency>
+  </dependencies>
+</dependencyManagement>
 
  <dependencies>
+    <dependency>
+        <groupId>com.google.cloud</groupId>
+        <artifactId>google-cloud-storage</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>com.google.pubsub.flink</groupId>
+        <artifactId>flink-connector-gcp-pubsub</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+        <groupId>com.google.cloud</groupId>
+        <artifactId>google-cloud-storage-control</artifactId>
+    </dependency>
     <dependency>
         <groupId>com.google.cloud.flink</groupId>
         <artifactId>flink-1.17-connector-bigquery</artifactId>
@@ -176,6 +200,7 @@ under the License.
                                 <include>org.checkerframework:*</include>
                                 <include>io.dropwizard.metrics:*</include>
                                 <include>io.grpc:*</include>
+                                <include>io.netty:*</include>
                                 <include>io.opencensus:*</include>
                                 <include>io.perfmark:*</include>                                <include>flink.connector.gcp:*</include>
                                 <include>org.apache.flink:flink-connector-kafka:*</include>
