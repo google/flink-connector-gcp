@@ -36,7 +36,7 @@ under the License.
     <maven.compiler.target>1.7</maven.compiler.target>
     <flink.version>1.19.0</flink.version>
     <kafka.connector.version>3.1-SNAPSHOT</kafka.connector.version>
-    <flink-connector-bigquery.version>0.2-SNAPSHOT</flink-connector-bigquery.version>
+    <flink-connector-bigquery.version>0.2.0</flink-connector-bigquery.version>
   </properties>
 
       <repositories>
@@ -59,7 +59,6 @@ under the License.
     <dependency>
         <groupId>com.google.cloud.flink</groupId>
         <artifactId>flink-1.17-connector-bigquery</artifactId>
-        <!-- This connector has yet to be released and, therefore, this dependency requires a locally built version. -->
         <version>${flink-connector-bigquery.version}</version>
     </dependency>
     <dependency>
@@ -89,6 +88,32 @@ under the License.
         <artifactId>flink-connector-datagen</artifactId>
         <version>${flink.version}</version>
     </dependency>
+    <dependency>
+        <groupId>org.apache.flink</groupId>
+        <artifactId>flink-table-api-java-uber</artifactId>
+        <version>${flink.version}</version>
+        <scope>provided</scope>
+      </dependency>
+   
+      <dependency>
+        <groupId>org.apache.flink</groupId>
+        <artifactId>flink-table-runtime</artifactId>
+        <version>${flink.version}</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.flink</groupId>
+        <artifactId>flink-table-planner-loader</artifactId>
+        <version>${flink.version}</version>
+        <scope>provided</scope>
+      </dependency>
+        <!-- https://mvnrepository.com/artifact/org.apache.flink/flink-csv -->
+        <!-- <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-csv</artifactId>
+            <version>${flink.version}</version>
+            <scope>compile</scope>
+        </dependency> -->
     <!-- Client Dependency -->
     <dependency>
         <groupId>org.apache.kafka</groupId>
@@ -133,8 +158,9 @@ under the License.
                         </resources>
                         <transformers>
                             <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                <mainClass>flink.connector.gcp.GMKLoadGenerator</mainClass>
+                                <mainClass>flink.connector.gcp.GCStoGCSTableApi</mainClass>
                             </transformer>
+                            <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                         </transformers>
                         <artifactSet>
                             <includes>
@@ -154,11 +180,15 @@ under the License.
                                 <include>io.dropwizard.metrics:*</include>
                                 <include>io.grpc:*</include>
                                 <include>io.opencensus:*</include>
-                                <include>io.perfmark:*</include>                                <include>flink.connector.gcp:*</include>
+                                <include>io.perfmark:*</include>                               
+                                <include>flink.connector.gcp:*</include>
                                 <include>org.apache.flink:flink-connector-kafka:*</include>
+                                <include>org.apache.flink:table-api:*</include>
+                                <!-- <include>org.apache.flink:table-api:factories:*</include> -->
                                 <include>org.apache.kafka:kafka-clients:*</include>
                                 <include>org.apache.flink:flink-connector-datagen:*</include>
                                 <include>org.apache.flink:flink-avro:*</include>
+                                <include>org.apache.flink:flink-csv:*</include>
                                 <include>com.google.*:*</include>
                                 <include>org.apache.avro:*</include>
                             </includes>
@@ -170,7 +200,11 @@ under the License.
                                     <include>flink/connector/gcp/**</include>
                                     <include>org/apache/flink/flink-connector-kafka/**</include>
                                     <include>org/apache/flink/flink-avro/**</include>
+                                    <include>org/apache/flink/flink-csv/**</include>
+                                    <include>org/apache/flink/table-api/**</include>
+                                    <include>org/apache/flink/table-api/factories/**</include>
                                     <include>org/apache/kafka/kafka-clients/**</include>
+                                    <!-- <include>org/apache/flink/table/factories/BulkWriterFormatFactory/**</include> -->
                                     <include>org/apache/flink/connector/datagen/source/DataGeneratorSource/**</include>
                                 </includes>
                             </filter>
