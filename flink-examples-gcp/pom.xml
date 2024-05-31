@@ -195,6 +195,7 @@ under the License.
                                 <include>org.checkerframework:*</include>
                                 <include>io.dropwizard.metrics:*</include>
                                 <include>io.grpc:*</include>
+                                <include>io.netty:*</include>
                                 <include>io.opencensus:*</include>
                                 <include>io.perfmark:*</include>                                <include>flink.connector.gcp:*</include>
                                 <include>org.apache.flink:flink-connector-kafka:*</include>

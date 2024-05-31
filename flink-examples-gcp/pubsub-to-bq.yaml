@@ -1,0 +1,28 @@
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkDeployment
+metadata:
+  name: pubsub-to-bq-wordcount
+spec:
+  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/flink-examples-gcp:latest
+  flinkVersion: v1_19
+  flinkConfiguration:
+    taskmanager.numberOfTaskSlots: "1"
+  serviceAccount: flink
+  jobManager:
+    resource:
+      memory: "2048m"
+      cpu: 1
+  taskManager:
+    resource:
+      memory: "2048m"
+      cpu: 1
+  job:
+    entryClass: flink.connector.gcp.PubSubToBQWordCount
+    jarURI: local:///opt/flink/usrlib/gmf-examples.jar
+    # Replace these with your values:
+    args: ["--pubsub-subscription", "<subscription-name>",
+          "--project-id", "<project-name>",
+          "--dataset-name", "<dataset-name>",
+          "--table-name", "<table-name>"]
+    parallelism: 5
+    upgradeMode: stateless
