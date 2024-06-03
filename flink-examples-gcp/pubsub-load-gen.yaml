@@ -23,7 +23,7 @@ spec:
     # Replace with your own values
     args: [ 
       "--output", "<topic-name>",
-      "--projectName", "<project-name>,
+      "--projectName", "<project-name>",
       "--messageSizeKB", "10",
       "--messagesPerSec", "1000" ] 
     parallelism: 10
