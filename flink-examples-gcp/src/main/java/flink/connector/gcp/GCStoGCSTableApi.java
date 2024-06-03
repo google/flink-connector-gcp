@@ -19,83 +19,107 @@
 package flink.connector.gcp;
 
 import org.apache.flink.api.java.utils.ParameterTool;
+import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.StateBackendOptions;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.annotation.DataTypeHint;
 import org.apache.flink.table.annotation.FunctionHint;
 import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.api.EnvironmentSettings;
+import org.apache.flink.table.api.FormatDescriptor;
 import org.apache.flink.table.api.Schema;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableDescriptor;
-import org.apache.flink.table.api.TableEnvironment;
+import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.table.functions.TableFunction;
 import org.apache.flink.types.Row;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.time.Duration;
+
 import static org.apache.flink.table.api.Expressions.$;
-// import static org.apache.flink.table.api.Expressions.call;
+import static org.apache.flink.table.api.Expressions.call;
+
 
 /** GCS to GCS Wordcount using TableAPI. */
 public class GCStoGCSTableApi {
+
+    private static final Logger LOG = LoggerFactory.getLogger(GCStoGCSTableApi.class);
+
     public static void main(String[] args) throws Exception {
-        Configuration config = new Configuration();
-        config.set(StateBackendOptions.STATE_BACKEND, "hashmap");
         ParameterTool params = ParameterTool.fromArgs(args);
         String inputPath = params.get("input");
         String outputPath = params.get("output");
+        Long checkpointInterval = params.getLong("checkpoint-interval", 60000L);
+        Integer sinkMaxFileSizeMB = params.getInt("max-file-size-mb", 1);
+        String checkpointing = params.get("checkpoint");
+
+        Configuration config = new Configuration();
+        config.set(StateBackendOptions.STATE_BACKEND, "hashmap");
+        config.set(CheckpointingOptions.CHECKPOINT_STORAGE, "filesystem");
+        if (checkpointing != null) {
+            config.set(CheckpointingOptions.CHECKPOINTS_DIRECTORY, checkpointing);
+        }
+
         EnvironmentSettings settings = EnvironmentSettings
                 .newInstance()
-                .inBatchMode()
-                // .inStreamingMode()
+                .inStreamingMode()
                 .withConfiguration(config)
                 .build();
 
-        TableEnvironment tableEnv = TableEnvironment.create(settings);
+        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        env.getConfig().setGlobalJobParameters(params);
+        env.enableCheckpointing(checkpointInterval);
+        env.getCheckpointConfig().enableUnalignedCheckpoints();
+        env.getCheckpointConfig().setAlignedCheckpointTimeout(Duration.ofMillis(10000L));
+        env.getCheckpointConfig().setMaxConcurrentCheckpoints(1);
+        env.getCheckpointConfig().setMinPauseBetweenCheckpoints(10000L);
+        env.getCheckpointConfig().setCheckpointTimeout(600000L);
+        env.getCheckpointConfig().setTolerableCheckpointFailureNumber(Integer.MAX_VALUE);
+        env.getConfig().setUseSnapshotCompression(true);
+
+        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(env, settings);
+
         final Schema schemaInput = Schema.newBuilder()
-                // .column("text", DataTypes.STRING())
-                .column("name", DataTypes.STRING())
-                .column("surname", DataTypes.STRING())
+                .column("text", DataTypes.STRING())
                 .build();
 
-        // final Schema schemaOutput = Schema.newBuilder()
-        //         .column("word", DataTypes.STRING())
-        //         .column("counted", DataTypes.INT())
-        //         .build();
+        final Schema schemaOutput = Schema.newBuilder()
+                .column("word", DataTypes.STRING())
+                .build();
 
         tableEnv.createTemporaryTable("words",
                 TableDescriptor
                         .forConnector("filesystem")
                         .schema(schemaInput)
-                        // .option("path", inputPath)
-                        .option("path", "file://opt/flink/usrlib/csv.csv")
-                        // .option("path", "gs://apache-beam-samples/nasa_jpl_asteroid/sample_1000.csv")
-                        // .option("source.monitor-interval", "30s") // Check for new files every minute
-                        .format("csv")
-                        // .format(FormatDescriptor.forFormat("csv")
-                            // .option("header", "false")
-                            // .option("field-delimiter", "|")
-                            // .build())
+                        .option("path", inputPath)
+                        .option("source.monitor-interval", "30s") // Check for new files every minute
+                        .format(FormatDescriptor.forFormat("csv")
+                            .option("header", "false")
+                            .option("field-delimiter", "|")
+                            .build())
                         .build());
 
-        // tableEnv.createTemporaryTable("wordcount",
-        //         TableDescriptor
-        //                 .forConnector("filesystem")
-        //                 .schema(schemaOutput)
-        //                 .option("path", outputPath)
-        //                 .format(FormatDescriptor.forFormat("csv").build())
-        //                 .build());
+        tableEnv.createTemporaryTable("wordcount",
+                TableDescriptor
+                        .forConnector("filesystem")
+                        .schema(schemaOutput)
+                        .option("path", outputPath)
+                        .option("auto-compaction", "true")
+                        .option("sink.rolling-policy.rollover-interval", "30s")
+                        .option("compaction.file-size", sinkMaxFileSizeMB + "MB")
+                        .format(FormatDescriptor.forFormat("csv").build())
+                        .build());
 
         tableEnv.createTemporarySystemFunction("split", SplitWords.class);
 
-        // Table result = tableEnv.from("words")
-        //     .flatMap(call("split", $("text"))).as("word")
-        //     .groupBy($("word"))
-        //     .select($("word"), $("word").count().as("counted"));
+        Table result = tableEnv.from("words")
+            .flatMap(call("split", $("text"))).as("word");
 
-        Table result = tableEnv.from("words").select($("*"));
-
-        result.execute();
-        // result.executeInsert("wordcount");
+        result.executeInsert("wordcount").print();
     }
 
     /** Split words. */
