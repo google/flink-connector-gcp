@@ -117,7 +117,6 @@ public class GCStoGCSUnboundedWC {
         readUnbounded
                 .flatMap(new PrepareWC())
                 .keyBy(tuple -> tuple.f0)
-                // .window(TumblingProcessingTimeWindows.of(Duration.ofSeconds(30)))
                 .sum(1)
                 .map(kv -> String.format("Word: %s Count: %s", kv.f0, kv.f1))
                 .sinkTo(sink)
