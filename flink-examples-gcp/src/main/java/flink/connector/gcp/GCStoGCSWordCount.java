@@ -91,7 +91,7 @@ public class GCStoGCSWordCount {
 
         @Override
         public void flatMap(String value, Collector<Tuple2<String, Integer>> out) {
-            for (String split : value.split("[^\\p{L}]+")) {
+            for (String split : value.split(" ")) {
                 if (!split.equals(",") && !split.isEmpty()) {
                     out.collect(new Tuple2<>(split.toLowerCase(), 1));
                 }
