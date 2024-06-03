@@ -35,18 +35,17 @@ import org.apache.flink.connector.file.sink.compactor.RecordWiseFileCompactor;
 import org.apache.flink.connector.file.sink.compactor.SimpleStringDecoder;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
+import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.filesystem.OutputFileConfig;
 import org.apache.flink.streaming.api.functions.sink.filesystem.rollingpolicies.DefaultRollingPolicy;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import java.time.Clock;
 import java.time.Duration;
+import java.util.Random;
 
 /** Creates load with pseudo random bytes and sends to the output GCS bucket. */
 public class GCSLoadGenerator {
-    private static final Logger LOG = LoggerFactory.getLogger(GCSLoadGenerator.class);
     private static final int KB = 1024;
     private static final int MB = 1024 * 1024;
 
@@ -60,7 +59,9 @@ public class GCSLoadGenerator {
         String outputPath = parameters.get("output", "gs://source/");
         int load = parameters.getInt("messageSizeKB", 10);
         int rate = parameters.getInt("messagesPerSecond", 1000);
-        System.out.println(String.format("Message load: %d; Rate Per Sec: %d", load, rate));
+        Long loadPeriod = parameters.getLong("load-period-in-second", 3600);
+        String pattern = parameters.get("pattern", "static");
+        System.out.println(String.format("Message load: %d; Rate Per Sec: %d, Load pattern: %s, Load period: %d", load, rate, pattern, loadPeriod));
 
         // Add checkpointing, this is needed for files to leave the "in progress state"
         Configuration config = new Configuration();
@@ -101,7 +102,9 @@ public class GCSLoadGenerator {
         DataStreamSource<Long> generator =
                 env.fromSource(generatorSource, WatermarkStrategy.noWatermarks(), "Data Generator");
 
-        generator.flatMap(new WordLoadGenerator(load * KB)).sinkTo(sink).uid("writer");
+        // Apply the input load filter.
+        SingleOutputStreamOperator<Long> filteredGenerator = generator.filter(new InputLoadFilter(loadPeriod, pattern, Clock.systemDefaultZone(), new Random())).uid(pattern.concat(" filter"));
+        filteredGenerator.flatMap(new WordLoadGenerator(load * KB)).sinkTo(sink).uid("writer");
 
         env.execute("Write to Text Unbounded");
     }
