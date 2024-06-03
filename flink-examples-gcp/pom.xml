@@ -107,13 +107,6 @@ under the License.
         <version>${flink.version}</version>
         <scope>provided</scope>
       </dependency>
-        <!-- https://mvnrepository.com/artifact/org.apache.flink/flink-csv -->
-        <!-- <dependency>
-            <groupId>org.apache.flink</groupId>
-            <artifactId>flink-csv</artifactId>
-            <version>${flink.version}</version>
-            <scope>compile</scope>
-        </dependency> -->
     <!-- Client Dependency -->
     <dependency>
         <groupId>org.apache.kafka</groupId>
@@ -178,12 +171,8 @@ under the License.
                                 <include>io.perfmark:*</include>                               
                                 <include>flink.connector.gcp:*</include>
                                 <include>org.apache.flink:flink-connector-kafka:*</include>
-                                <!-- <include>org.apache.flink:table-api:*</include> -->
-                                <!-- <include>org.apache.flink:table-api:factories:*</include> -->
                                 <include>org.apache.kafka:kafka-clients:*</include>
                                 <include>org.apache.flink:flink-connector-datagen:*</include>
-                                <!-- <include>org.apache.flink:flink-avro:*</include>
-                                <include>org.apache.flink:flink-csv:*</include> -->
                                 <include>com.google.*:*</include>
                                 <include>org.apache.avro:*</include>
                             </includes>
@@ -194,12 +183,7 @@ under the License.
                                 <includes>
                                     <include>flink/connector/gcp/**</include>
                                     <include>org/apache/flink/flink-connector-kafka/**</include>
-                                    <!-- <include>org/apache/flink/flink-avro/**</include>
-                                    <include>org/apache/flink/flink-csv/**</include>
-                                    <include>org/apache/flink/table-api/**</include>
-                                    <include>org/apache/flink/table-api/factories/**</include> -->
                                     <include>org/apache/kafka/kafka-clients/**</include>
-                                    <!-- <include>org/apache/flink/table/factories/BulkWriterFormatFactory/**</include> -->
                                     <include>org/apache/flink/connector/datagen/source/DataGeneratorSource/**</include>
                                 </includes>
                             </filter>
