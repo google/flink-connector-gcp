@@ -22,7 +22,7 @@ spec:
     jarURI: local:///opt/flink/usrlib/gmf-examples.jar
     # Replace with your own values
     args: [ 
-      "--output", "gs://<your-source-bucket>",
+      "--output", "gs://<your-source-bucket>/",
       "--messageSizeKB", "10",
       "--messagesPerSec", "1000" ] 
     parallelism: 10
