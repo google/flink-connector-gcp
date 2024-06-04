@@ -25,6 +25,7 @@ import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringEncoder;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.utils.ParameterTool;
+import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.StateBackendOptions;
 import org.apache.flink.connector.file.sink.FileSink;
@@ -63,10 +64,21 @@ public class GCStoGCSUnboundedWC {
 
         String inputPath = parameters.get("input");
         String outputPath = parameters.get("output", "gs://output/");
+        String checkpointDir = parameters.get("checkpoint");
         // Add checkpointing, this is needed for files to leave the "in progress state"
         Configuration config = new Configuration();
         config.set(StateBackendOptions.STATE_BACKEND, "hashmap");
-        env.enableCheckpointing(Duration.ofSeconds(5).toMillis());
+        config.set(CheckpointingOptions.CHECKPOINT_STORAGE, "filesystem");
+        config.set(CheckpointingOptions.CHECKPOINTS_DIRECTORY, checkpointDir);
+        env.configure(config);
+        env.enableCheckpointing(10000L);
+        env.getCheckpointConfig().enableUnalignedCheckpoints();
+        env.getCheckpointConfig().setAlignedCheckpointTimeout(Duration.ofMillis(10000L));
+        env.getCheckpointConfig().setMaxConcurrentCheckpoints(1);
+        env.getCheckpointConfig().setMinPauseBetweenCheckpoints(10000L);
+        env.getCheckpointConfig().setCheckpointTimeout(600000L);
+        env.getCheckpointConfig().setTolerableCheckpointFailureNumber(Integer.MAX_VALUE);
+        env.getConfig().setUseSnapshotCompression(true);
 
         // Source (Unbounded Read)
         FileSource<String> textUnboundedSource =
@@ -103,8 +115,6 @@ public class GCStoGCSUnboundedWC {
                         textUnboundedSource, WatermarkStrategy.noWatermarks(), "Unbounded Read");
 
         readUnbounded
-                .filter(s -> !s.isEmpty())
-                .map(new AddTimeString())
                 .flatMap(new PrepareWC())
                 .keyBy(tuple -> tuple.f0)
                 .sum(1)
@@ -134,7 +144,7 @@ public class GCStoGCSUnboundedWC {
 
         @Override
         public void flatMap(String value, Collector<Tuple2<String, Integer>> out) {
-            for (String split : value.split("[^\\p{L}]+")) {
+            for (String split : value.split(" ")) {
                 if (!split.equals(",") && !split.isEmpty()) {
                     out.collect(new Tuple2<>(split.toLowerCase(), 1));
                 }
