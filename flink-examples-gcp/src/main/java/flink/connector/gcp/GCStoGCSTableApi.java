@@ -35,9 +35,6 @@ import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.table.functions.TableFunction;
 import org.apache.flink.types.Row;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.time.Duration;
 
 import static org.apache.flink.table.api.Expressions.$;
@@ -46,8 +43,6 @@ import static org.apache.flink.table.api.Expressions.call;
 
 /** GCS to GCS Wordcount using TableAPI. */
 public class GCStoGCSTableApi {
-
-    private static final Logger LOG = LoggerFactory.getLogger(GCStoGCSTableApi.class);
 
     public static void main(String[] args) throws Exception {
         ParameterTool params = ParameterTool.fromArgs(args);
@@ -89,6 +84,7 @@ public class GCStoGCSTableApi {
 
         final Schema schemaOutput = Schema.newBuilder()
                 .column("word", DataTypes.STRING())
+                .column("counted", DataTypes.BIGINT())
                 .build();
 
         tableEnv.createTemporaryTable("words",
@@ -96,7 +92,7 @@ public class GCStoGCSTableApi {
                         .forConnector("filesystem")
                         .schema(schemaInput)
                         .option("path", inputPath)
-                        .option("source.monitor-interval", "30s") // Check for new files every minute
+                        .option("source.monitor-interval", "60s") // Check for new files every minute
                         .format(FormatDescriptor.forFormat("csv")
                             .option("header", "false")
                             .option("field-delimiter", "|")
@@ -111,19 +107,23 @@ public class GCStoGCSTableApi {
                         .option("auto-compaction", "true")
                         .option("sink.rolling-policy.rollover-interval", "30s")
                         .option("compaction.file-size", sinkMaxFileSizeMB + "MB")
-                        .format(FormatDescriptor.forFormat("csv").build())
+                        .format(FormatDescriptor.forFormat("canal-json").build())
                         .build());
 
         tableEnv.createTemporarySystemFunction("split", SplitWords.class);
 
         Table result = tableEnv.from("words")
-            .flatMap(call("split", $("text"))).as("word");
+            .flatMap(call("split", $("text"))).as("word")
+            .groupBy($("word"))
+            .select(
+                $("word"),
+                $("word").count().as("counted"));
 
-        result.executeInsert("wordcount").print();
+        result.executeInsert("wordcount");
     }
 
     /** Split words. */
-    @FunctionHint(output = @DataTypeHint("ROW<s STRING>"))
+    @FunctionHint(output = @DataTypeHint("ROW<word STRING>"))
     public static final class SplitWords extends TableFunction<Row> {
         public void eval(String sentence) {
             for (String split : sentence.split("[^\\p{L}]+")) {
