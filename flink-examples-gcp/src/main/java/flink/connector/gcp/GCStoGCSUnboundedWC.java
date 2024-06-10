@@ -65,6 +65,8 @@ public class GCStoGCSUnboundedWC {
         String inputPath = parameters.get("input");
         String outputPath = parameters.get("output", "gs://output/");
         String checkpointDir = parameters.get("checkpoint");
+        String jobName = parameters.get("job-name", "GMK-BQ-word-count");
+
         // Add checkpointing, this is needed for files to leave the "in progress state"
         Configuration config = new Configuration();
         config.set(StateBackendOptions.STATE_BACKEND, "hashmap");
@@ -123,7 +125,7 @@ public class GCStoGCSUnboundedWC {
                 .uid("gcsToGcsWriter");
 
         // Execute
-        env.execute("Read / Write to Text Unbounded");
+        env.execute(jobName);
     }
 
     /** Prepends date and time before message. */

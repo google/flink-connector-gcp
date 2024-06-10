@@ -23,6 +23,7 @@ import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.utils.MultipleParameterTool;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.connector.base.DeliveryGuarantee;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
@@ -58,9 +59,12 @@ public class GMKToBQWordCount {
         String kafkaGroupId = parameters.get("kafka-group-id", "kafka-source-of-".concat(tableName));
         String jobName = parameters.get("job-name", "GMK-BQ-word-count");
         System.out.println("Starting job ".concat(jobName).concat(" with Kafka group id: ".concat(kafkaGroupId)));
-
-        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        Configuration conf = new Configuration();
+        conf.setString("restart-strategy.type", "fixed-delay");
+        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(conf);
         env.getConfig().setGlobalJobParameters(parameters);
+        // BQ sink can only support up to 100 parallelism.
+        env.getConfig().setMaxParallelism(100);
         env.enableCheckpointing(checkpointInterval);
         java.util.Base64.Encoder encoder = java.util.Base64.getEncoder();
 

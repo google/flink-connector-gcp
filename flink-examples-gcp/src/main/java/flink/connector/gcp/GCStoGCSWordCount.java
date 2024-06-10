@@ -51,6 +51,7 @@ public class GCStoGCSWordCount {
                 parameters.get("input", "gs://apache-beam-samples/shakespeare/kinglear.txt");
         String outputPath = parameters.get("output", "outputBounded");
         Integer parallelism = parameters.getInt("parallelism", 1);
+        String jobName = parameters.get("job-name", "GCS-GCS-word-count");
 
         env.setParallelism(parallelism);
 
@@ -82,7 +83,7 @@ public class GCStoGCSWordCount {
                 .uid("writer");
 
         // Execute
-        env.execute("WordCount");
+        env.execute(jobName);
     }
 
     /** Split words and outputs a tuple for the Wordcount. */
