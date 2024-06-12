@@ -78,7 +78,7 @@ public class GMKToBQWordCount {
                                 "sasl.jaas.config",
                                 String.format(
                                         "org.apache.kafka.common.security.plain.PlainLoginModule required username=\'%s\' password=\"%s\";",
-                                        gmkUsername, encoder.encodeToString(System.getenv("GMK_PASSWORD").getBytes("UTF-8"))))
+                                        gmkUsername, System.getenv("GMK_PASSWORD")))
                         .build();
         BigQueryConnectOptions sinkConnectOptions =
                 BigQueryConnectOptions.builder()

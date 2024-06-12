@@ -7,3 +7,4 @@ my*.yaml
 *.txt
 !LICENSE.txt
 !words.txt
+schema.json
