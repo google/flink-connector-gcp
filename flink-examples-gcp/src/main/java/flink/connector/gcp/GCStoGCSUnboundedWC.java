@@ -56,7 +56,9 @@ public class GCStoGCSUnboundedWC {
     private static final int MB = 1024 * 1024;
 
     public static void main(String[] args) throws Exception {
-        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        Configuration conf = new Configuration();
+        conf.setString("restart-strategy.type", "fixed-delay");
+        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(conf);
         final ParameterTool parameters = ParameterTool.fromArgs(args);
 
         env.setRuntimeMode(RuntimeExecutionMode.STREAMING);
@@ -65,7 +67,7 @@ public class GCStoGCSUnboundedWC {
         String inputPath = parameters.get("input");
         String outputPath = parameters.get("output", "gs://output/");
         String checkpointDir = parameters.get("checkpoint");
-        String jobName = parameters.get("job-name", "GMK-BQ-word-count");
+        String jobName = parameters.get("job-name", "GCS-GCS-word-count");
 
         // Add checkpointing, this is needed for files to leave the "in progress state"
         Configuration config = new Configuration();

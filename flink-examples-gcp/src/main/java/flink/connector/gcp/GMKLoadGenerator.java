@@ -55,7 +55,7 @@ public class GMKLoadGenerator {
         Long maxRecords = parameters.getLong("max-records", 1_000_000_000L);
         Long loadPeriod = parameters.getLong("load-period-in-second", 3600);
         String pattern = parameters.get("pattern", "static");
-        String jobName = parameters.get("job-name", "GMKLoadGenerator");
+        String jobName = parameters.get("job-name", "GMK-load-gen");
         System.out.println("Starting job ".concat(jobName));
 
         env.getConfig().setGlobalJobParameters(parameters);
