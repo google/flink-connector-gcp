@@ -61,6 +61,7 @@ public class GCSLoadGenerator {
         int rate = parameters.getInt("messagesPerSecond", 1000);
         Long loadPeriod = parameters.getLong("load-period-in-second", 3600);
         String pattern = parameters.get("pattern", "static");
+        String jobName = parameters.get("job-name", "GCS-load-gen");
         System.out.println(String.format("Message load: %d; Rate Per Sec: %d, Load pattern: %s, Load period: %d", load, rate, pattern, loadPeriod));
 
         // Add checkpointing, this is needed for files to leave the "in progress state"
@@ -106,6 +107,6 @@ public class GCSLoadGenerator {
         SingleOutputStreamOperator<Long> filteredGenerator = generator.filter(new InputLoadFilter(loadPeriod, pattern, Clock.systemDefaultZone(), new Random())).uid(pattern.concat(" filter"));
         filteredGenerator.flatMap(new WordLoadGenerator(load * KB)).sinkTo(sink).uid("writer");
 
-        env.execute("Write to Text Unbounded");
+        env.execute(jobName);
     }
 }

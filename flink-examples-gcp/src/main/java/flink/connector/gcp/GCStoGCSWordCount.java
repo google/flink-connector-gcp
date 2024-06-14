@@ -24,6 +24,7 @@ import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringEncoder;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.utils.ParameterTool;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.connector.file.sink.FileSink;
 import org.apache.flink.connector.file.src.FileSource;
 import org.apache.flink.connector.file.src.reader.TextLineInputFormat;
@@ -42,7 +43,9 @@ public class GCStoGCSWordCount {
     private static final Logger LOG = LoggerFactory.getLogger(GCStoGCSWordCount.class);
 
     public static void main(String[] args) throws Exception {
-        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        Configuration conf = new Configuration();
+        conf.setString("restart-strategy.type", "fixed-delay");
+        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(conf);
         final ParameterTool parameters = ParameterTool.fromArgs(args);
         env.setRuntimeMode(RuntimeExecutionMode.BATCH);
         env.getConfig().setGlobalJobParameters(parameters);
@@ -51,6 +54,7 @@ public class GCStoGCSWordCount {
                 parameters.get("input", "gs://apache-beam-samples/shakespeare/kinglear.txt");
         String outputPath = parameters.get("output", "outputBounded");
         Integer parallelism = parameters.getInt("parallelism", 1);
+        String jobName = parameters.get("job-name", "GCS-GCS-word-count");
 
         env.setParallelism(parallelism);
 
@@ -82,7 +86,7 @@ public class GCStoGCSWordCount {
                 .uid("writer");
 
         // Execute
-        env.execute("WordCount");
+        env.execute(jobName);
     }
 
     /** Split words and outputs a tuple for the Wordcount. */
