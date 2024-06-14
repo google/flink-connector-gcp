@@ -19,9 +19,7 @@
 package flink.connector.gcp;
 
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
-import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
-import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.connector.source.util.ratelimit.RateLimiterStrategy;
 import org.apache.flink.api.java.utils.ParameterTool;
