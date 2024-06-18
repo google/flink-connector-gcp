@@ -125,15 +125,12 @@ public class GCStoGCSUnboundedWC {
                 .sum(1);
 
         for (int i = 0; i < shuffleStages; i++) {
-                final int k = i;
-                shuffleStream = shuffleStream.keyBy(kv -> {
-                        int start = k % 2;
-                        return kv.f0.substring(start, start + 1);
-                }).map(new MapFunction<Tuple2<String, Integer>, Tuple2<String, Integer>>() {
-                        @Override
-                        public Tuple2<String, Integer> map(Tuple2<String, Integer> kv) {
-                                return Tuple2.of(kv.f0, kv.f1 + 1);
-                        }
+                shuffleStream = shuffleStream.shuffle()
+                .map(new MapFunction<Tuple2<String, Integer>, Tuple2<String, Integer>>() {
+                                        @Override
+                                        public Tuple2<String, Integer> map(Tuple2<String, Integer> kv) {
+                                                return Tuple2.of(kv.f0, kv.f1 + 1);
+                                        }
                 }).name("Map " + String.valueOf(i));
         }
         shuffleStream.map(kv -> String.format("Word: %s Count: %s", kv.f0, kv.f1)).sinkTo(sink).uid("gcsToGcsWriter");
