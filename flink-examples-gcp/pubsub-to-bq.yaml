@@ -10,11 +10,11 @@ spec:
   serviceAccount: flink
   jobManager:
     resource:
-      memory: "2048m"
+      memory: "4096m"
       cpu: 1
   taskManager:
     resource:
-      memory: "2048m"
+      memory: "4096m"
       cpu: 1
   job:
     entryClass: flink.connector.gcp.PubSubToBQWordCount
