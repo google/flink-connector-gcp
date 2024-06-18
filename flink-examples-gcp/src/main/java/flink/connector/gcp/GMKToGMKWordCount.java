@@ -79,6 +79,17 @@ public class GMKToGMKWordCount {
                             .build()
                         )
                         .setDeliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
+                        .setProperty("security.protocol", "SASL_SSL")
+                        .setProperty("sasl.mechanism", "PLAIN")
+                        .setProperty(
+                                "sasl.jaas.config",
+                                "org.apache.kafka.common.security.plain.PlainLoginModule required"
+                                        + " username=\'"
+                                        + gmkUsername
+                                        + "\'"
+                                        + " password=\'"
+                                        + System.getenv("GMK_PASSWORD")
+                                                                        + "\';")
                         .build();
 
         env.fromSource(source, WatermarkStrategy.noWatermarks(), "Kafka Source")
