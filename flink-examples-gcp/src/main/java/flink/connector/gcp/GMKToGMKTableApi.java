@@ -97,7 +97,6 @@ public class GMKToGMKTableApi {
                                                                     + System.getenv("GMK_PASSWORD")
                                                                     + "\';")
                         .format(FormatDescriptor.forFormat("csv")
-                            .option("header", "false")
                             .option("field-delimiter", "|")
                             .build())
                         .build());
