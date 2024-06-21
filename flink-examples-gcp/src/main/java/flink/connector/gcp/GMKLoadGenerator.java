@@ -88,7 +88,7 @@ public class GMKLoadGenerator {
                                         + gmkUsername
                                         + "\'"
                                         + " password=\'"
-                                        + encoder.encodeToString(System.getenv("GMK_PASSWORD").getBytes("UTF-8"))
+                                        + System.getenv("GMK_PASSWORD")
                                                                         + "\';")
                                         .build();
         DataStreamSource<Long> generator = env.fromSource(generatorSource, WatermarkStrategy.noWatermarks(),
