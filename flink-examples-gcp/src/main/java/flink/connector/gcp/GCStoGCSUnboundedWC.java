@@ -78,7 +78,6 @@ public class GCStoGCSUnboundedWC {
         config.set(CheckpointingOptions.CHECKPOINT_STORAGE, "filesystem");
         config.set(CheckpointingOptions.CHECKPOINTS_DIRECTORY, checkpointDir);
         env.configure(config);
-        env.disableOperatorChaining();
         env.enableCheckpointing(10000L);
         env.getCheckpointConfig().enableUnalignedCheckpoints();
         env.getCheckpointConfig().setAlignedCheckpointTimeout(Duration.ofMillis(10000L));
