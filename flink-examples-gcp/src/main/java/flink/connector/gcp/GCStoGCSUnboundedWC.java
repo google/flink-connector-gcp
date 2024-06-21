@@ -36,6 +36,7 @@ import org.apache.flink.connector.file.sink.compactor.SimpleStringDecoder;
 import org.apache.flink.connector.file.src.FileSource;
 import org.apache.flink.connector.file.src.reader.TextLineInputFormat;
 import org.apache.flink.core.fs.Path;
+import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.filesystem.OutputFileConfig;
@@ -57,7 +58,8 @@ public class GCStoGCSUnboundedWC {
 
     public static void main(String[] args) throws Exception {
         Configuration conf = new Configuration();
-        conf.setString("restart-strategy.type", "fixed-delay");
+        // Remove fixed-delay restart strategy to avoid job failures.
+        // conf.setString("restart-strategy.type", "fixed-delay");
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(conf);
         final ParameterTool parameters = ParameterTool.fromArgs(args);
 
@@ -68,6 +70,7 @@ public class GCStoGCSUnboundedWC {
         String outputPath = parameters.get("output", "gs://output/");
         String checkpointDir = parameters.get("checkpoint");
         String jobName = parameters.get("job-name", "GCS-GCS-word-count");
+        int shuffleStages = parameters.getInt("shuffle-stages", 1);
 
         // Add checkpointing, this is needed for files to leave the "in progress state"
         Configuration config = new Configuration();
@@ -117,14 +120,20 @@ public class GCStoGCSUnboundedWC {
         DataStreamSource<String> readUnbounded =
                 env.fromSource(
                         textUnboundedSource, WatermarkStrategy.noWatermarks(), "Unbounded Read");
-
-        readUnbounded
-                .flatMap(new PrepareWC())
+        DataStream<Tuple2<String, Integer>> shuffleStream = readUnbounded.flatMap(new PrepareWC())
                 .keyBy(tuple -> tuple.f0)
-                .sum(1)
-                .map(kv -> String.format("Word: %s Count: %s", kv.f0, kv.f1))
-                .sinkTo(sink)
-                .uid("gcsToGcsWriter");
+                .sum(1);
+
+        for (int i = 0; i < shuffleStages; i++) {
+                shuffleStream = shuffleStream.shuffle()
+                .map(new MapFunction<Tuple2<String, Integer>, Tuple2<String, Integer>>() {
+                                        @Override
+                                        public Tuple2<String, Integer> map(Tuple2<String, Integer> kv) {
+                                                return Tuple2.of(kv.f0, kv.f1 + 1);
+                                        }
+                }).name("Map " + String.valueOf(i));
+        }
+        shuffleStream.map(kv -> String.format("Word: %s Count: %s", kv.f0, kv.f1)).sinkTo(sink).uid("gcsToGcsWriter");
 
         // Execute
         env.execute(jobName);
