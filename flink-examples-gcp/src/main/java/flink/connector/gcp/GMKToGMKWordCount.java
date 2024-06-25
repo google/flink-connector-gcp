@@ -85,27 +85,20 @@ public class GMKToGMKWordCount {
                                 "sasl.jaas.config",
                                 "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required;");
         } else {
+            String config = "org.apache.kafka.common.security.plain.PlainLoginModule required"
+            + " username=\'"
+            + gmkUsername
+            + "\'"
+            + " password=\'"
+            + System.getenv("GMK_PASSWORD")
+                                            + "\';";
             sourceBuilder.setProperty("sasl.mechanism", "PLAIN")
                             .setProperty(
-                                "sasl.jaas.config",
-                                "org.apache.kafka.common.security.plain.PlainLoginModule required"
-                                        + " username=\'"
-                                        + gmkUsername
-                                        + "\'"
-                                        + " password=\'"
-                                        + System.getenv("GMK_PASSWORD")
-                                                                        + "\';");
+                                "sasl.jaas.config", config);
 
             sinkBuilder.setProperty("sasl.mechanism", "PLAIN")
                             .setProperty(
-                                    "sasl.jaas.config",
-                                    "org.apache.kafka.common.security.plain.PlainLoginModule required"
-                                            + " username=\'"
-                                            + gmkUsername
-                                            + "\'"
-                                            + " password=\'"
-                                            + System.getenv("GMK_PASSWORD")
-                                                                            + "\';");
+                                    "sasl.jaas.config", config);
         }
         KafkaSource<String> source = sourceBuilder.build();
         KafkaSink<String> sink = sinkBuilder.build();
