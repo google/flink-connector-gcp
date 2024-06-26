@@ -27,7 +27,6 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.configuration.StateBackendOptions;
 import org.apache.flink.connector.file.sink.FileSink;
 import org.apache.flink.connector.file.sink.compactor.DecoderBasedReader;
 import org.apache.flink.connector.file.sink.compactor.FileCompactStrategy;
@@ -74,7 +73,6 @@ public class GCStoGCSUnboundedWC {
 
         // Add checkpointing, this is needed for files to leave the "in progress state"
         Configuration config = new Configuration();
-        config.set(StateBackendOptions.STATE_BACKEND, "hashmap");
         config.set(CheckpointingOptions.CHECKPOINT_STORAGE, "filesystem");
         config.set(CheckpointingOptions.CHECKPOINTS_DIRECTORY, checkpointDir);
         env.configure(config);
