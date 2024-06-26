@@ -92,6 +92,12 @@ under the License.
         <artifactId>flink-connector-gcp-pubsub</artifactId>
         <version>1.0.0-SNAPSHOT</version>
     </dependency>
+    <!-- Must be built from source: https://github.com/googleapis/managedkafka -->
+    <dependency>
+        <groupId>com.google.cloud</groupId>
+        <artifactId>google-managed-kafka-auth-login-handler</artifactId>
+        <version>1.0.0</version>
+    </dependency>
     <!-- https://mvnrepository.com/artifact/org.apache.flink/flink-test-utils-junit -->
     <dependency>
         <groupId>org.apache.flink</groupId>

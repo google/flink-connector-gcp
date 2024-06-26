@@ -27,7 +27,9 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.connector.base.DeliveryGuarantee;
 import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchema;
 import org.apache.flink.connector.kafka.sink.KafkaSink;
+import org.apache.flink.connector.kafka.sink.KafkaSinkBuilder;
 import org.apache.flink.connector.kafka.source.KafkaSource;
+import org.apache.flink.connector.kafka.source.KafkaSourceBuilder;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.util.Collector;
@@ -44,54 +46,62 @@ public class GMKToGMKWordCount {
         String gmkUsername = parameters.get("gmk-username");
         String kafkaTopic = parameters.get("kafka-topic", "my-topic");
         String kafkaSinkTopic = parameters.get("kafka-sink-topic", "sink-topic");
-        String projectId = parameters.get("project-id");
+        boolean oauth = parameters.getBoolean("oauth", false);
         Long checkpointInterval = parameters.getLong("checkpoint-interval", 60000L);
         String jobName = parameters.get("job-name", "GMK-GMK-word-count");
         System.out.println("Starting job ".concat(jobName));
+        System.out.println("Using SASL_SSL " + (oauth ? "OAUTHBEARER" : "PLAIN") + " to authenticate");
         Configuration conf = new Configuration();
         conf.setString("restart-strategy.type", "fixed-delay");
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(conf);
         env.getConfig().setGlobalJobParameters(parameters);
         env.enableCheckpointing(checkpointInterval);
+        KafkaSourceBuilder<String> sourceBuilder = KafkaSource.<String>builder()
+                    .setBootstrapServers(brokers)
+                    .setTopics(kafkaTopic)
+                    .setStartingOffsets(OffsetsInitializer.earliest())
+                    .setValueOnlyDeserializer(new SimpleStringSchema())
+                    .setProperty("partition.discovery.interval.ms", "10000")
+                    .setProperty("security.protocol", "SASL_SSL");
 
-        KafkaSource<String> source =
-                KafkaSource.<String>builder()
-                        .setBootstrapServers(brokers)
-                        .setTopics(kafkaTopic)
-                        .setStartingOffsets(OffsetsInitializer.earliest())
-                        .setValueOnlyDeserializer(new SimpleStringSchema())
-                        .setProperty("partition.discovery.interval.ms", "10000")
-                        .setProperty("security.protocol", "SASL_SSL")
-                        .setProperty("sasl.mechanism", "PLAIN")
+        KafkaSinkBuilder<String> sinkBuilder = KafkaSink.<String>builder()
+                    .setBootstrapServers(brokers)
+                    .setRecordSerializer(KafkaRecordSerializationSchema.builder()
+                        .setTopic(kafkaSinkTopic)
+                        .setValueSerializationSchema(new SimpleStringSchema())
+                        .build()
+                    )
+                    .setDeliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
+                    .setProperty("security.protocol", "SASL_SSL");
+        if (oauth) {
+            sourceBuilder.setProperty("sasl.mechanism", "OAUTHBEARER")
+                        .setProperty("sasl.login.callback.handler.class", "com.google.cloud.hosted.kafka.auth.GcpLoginCallbackHandler")
                         .setProperty(
                                 "sasl.jaas.config",
-                                String.format(
-                                        "org.apache.kafka.common.security.plain.PlainLoginModule required username=\'%s\' password=\"%s\";",
-                                        gmkUsername, System.getenv("GMK_PASSWORD")))
-                        .build();
-
-        KafkaSink<String> sink =
-                KafkaSink.<String>builder()
-                        .setBootstrapServers(brokers)
-                        .setRecordSerializer(KafkaRecordSerializationSchema.builder()
-                            .setTopic(kafkaSinkTopic)
-                            .setValueSerializationSchema(new SimpleStringSchema())
-                            .build()
-                        )
-                        .setDeliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
-                        .setProperty("security.protocol", "SASL_SSL")
-                        .setProperty("sasl.mechanism", "PLAIN")
+                                "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required;");
+            sinkBuilder.setProperty("sasl.mechanism", "OAUTHBEARER")
+                        .setProperty("sasl.login.callback.handler.class", "com.google.cloud.hosted.kafka.auth.GcpLoginCallbackHandler")
                         .setProperty(
                                 "sasl.jaas.config",
-                                "org.apache.kafka.common.security.plain.PlainLoginModule required"
-                                        + " username=\'"
-                                        + gmkUsername
-                                        + "\'"
-                                        + " password=\'"
-                                        + System.getenv("GMK_PASSWORD")
-                                                                        + "\';")
-                        .build();
+                                "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required;");
+        } else {
+            String config = "org.apache.kafka.common.security.plain.PlainLoginModule required"
+            + " username=\'"
+            + gmkUsername
+            + "\'"
+            + " password=\'"
+            + System.getenv("GMK_PASSWORD")
+                                            + "\';";
+            sourceBuilder.setProperty("sasl.mechanism", "PLAIN")
+                            .setProperty(
+                                "sasl.jaas.config", config);
 
+            sinkBuilder.setProperty("sasl.mechanism", "PLAIN")
+                            .setProperty(
+                                    "sasl.jaas.config", config);
+        }
+        KafkaSource<String> source = sourceBuilder.build();
+        KafkaSink<String> sink = sinkBuilder.build();
         env.fromSource(source, WatermarkStrategy.noWatermarks(), "Kafka Source")
                 .flatMap(new PrepareWC())
                 .keyBy(tuple -> tuple.f0)
