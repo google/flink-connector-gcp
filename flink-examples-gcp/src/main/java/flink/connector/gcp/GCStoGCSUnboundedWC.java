@@ -71,7 +71,6 @@ public class GCStoGCSUnboundedWC {
 
         // Add checkpointing, this is needed for files to leave the "in progress state"
         Configuration config = new Configuration();
-        config.set(StateBackendOptions.STATE_BACKEND, "hashmap");
         config.set(CheckpointingOptions.CHECKPOINT_STORAGE, "filesystem");
         config.set(CheckpointingOptions.CHECKPOINTS_DIRECTORY, checkpointDir);
         env.configure(config);
