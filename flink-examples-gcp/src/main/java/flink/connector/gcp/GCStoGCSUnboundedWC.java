@@ -27,7 +27,6 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.configuration.StateBackendOptions;
 import org.apache.flink.connector.file.sink.FileSink;
 import org.apache.flink.connector.file.sink.compactor.DecoderBasedReader;
 import org.apache.flink.connector.file.sink.compactor.FileCompactStrategy;
