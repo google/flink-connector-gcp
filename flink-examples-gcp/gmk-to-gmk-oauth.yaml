@@ -28,7 +28,6 @@ spec:
     jarURI: local:///opt/flink/usrlib/gmf-examples.jar
     # Replace these with your values:
     args: ["--brokers", "bootstrap.<gmk-cluster-name>.us-central1.managedkafka-<env>.<project-name>.cloud-staging.goog:9092",
-          "--gmk-username", "<service-account-name>@<project-name>.iam.gserviceaccount.com",
           "--kafka-topic", "my-topic",
           "--project-id", "<project-name>",
           "--kafka-sink-topic", "sink-topic",
