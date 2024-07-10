@@ -43,7 +43,7 @@ public class GMKToGMKWordCount {
     public static void main(String[] args) throws Exception {
         final MultipleParameterTool parameters = MultipleParameterTool.fromArgs(args);
         String brokers = parameters.get("brokers", "localhost:9092");
-        String gmkUsername = parameters.get("gmk-username");
+        String gmkUsername = parameters.get("gmk-username", "");
         String kafkaTopic = parameters.get("kafka-topic", "my-topic");
         String kafkaSinkTopic = parameters.get("kafka-sink-topic", "sink-topic");
         boolean oauth = parameters.getBoolean("oauth", false);
