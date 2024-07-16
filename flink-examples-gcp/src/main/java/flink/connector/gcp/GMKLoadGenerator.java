@@ -29,6 +29,7 @@ import org.apache.flink.connector.datagen.source.DataGeneratorSource;
 import org.apache.flink.connector.datagen.source.GeneratorFunction;
 import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchema;
 import org.apache.flink.connector.kafka.sink.KafkaSink;
+import org.apache.flink.connector.kafka.sink.KafkaSinkBuilder;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -52,11 +53,13 @@ public class GMKLoadGenerator {
         String kafkaTopic = parameters.get("kafka-topic", "my-topic");
         int load = parameters.getInt("messageSizeKB", 10);
         int rate = parameters.getInt("messagesPerSecond", 1000);
+        boolean oauth = parameters.getBoolean("oauth", false);
         Long maxRecords = parameters.getLong("max-records", 1_000_000_000L);
         Long loadPeriod = parameters.getLong("load-period-in-second", 3600);
         String pattern = parameters.get("pattern", "static");
         String jobName = parameters.get("job-name", "GMK-load-gen");
         System.out.println("Starting job ".concat(jobName));
+        System.out.println("Using SASL_SSL " + (oauth ? "OAUTHBEARER" : "PLAIN") + " to authenticate");
 
         env.getConfig().setGlobalJobParameters(parameters);
 
@@ -70,27 +73,34 @@ public class GMKLoadGenerator {
                         Types.LONG);
         java.util.Base64.Encoder encoder = java.util.Base64.getEncoder();
 
-        KafkaSink<String> sink =
-                KafkaSink.<String>builder()
-                        .setBootstrapServers(brokers)
-                        .setRecordSerializer(
-                                KafkaRecordSerializationSchema.builder()
-                                        .setTopic(kafkaTopic)
-                                        .setValueSerializationSchema(new SimpleStringSchema())
-                                        .build())
-                        .setDeliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
-                        .setProperty("security.protocol", "SASL_SSL")
-                        .setProperty("sasl.mechanism", "PLAIN")
-                        .setProperty(
-                                "sasl.jaas.config",
-                                "org.apache.kafka.common.security.plain.PlainLoginModule required"
-                                        + " username=\'"
-                                        + gmkUsername
-                                        + "\'"
-                                        + " password=\'"
-                                        + System.getenv("GMK_PASSWORD")
-                                                                        + "\';")
-                                        .build();
+        KafkaSinkBuilder<String> sinkBuilder = KafkaSink.<String>builder()
+                .setBootstrapServers(brokers)
+                .setRecordSerializer(
+                        KafkaRecordSerializationSchema.builder()
+                                .setTopic(kafkaTopic)
+                                .setValueSerializationSchema(new SimpleStringSchema())
+                                .build())
+                .setDeliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
+                .setProperty("security.protocol", "SASL_SSL");
+        if (oauth) {
+                sinkBuilder.setProperty("sasl.mechanism", "OAUTHBEARER")
+                                    .setProperty("sasl.login.callback.handler.class", "com.google.cloud.hosted.kafka.auth.GcpLoginCallbackHandler")
+                                    .setProperty(
+                                            "sasl.jaas.config",
+                                            "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required;");
+        } else {
+                String config = "org.apache.kafka.common.security.plain.PlainLoginModule required"
+                + " username=\'"
+                + gmkUsername
+                + "\'"
+                + " password=\'"
+                + System.getenv("GMK_PASSWORD")
+                                                + "\';";
+                sinkBuilder.setProperty("sasl.mechanism", "PLAIN")
+                                .setProperty(
+                                        "sasl.jaas.config", config);
+        }
+        KafkaSink<String> sink = sinkBuilder.build();
         DataStreamSource<Long> generator = env.fromSource(generatorSource, WatermarkStrategy.noWatermarks(),
                         "Data Generator");
         // Apply the input load filter.
