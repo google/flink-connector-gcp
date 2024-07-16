@@ -25,7 +25,6 @@ import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.connector.source.util.ratelimit.RateLimiterStrategy;
 import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.configuration.StateBackendOptions;
 import org.apache.flink.connector.datagen.source.DataGeneratorSource;
 import org.apache.flink.connector.datagen.source.GeneratorFunction;
 import org.apache.flink.connector.file.sink.FileSink;
@@ -66,7 +65,6 @@ public class GCSLoadGenerator {
 
         // Add checkpointing, this is needed for files to leave the "in progress state"
         Configuration config = new Configuration();
-        config.set(StateBackendOptions.STATE_BACKEND, "hashmap");
         env.enableCheckpointing(Duration.ofSeconds(5).toMillis());
 
         // Source (Data Generator)
