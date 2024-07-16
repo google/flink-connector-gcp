@@ -48,9 +48,11 @@ public class GMKToGMKTableApi {
         String gmkUsername = parameters.get("gmk-username");
         String kafkaTopic = parameters.get("kafka-topic", "my-topic");
         String kafkaSinkTopic = parameters.get("kafka-sink-topic", "sink-topic");
+        boolean oauth = parameters.getBoolean("oauth", false);
         Long checkpointInterval = parameters.getLong("checkpoint-interval", 60000L);
         String jobName = parameters.get("job-name", "GMK-GMK-word-count");
         System.out.println("Starting job ".concat(jobName));
+        System.out.println("Using SASL_SSL " + (oauth ? "OAUTHBEARER" : "PLAIN") + " to authenticate");
         Configuration conf = new Configuration();
         conf.setString("restart-strategy.type", "fixed-delay");
         EnvironmentSettings settings = EnvironmentSettings
@@ -80,45 +82,54 @@ public class GMKToGMKTableApi {
                 .column("counted", DataTypes.BIGINT())
                 .build();
 
+        TableDescriptor.Builder sourceBuilder = TableDescriptor
+            .forConnector("kafka")
+            .schema(schemaInput)
+            .option("topic", kafkaTopic)
+            .option("properties.bootstrap.servers", brokers)
+            .option("scan.startup.mode", "earliest-offset")
+            .format(FormatDescriptor.forFormat("csv")
+                .option("field-delimiter", "|")
+                .build());
+
+        TableDescriptor.Builder sinkBuilder = TableDescriptor
+            .forConnector("kafka")
+            .schema(schemaOutput)
+            .option("topic", kafkaSinkTopic)
+            .option("properties.bootstrap.servers", brokers)
+            .option("scan.startup.mode", "earliest-offset")
+            .format(FormatDescriptor.forFormat("canal-json").build());
+
+        if (oauth) {
+            sourceBuilder.option("properties.security.protocol", "SASL_SSL")
+                .option("properties.sasl.mechanism", "OAUTHBEARER")
+                .option("properties.sasl.login.callback.handler.class", "com.google.cloud.hosted.kafka.auth.GcpLoginCallbackHandler")
+                .option("properties.sasl.jaas.config", "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required;");
+            sinkBuilder.option("properties.security.protocol", "SASL_SSL")
+                .option("properties.sasl.mechanism", "OAUTHBEARER")
+                .option("properties.sasl.login.callback.handler.class", "com.google.cloud.hosted.kafka.auth.GcpLoginCallbackHandler")
+                .option("properties.sasl.jaas.config", "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required;");
+        } else {
+            String config = "org.apache.kafka.common.security.plain.PlainLoginModule required"
+                + " username=\'"
+                + gmkUsername
+                + "\'"
+                + " password=\'"
+                + System.getenv("GMK_PASSWORD")
+                + "\';";
+            sourceBuilder.option("properties.security.protocol", "SASL_SSL")
+                .option("properties.sasl.mechanism", "PLAIN")
+                .option("properties.sasl.jaas.config", config);
+            sinkBuilder.option("properties.security.protocol", "SASL_SSL")
+                .option("properties.sasl.mechanism", "PLAIN")
+                .option("properties.sasl.jaas.config", config);
+            }
+
         tableEnv.createTemporaryTable("words",
-                TableDescriptor
-                        .forConnector("kafka")
-                        .schema(schemaInput)
-                        .option("topic", kafkaTopic)
-                        .option("properties.bootstrap.servers", brokers)
-                        .option("scan.startup.mode", "earliest-offset")
-                        .option("properties.security.protocol", "SASL_PLAINTEXT")
-                        .option("properties.sasl.mechanism", "PLAIN")
-                        .option("properties.sasl.jaas.config", "org.apache.kafka.common.security.plain.PlainLoginModule required"
-                                                                    + " username=\'"
-                                                                    + gmkUsername
-                                                                    + "\'"
-                                                                    + " password=\'"
-                                                                    + System.getenv("GMK_PASSWORD")
-                                                                    + "\';")
-                        .format(FormatDescriptor.forFormat("csv")
-                            .option("field-delimiter", "|")
-                            .build())
-                        .build());
+                sourceBuilder.build());
 
         tableEnv.createTemporaryTable("wordcount",
-                TableDescriptor
-                        .forConnector("kafka")
-                        .schema(schemaOutput)
-                        .option("topic", kafkaSinkTopic)
-                        .option("properties.bootstrap.servers", brokers)
-                        .option("scan.startup.mode", "earliest-offset")
-                        .option("properties.security.protocol", "SASL_PLAINTEXT")
-                        .option("properties.sasl.mechanism", "PLAIN")
-                        .option("properties.sasl.jaas.config", "org.apache.kafka.common.security.plain.PlainLoginModule required"
-                                                                    + " username=\'"
-                                                                    + gmkUsername
-                                                                    + "\'"
-                                                                    + " password=\'"
-                                                                    + System.getenv("GMK_PASSWORD")
-                                                                    + "\';")
-                        .format(FormatDescriptor.forFormat("canal-json").build())
-                        .build());
+                sinkBuilder.build());
 
         tableEnv.createTemporarySystemFunction("split", SplitWords.class);
 
