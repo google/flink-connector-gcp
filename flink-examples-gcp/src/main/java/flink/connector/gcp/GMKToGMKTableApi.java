@@ -19,7 +19,6 @@
 package flink.connector.gcp;
 
 import org.apache.flink.api.java.utils.MultipleParameterTool;
-import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.annotation.DataTypeHint;
 import org.apache.flink.table.annotation.FunctionHint;
