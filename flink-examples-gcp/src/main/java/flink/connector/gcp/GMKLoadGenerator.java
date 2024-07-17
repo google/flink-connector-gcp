@@ -43,9 +43,7 @@ public class GMKLoadGenerator {
     private static final int MB = 1024 * 1024;
 
     public static void main(String[] args) throws Exception {
-        Configuration conf = new Configuration();
-        conf.setString("restart-strategy.type", "fixed-delay");
-        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(conf);
+        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
         final ParameterTool parameters = ParameterTool.fromArgs(args);
         String brokers = parameters.get("brokers", "localhost:9092");

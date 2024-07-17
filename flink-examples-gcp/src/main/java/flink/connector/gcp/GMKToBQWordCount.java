@@ -62,9 +62,7 @@ public class GMKToBQWordCount {
         String jobName = parameters.get("job-name", "GMK-BQ-word-count");
         System.out.println("Starting job ".concat(jobName).concat(" with Kafka group id: ".concat(kafkaGroupId)));
         System.out.println("Using SASL_SSL " + (oauth ? "OAUTHBEARER" : "PLAIN") + " to authenticate");
-        Configuration conf = new Configuration();
-        conf.setString("restart-strategy.type", "fixed-delay");
-        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(conf);
+        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.getConfig().setGlobalJobParameters(parameters);
         // BQ sink can only support up to 100 parallelism.
         env.getConfig().setMaxParallelism(100);

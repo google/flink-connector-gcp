@@ -56,10 +56,7 @@ public class GCStoGCSUnboundedWC {
     private static final int MB = 1024 * 1024;
 
     public static void main(String[] args) throws Exception {
-        Configuration conf = new Configuration();
-        // Remove fixed-delay restart strategy to avoid job failures.
-        // conf.setString("restart-strategy.type", "fixed-delay");
-        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(conf);
+        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         final ParameterTool parameters = ParameterTool.fromArgs(args);
 
         env.setRuntimeMode(RuntimeExecutionMode.STREAMING);

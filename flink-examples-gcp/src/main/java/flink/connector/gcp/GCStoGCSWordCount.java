@@ -43,9 +43,7 @@ public class GCStoGCSWordCount {
     private static final Logger LOG = LoggerFactory.getLogger(GCStoGCSWordCount.class);
 
     public static void main(String[] args) throws Exception {
-        Configuration conf = new Configuration();
-        conf.setString("restart-strategy.type", "fixed-delay");
-        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(conf);
+        final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         final ParameterTool parameters = ParameterTool.fromArgs(args);
         env.setRuntimeMode(RuntimeExecutionMode.BATCH);
         env.getConfig().setGlobalJobParameters(parameters);
