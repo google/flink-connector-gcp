@@ -51,7 +51,7 @@ public class GMKToGMKWordCount {
         System.out.println("Using SASL_SSL " + (oauth ? "OAUTHBEARER" : "PLAIN") + " to authenticate");
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.getConfig().setGlobalJobParameters(parameters);
-        
+
         KafkaSourceBuilder<String> sourceBuilder = KafkaSource.<String>builder()
                     .setBootstrapServers(brokers)
                     .setTopics(kafkaTopic)

@@ -24,7 +24,6 @@ import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.connector.source.util.ratelimit.RateLimiterStrategy;
 import org.apache.flink.api.java.utils.ParameterTool;
-import org.apache.flink.configuration.Configuration;
 import org.apache.flink.connector.datagen.source.DataGeneratorSource;
 import org.apache.flink.connector.datagen.source.GeneratorFunction;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
@@ -35,7 +34,6 @@ import com.google.pubsub.flink.PubSubSerializationSchema;
 import com.google.pubsub.flink.PubSubSink;
 
 import java.time.Clock;
-import java.time.Duration;
 import java.util.Random;
 
 /** Creates load with pseudo random bytes and sends to the output PubSub topic. */
