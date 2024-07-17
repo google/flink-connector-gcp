@@ -19,9 +19,6 @@
 package flink.connector.gcp;
 
 import org.apache.flink.api.java.utils.ParameterTool;
-import org.apache.flink.configuration.CheckpointingOptions;
-import org.apache.flink.configuration.Configuration;
-import org.apache.flink.configuration.StateBackendOptions;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.annotation.DataTypeHint;
 import org.apache.flink.table.annotation.FunctionHint;
@@ -35,8 +32,6 @@ import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.table.functions.TableFunction;
 import org.apache.flink.types.Row;
 
-import java.time.Duration;
-
 import static org.apache.flink.table.api.Expressions.$;
 import static org.apache.flink.table.api.Expressions.call;
 
@@ -48,33 +43,15 @@ public class GCStoGCSTableApi {
         ParameterTool params = ParameterTool.fromArgs(args);
         String inputPath = params.get("input");
         String outputPath = params.get("output");
-        Long checkpointInterval = params.getLong("checkpoint-interval", 60000L);
         Integer sinkMaxFileSizeMB = params.getInt("max-file-size-mb", 1);
-        String checkpointing = params.get("checkpoint");
-
-        Configuration config = new Configuration();
-        config.set(StateBackendOptions.STATE_BACKEND, "hashmap");
-        config.set(CheckpointingOptions.CHECKPOINT_STORAGE, "filesystem");
-        if (checkpointing != null) {
-            config.set(CheckpointingOptions.CHECKPOINTS_DIRECTORY, checkpointing);
-        }
 
         EnvironmentSettings settings = EnvironmentSettings
                 .newInstance()
                 .inStreamingMode()
-                .withConfiguration(config)
                 .build();
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.getConfig().setGlobalJobParameters(params);
-        env.enableCheckpointing(checkpointInterval);
-        env.getCheckpointConfig().enableUnalignedCheckpoints();
-        env.getCheckpointConfig().setAlignedCheckpointTimeout(Duration.ofMillis(10000L));
-        env.getCheckpointConfig().setMaxConcurrentCheckpoints(1);
-        env.getCheckpointConfig().setMinPauseBetweenCheckpoints(10000L);
-        env.getCheckpointConfig().setCheckpointTimeout(600000L);
-        env.getCheckpointConfig().setTolerableCheckpointFailureNumber(Integer.MAX_VALUE);
-        env.getConfig().setUseSnapshotCompression(true);
 
         StreamTableEnvironment tableEnv = StreamTableEnvironment.create(env, settings);
 

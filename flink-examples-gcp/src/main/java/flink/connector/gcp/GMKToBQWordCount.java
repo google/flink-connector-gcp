@@ -56,7 +56,6 @@ public class GMKToBQWordCount {
         boolean oauth = parameters.getBoolean("oauth", false);
         String bqWordFieldName = parameters.get("bq-word-field-name", "word");
         String bqCountFieldName = parameters.get("bq-count-field-name", "countStr");
-        Long checkpointInterval = parameters.getLong("checkpoint-interval", 60000L);
         String kafkaGroupId = parameters.get("kafka-group-id", "kafka-source-of-".concat(tableName));
         String jobName = parameters.get("job-name", "GMK-BQ-word-count");
         System.out.println("Starting job ".concat(jobName).concat(" with Kafka group id: ".concat(kafkaGroupId)));
@@ -65,8 +64,6 @@ public class GMKToBQWordCount {
         env.getConfig().setGlobalJobParameters(parameters);
         // BQ sink can only support up to 100 parallelism.
         env.getConfig().setMaxParallelism(100);
-        env.enableCheckpointing(checkpointInterval);
-        java.util.Base64.Encoder encoder = java.util.Base64.getEncoder();
 
         KafkaSourceBuilder<String> sourceBuilder = KafkaSource.<String>builder()
                 .setBootstrapServers(brokers)

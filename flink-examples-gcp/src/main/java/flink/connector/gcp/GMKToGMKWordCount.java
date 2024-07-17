@@ -46,13 +46,12 @@ public class GMKToGMKWordCount {
         String kafkaTopic = parameters.get("kafka-topic", "my-topic");
         String kafkaSinkTopic = parameters.get("kafka-sink-topic", "sink-topic");
         boolean oauth = parameters.getBoolean("oauth", false);
-        Long checkpointInterval = parameters.getLong("checkpoint-interval", 60000L);
         String jobName = parameters.get("job-name", "GMK-GMK-word-count");
         System.out.println("Starting job ".concat(jobName));
         System.out.println("Using SASL_SSL " + (oauth ? "OAUTHBEARER" : "PLAIN") + " to authenticate");
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.getConfig().setGlobalJobParameters(parameters);
-        env.enableCheckpointing(checkpointInterval);
+        
         KafkaSourceBuilder<String> sourceBuilder = KafkaSource.<String>builder()
                     .setBootstrapServers(brokers)
                     .setTopics(kafkaTopic)

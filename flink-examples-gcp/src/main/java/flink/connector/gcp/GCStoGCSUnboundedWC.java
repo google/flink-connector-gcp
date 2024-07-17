@@ -25,8 +25,6 @@ import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringEncoder;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.utils.ParameterTool;
-import org.apache.flink.configuration.CheckpointingOptions;
-import org.apache.flink.configuration.Configuration;
 import org.apache.flink.connector.file.sink.FileSink;
 import org.apache.flink.connector.file.sink.compactor.DecoderBasedReader;
 import org.apache.flink.connector.file.sink.compactor.FileCompactStrategy;
@@ -63,24 +61,9 @@ public class GCStoGCSUnboundedWC {
         env.getConfig().setGlobalJobParameters(parameters);
 
         String inputPath = parameters.get("input");
-        String outputPath = parameters.get("output", "gs://output/");
-        String checkpointDir = parameters.get("checkpoint");
+        String outputPath = parameters.get("output");
         String jobName = parameters.get("job-name", "GCS-GCS-word-count");
         int shuffleStages = parameters.getInt("shuffle-stages", 1);
-
-        // Add checkpointing, this is needed for files to leave the "in progress state"
-        Configuration config = new Configuration();
-        config.set(CheckpointingOptions.CHECKPOINT_STORAGE, "filesystem");
-        config.set(CheckpointingOptions.CHECKPOINTS_DIRECTORY, checkpointDir);
-        env.configure(config);
-        env.enableCheckpointing(10000L);
-        env.getCheckpointConfig().enableUnalignedCheckpoints();
-        env.getCheckpointConfig().setAlignedCheckpointTimeout(Duration.ofMillis(10000L));
-        env.getCheckpointConfig().setMaxConcurrentCheckpoints(1);
-        env.getCheckpointConfig().setMinPauseBetweenCheckpoints(10000L);
-        env.getCheckpointConfig().setCheckpointTimeout(600000L);
-        env.getCheckpointConfig().setTolerableCheckpointFailureNumber(Integer.MAX_VALUE);
-        env.getConfig().setUseSnapshotCompression(true);
 
         // Source (Unbounded Read)
         FileSource<String> textUnboundedSource =

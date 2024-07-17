@@ -63,10 +63,6 @@ public class GCSLoadGenerator {
         String jobName = parameters.get("job-name", "GCS-load-gen");
         System.out.println(String.format("Message load: %d; Rate Per Sec: %d, Load pattern: %s, Load period: %d", load, rate, pattern, loadPeriod));
 
-        // Add checkpointing, this is needed for files to leave the "in progress state"
-        Configuration config = new Configuration();
-        env.enableCheckpointing(Duration.ofSeconds(5).toMillis());
-
         // Source (Data Generator)
         GeneratorFunction<Long, Long> generatorFunction = n -> n;
         DataGeneratorSource<Long> generatorSource =
