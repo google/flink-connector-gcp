@@ -24,7 +24,6 @@ import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.connector.source.util.ratelimit.RateLimiterStrategy;
 import org.apache.flink.api.java.utils.ParameterTool;
-import org.apache.flink.configuration.Configuration;
 import org.apache.flink.connector.datagen.source.DataGeneratorSource;
 import org.apache.flink.connector.datagen.source.GeneratorFunction;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
@@ -35,7 +34,6 @@ import com.google.pubsub.flink.PubSubSerializationSchema;
 import com.google.pubsub.flink.PubSubSink;
 
 import java.time.Clock;
-import java.time.Duration;
 import java.util.Random;
 
 /** Creates load with pseudo random bytes and sends to the output PubSub topic. */
@@ -49,17 +47,13 @@ public class PubSubLoadGenerator {
         env.setRuntimeMode(RuntimeExecutionMode.STREAMING);
         env.getConfig().setGlobalJobParameters(parameters);
 
-        String outputPath = parameters.get("output", "input-topic");
-        String projectName = parameters.get("projectName", "managed-flink-shared-dev");
+        String outputPath = parameters.get("output");
+        String projectName = parameters.get("projectName");
         int load = parameters.getInt("messageSizeKB", 10);
         int rate = parameters.getInt("messagesPerSecond", 1000);
         Long loadPeriod = parameters.getLong("load-period-in-second", 3600);
         String pattern = parameters.get("pattern", "static");
         System.out.println(String.format("Message load: %d; Rate Per Sec: %d, Load pattern: %s, Load period: %d", load, rate, pattern, loadPeriod));
-
-        // Add checkpointing, this is needed for files to leave the "in progress state"
-        Configuration config = new Configuration();
-        env.enableCheckpointing(Duration.ofSeconds(5).toMillis());
 
         // Source (Data Generator)
         GeneratorFunction<Long, Long> generatorFunction = n -> n;

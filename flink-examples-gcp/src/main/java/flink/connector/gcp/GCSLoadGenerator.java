@@ -24,7 +24,6 @@ import org.apache.flink.api.common.serialization.SimpleStringEncoder;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.connector.source.util.ratelimit.RateLimiterStrategy;
 import org.apache.flink.api.java.utils.ParameterTool;
-import org.apache.flink.configuration.Configuration;
 import org.apache.flink.connector.datagen.source.DataGeneratorSource;
 import org.apache.flink.connector.datagen.source.GeneratorFunction;
 import org.apache.flink.connector.file.sink.FileSink;
@@ -62,10 +61,6 @@ public class GCSLoadGenerator {
         String pattern = parameters.get("pattern", "static");
         String jobName = parameters.get("job-name", "GCS-load-gen");
         System.out.println(String.format("Message load: %d; Rate Per Sec: %d, Load pattern: %s, Load period: %d", load, rate, pattern, loadPeriod));
-
-        // Add checkpointing, this is needed for files to leave the "in progress state"
-        Configuration config = new Configuration();
-        env.enableCheckpointing(Duration.ofSeconds(5).toMillis());
 
         // Source (Data Generator)
         GeneratorFunction<Long, Long> generatorFunction = n -> n;

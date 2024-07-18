@@ -52,13 +52,11 @@ public class PubSubToBQWordCount {
         String tableName = parameters.get("table-name");
         String bqWordFieldName = parameters.get("bq-word-field-name", "word");
         String bqCountFieldName = parameters.get("bq-count-field-name", "countStr");
-        Long checkpointInterval = parameters.getLong("checkpoint-interval", 60000L);
         String jobName = parameters.get("jobName", "PubSub-BQ-word-count");
         System.out.println("Starting job ".concat(jobName));
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.getConfig().setGlobalJobParameters(parameters);
-        env.enableCheckpointing(checkpointInterval);
 
     PubSubSource<String> source =
         PubSubSource.<String>builder()

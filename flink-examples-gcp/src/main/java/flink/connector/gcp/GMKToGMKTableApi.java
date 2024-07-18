@@ -32,8 +32,6 @@ import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.table.functions.TableFunction;
 import org.apache.flink.types.Row;
 
-import java.time.Duration;
-
 import static org.apache.flink.table.api.Expressions.$;
 import static org.apache.flink.table.api.Expressions.call;
 
@@ -48,24 +46,16 @@ public class GMKToGMKTableApi {
         String kafkaTopic = parameters.get("kafka-topic", "my-topic");
         String kafkaSinkTopic = parameters.get("kafka-sink-topic", "sink-topic");
         boolean oauth = parameters.getBoolean("oauth", false);
-        Long checkpointInterval = parameters.getLong("checkpoint-interval", 60000L);
         String jobName = parameters.get("job-name", "GMK-GMK-word-count");
         System.out.println("Starting job ".concat(jobName));
         System.out.println("Using SASL_SSL " + (oauth ? "OAUTHBEARER" : "PLAIN") + " to authenticate");
+
         EnvironmentSettings settings = EnvironmentSettings
                 .newInstance()
                 .inStreamingMode()
                 .build();
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.getConfig().setGlobalJobParameters(parameters);
-        env.enableCheckpointing(checkpointInterval);
-        env.getCheckpointConfig().enableUnalignedCheckpoints();
-        env.getCheckpointConfig().setAlignedCheckpointTimeout(Duration.ofMillis(10000L));
-        env.getCheckpointConfig().setMaxConcurrentCheckpoints(1);
-        env.getCheckpointConfig().setMinPauseBetweenCheckpoints(10000L);
-        env.getCheckpointConfig().setCheckpointTimeout(600000L);
-        env.getCheckpointConfig().setTolerableCheckpointFailureNumber(Integer.MAX_VALUE);
-        env.getConfig().setUseSnapshotCompression(true);
 
         StreamTableEnvironment tableEnv = StreamTableEnvironment.create(env, settings);
 
