@@ -1,9 +1,9 @@
-This is a collection of scripts to create a Google Manage Flink cluster and start a Flink Deployment
+This is a collection of scripts to create a Google Manage Flink deployment and start a Flink job
 
 # Scripts
 
-The main script `run_flink` creates a GMF cluster, adds needed settings, builds a Docker image and
-starts a Flink Deployment.
+The main script `run_flink_job` compiles `flink-examples-gcs`, uploads it to a GCS bucket,
+creates a Flink Deployment and starts a job.
 
 There are scripts for each in folder `util-scripts`.
 
@@ -11,72 +11,57 @@ There are scripts for each in folder `util-scripts`.
 
 ```
     # Required
-    -c cluster name
+    -j GCS path to the JAR. Can be created with -J under that path.
 
-    # Optional
-    -a Arguments for the Flink Deployment
-    -e Entry class name for the Flink Deployment
-    -d Name of the deployment
-    -f Flink version, defaults to `1.18.1`
-    -i Full image name, used if you don't want to build the image and pass your own
-    -j Jar URI
-    -m Docker image name
-    -n Repository for docker image
-    -p Project ID
-    -q Parallelism for the Flink Deployment,  defaults to 1
+    # Optional 
+    -a Arguments for the Flink job
+    -d Deployment name
     -r Region, defaults to `us-central1`
-    -s Service Account used to authentificate the Flink Deployment
-    -t Tag of the Docker image
+    -p Project ID
+    -v VPC for the deployment
+    -n Subnetwork for the deployment
+    -s Max slots of the deployment, defaults to 10
+    -t Service account to impersonate
+    -e Entry class name for the Flink job
+    -m Min parallelism for the Flink job, defaults to 1
+    -M Max parallelsim for the Flink job, defaults to 10
+    -k List of Managed Kafka Clusters, comma separated
 
-     # Booleans
-    -B Uses Cloud Build to build the image
-    -C Skips cluster creation
-    -D Skips Docker image creation
-    -F Skips Flink Deployment
-    -M Skips compiling the example pipeline
-    -P Skips installing GCS Plugin
-    -W Skips Workload Indentity Federation annotation
+    # Booleans
+    -P Compiles `flink-examples-gcp` and uploads the JAR to the `jar_uri`
+    -D Creates a new deployment
 ```
 
 # Examples
 
-## Basic End-to-End
+## Basic End-to-End on demand
 
-The simplest command only needs the name of the cluster (`-c`), it will use the default Project and
-Compute Engine Service Account (`service-<PROJECT NUMBER>-compute@developer.gserviceaccount.com`).
-
-```
-bash run_flink.sh -c my-cluster
-```
-
-## End-to-End with existing cluster
-
-If you have an existing cluster and want to launch a Flink Deployment using Cloud Build. This will install CERTs, `flink-kubernetes-operator` and annotate the Service Account with [Workloads Identity Federation](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity). The script will identify the cluster already exists:
+The simplest command only needs the name of the path to the JAR (`-j`):
 
 ```
-bash run_flink.sh -c my-existing-cluster
+bash run_flink_job.sh -j gs://my-bucket/my-jar.jar
 ```
 
-If the cluster already has all the needed settings, you can fully skip the creation:
+## End-to-End on existing deployment
+
+If you have an existing deployment and want to launch a Flink job there:
 
 ```
-bash run_flink.sh -c my-existing-cluster -C
+bash run_flink_job.sh -j gs://my-bucket/my-jar.jar -d my-deployment
 ```
 
-## End-to-End using an existing image
+## End-to-End with new deployment and new JAR
 
-If you have an existising Docker image and want to use it in a new cluster, you can pass it with parameter `-f`.
-The image has to be available for GMF and the script will skip the creation of a new image:
+If you need to create a deployment and generate the JAR:
 
 ```
-bash run_flink.sh -c my-cluster -f us-central1-docker.pkg.dev/<PROJECT>/flink-connector-repo/flink-image:latest -e MyClass -a "--arg1=value1 --arg2 value2" -j "local:///opt/flink/usrlib/my-job.jar"
+bash run_flink_job.sh -j gs://my-bucket/my-job.jar -J -d my-deployment -D
 ```
 
-
-## Create cluster with Service Account, using Cloud Build without Flink Deployment
+## Create an on demand job with custom class, max parallelism, Managed Kafka Clusters and arguments
 
 Creates a GMF cluster with a non-default Service Account and builds a Docker image using Cloud Build
 
 ```
-bash run_flink.sh -c my-cluster -s <PROJECT_NUMBER>-compute@developer.gserviceaccount.com -B -F
+bash run_flink_job.sh -j gs://my-bucket/my-job.jar -e path.to.entry.Class -M 1 -a arg1=value1,arg2=value2 -k projects/my-project/locations/us-central1/clusters/my-cluster,projects/my-project/locations/us-central1/clusters/my-cluster2
 ```
