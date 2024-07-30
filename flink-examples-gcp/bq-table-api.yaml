@@ -3,7 +3,7 @@ kind: FlinkDeployment
 metadata:
   name: bq-table-api
 spec:
-  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/bq-table-api:10
+  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/bq-table-api:71
   flinkVersion: v1_19
   flinkConfiguration:
     taskmanager.numberOfTaskSlots: "1"
@@ -19,6 +19,6 @@ spec:
   job:
     entryClass: flink.connector.gcp.BQTableAPI
     jarURI: local:///opt/flink/usrlib/gmf-examples.jar
-    args: [] 
+    args: ["--output-table", "test_table_table"] 
     parallelism: 1
     upgradeMode: stateless
