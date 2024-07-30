@@ -37,6 +37,8 @@ import com.google.cloud.flink.bigquery.sink.serializer.BigQueryTableSchemaProvid
 import com.google.cloud.flink.bigquery.table.config.BigQuerySinkTableConfig;
 import com.google.cloud.flink.bigquery.table.config.BigQueryTableConfig;
 
+import java.time.Duration;
+
 import static org.apache.flink.table.api.Expressions.$;
 import static org.apache.flink.table.api.Expressions.lit;
 
@@ -56,12 +58,13 @@ public class BQTableAPI {
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.getConfig().setGlobalJobParameters(params);
+        env.enableCheckpointing(Duration.ofSeconds(5).toMillis());
 
         StreamTableEnvironment tableEnv = StreamTableEnvironment.create(env, settings);
 
         final Schema schemaInput = Schema.newBuilder()
                 .column("text", DataTypes.STRING())
-                .columnByMetadata("timestamp", DataTypes.TIMESTAMP_LTZ())
+                .columnByMetadata("timestamp", DataTypes.TIMESTAMP_LTZ(3)).watermark("timestamp", $("timestamp").minus(lit(5).seconds()))
                 .build();
 
         TableDescriptor.Builder sourceBuilder = TableDescriptor
@@ -94,9 +97,9 @@ public class BQTableAPI {
         tableEnv.createTemporarySystemFunction("split", SplitWords.class);
 
         Table result = tableEnv.from("words")
-            .select($("text").as("text"), $("timestamp").as("ts"))
-            .window(Tumble.over(lit(1).hours()).on($("ts")).as("hourlyWindow"))
-            .groupBy($("hourlyWindow"), $("word"))
+            .select($("text").as("word"), $("timestamp").as("ts"))
+            .window(Tumble.over(lit(1).minutes()).on($("ts")).as("minuteWindow"))
+            .groupBy($("minuteWindow"), $("word"))
             .select(
                 $("word"),
                 $("word").count().as("counted"));
