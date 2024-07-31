@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 mvn clean install -U -DskipTests -Dcheckstyle.skip
 
 export IMAGE_WITH_TAG=us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/bq-table-api:$1

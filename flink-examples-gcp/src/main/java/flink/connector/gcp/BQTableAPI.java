@@ -47,6 +47,8 @@ public class BQTableAPI {
 
     public static void main(String[] args) throws Exception {
         ParameterTool params = ParameterTool.fromArgs(args);
+        String outputProject = params.get("output-project");
+        String outputDataset = params.get("output-dataset");
         String outputTable = params.get("output-table");
         String brokers = params.get("brokers", "localhost:9092");
         String kafkaTopic = params.get("kafka-topic", "my-topic");
@@ -61,6 +63,7 @@ public class BQTableAPI {
         env.enableCheckpointing(Duration.ofSeconds(5).toMillis());
 
         StreamTableEnvironment tableEnv = StreamTableEnvironment.create(env, settings);
+        tableEnv.getConfig().set("table.exec.source.idle-timeout", "5000");
 
         final Schema schemaInput = Schema.newBuilder()
                 .column("text", DataTypes.STRING())
@@ -82,8 +85,8 @@ public class BQTableAPI {
         // Declare Write Options.
         BigQueryTableConfig sinkTableConfig = BigQuerySinkTableConfig.newBuilder()
                 .table(outputTable)
-                .project("managed-flink-shared-dev")
-                .dataset("test_table_ds")
+                .project(outputProject)
+                .dataset(outputDataset)
                 .testMode(false)
                 .build();
         // Register the Sink Table
@@ -98,11 +101,11 @@ public class BQTableAPI {
 
         Table result = tableEnv.from("words")
             .select($("text").as("word"), $("timestamp").as("ts"))
-            .window(Tumble.over(lit(1).minutes()).on($("ts")).as("minuteWindow"))
-            .groupBy($("minuteWindow"), $("word"))
+            .window(Tumble.over(lit(1).minutes()).on($("ts")).as("w"))
+            .groupBy($("w"), $("word"))
             .select(
                 $("word"),
-                $("word").count().as("counted"));
+                $("word").count().as("counted"), $("w").start().as("window_start"), $("w").end().as("window_end"));
 
         result.executeInsert("bigQuerySinkTable");
     }
