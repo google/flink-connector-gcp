@@ -22,7 +22,7 @@ spec:
     jarURI: local:///opt/flink/usrlib/gmf-examples.jar
     # Replace with your own values
     args: [ 
-      "--output", "<subcription-name>",
+      "--output", "<subscription-name>",
       "--projectName", "<project-name>",
       "--messageSizeKB", "10",
       "--messagesPerSec", "1000" ] 

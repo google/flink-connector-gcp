@@ -35,7 +35,7 @@ spec:
     entryClass: flink.connector.gcp.GMKToGMKWordCount
     jarURI: local:///opt/flink/usrlib/gmf-examples.jar
     # Replace these with your values:
-    args: ["--brokers", "bootstrap.<gmk-cluster-name>.<region>.managedkafka-<env>.<project-name>.cloud-staging.goog:9092",
+    args: ["--brokers", "bootstrap.<gmk-cluster-name>.<region>.managedkafka.<project-name>.cloud-staging.goog:9092",
           "--gmk-username", "<service-account-name>@<project-name>.iam.gserviceaccount.com",
           "--kafka-topic", "<source-topic>",
           "--project-id", "<project-name>",
