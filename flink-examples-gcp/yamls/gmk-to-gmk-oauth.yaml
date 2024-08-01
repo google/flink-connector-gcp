@@ -3,7 +3,7 @@ kind: FlinkDeployment
 metadata:
   name: gmk-to-gmk-wordcount
 spec:
-  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/flink-examples-gcp:latest
+  image: <IMAGE>
   flinkVersion: v1_19
   flinkConfiguration:
     taskmanager.numberOfTaskSlots: "1"
@@ -27,8 +27,8 @@ spec:
     entryClass: flink.connector.gcp.GMKToGMKWordCount
     jarURI: local:///opt/flink/usrlib/gmf-examples.jar
     # Replace these with your values:
-    args: ["--brokers", "bootstrap.<gmk-cluster-name>.us-central1.managedkafka-<env>.<project-name>.cloud-staging.goog:9092",
-          "--kafka-topic", "my-topic",
+    args: ["--brokers", "bootstrap.<gmk-cluster-name>.<region>.managedkafka-<env>.<project-name>.cloud-staging.goog:9092",
+          "--kafka-topic", "<source-topic>",
           "--project-id", "<project-name>",
           "--kafka-sink-topic", "sink-topic",
           "--oauth", "true"] # true = OAUTHBEARER, false = PLAIN

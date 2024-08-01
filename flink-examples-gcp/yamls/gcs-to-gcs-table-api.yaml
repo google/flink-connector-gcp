@@ -1,10 +1,9 @@
 apiVersion: flink.apache.org/v1beta1
 kind: FlinkDeployment
 metadata:
-  name: gcs-load-gen
+  name: gcs-to-gcs-table-api
 spec:
-  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/flink-examples-gcp:latest
-  imagePullPolicy: "Always"
+  image: <IMAGE>
   flinkVersion: v1_19
   flinkConfiguration:
     taskmanager.numberOfTaskSlots: "1"
@@ -18,12 +17,12 @@ spec:
       memory: "4096m"
       cpu: 1
   job:
-    entryClass: flink.connector.gcp.GCSLoadGenerator
+    entryClass: flink.connector.gcp.GCStoGCSTableApi
     jarURI: local:///opt/flink/usrlib/gmf-examples.jar
-    # Replace with your own values
     args: [ 
-      "--output", "gs://<your-source-bucket>/",
-      "--messageSizeKB", "10",
-      "--messagesPerSec", "1000" ] 
-    parallelism: 10
+      "--input", "gs://<your-source-bucket>",
+      "--output", "gs://<your-sink-bucket>",
+      "--checkpoint", "gs://<your-checkpoint-bucket>" 
+      ] 
+    parallelism: 1
     upgradeMode: stateless

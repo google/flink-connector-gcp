@@ -1,9 +1,10 @@
 apiVersion: flink.apache.org/v1beta1
 kind: FlinkDeployment
 metadata:
-  name: gcs-to-gcs-table-api
+  name: pubsub-load-gen
 spec:
-  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/gcs-table-api:latest
+  image: <IMAGE>
+  imagePullPolicy: "Always"
   flinkVersion: v1_19
   flinkConfiguration:
     taskmanager.numberOfTaskSlots: "1"
@@ -17,12 +18,13 @@ spec:
       memory: "4096m"
       cpu: 1
   job:
-    entryClass: flink.connector.gcp.GCStoGCSTableApi
+    entryClass: flink.connector.gcp.PubSubLoadGenerator
     jarURI: local:///opt/flink/usrlib/gmf-examples.jar
+    # Replace with your own values
     args: [ 
-      "--input", "gs://<your-source-bucket>",
-      "--output", "gs://<your-sink-bucket>",
-      "--checkpoint", "gs://<your-checkpoint-bucket>" 
-      ] 
-    parallelism: 1
+      "--output", "<subcription-name>",
+      "--projectName", "<project-name>",
+      "--messageSizeKB", "10",
+      "--messagesPerSec", "1000" ] 
+    parallelism: 10
     upgradeMode: stateless

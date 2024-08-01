@@ -1,9 +1,9 @@
 apiVersion: flink.apache.org/v1beta1
 kind: FlinkDeployment
 metadata:
-  name: gmk-to-gmk-table-api
+  name: gmk-to-gmk-wordcount
 spec:
-  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/gmk-table-api:latest
+  image: <IMAGE>
   flinkVersion: v1_19
   flinkConfiguration:
     taskmanager.numberOfTaskSlots: "1"
@@ -32,13 +32,13 @@ spec:
       memory: "4096m"
       cpu: 1
   job:
-    entryClass: flink.connector.gcp.GMKToGMKTableApi
+    entryClass: flink.connector.gcp.GMKToGMKWordCount
     jarURI: local:///opt/flink/usrlib/gmf-examples.jar
     # Replace these with your values:
-    args: ["--brokers", "bootstrap.<gmk-cluster-name>.us-central1.managedkafka-<env>.<project-name>.cloud.goog:9092",
+    args: ["--brokers", "bootstrap.<gmk-cluster-name>.<region>.managedkafka-<env>.<project-name>.cloud-staging.goog:9092",
           "--gmk-username", "<service-account-name>@<project-name>.iam.gserviceaccount.com",
-          "--kafka-topic", "my-topic",
+          "--kafka-topic", "<source-topic>",
           "--project-id", "<project-name>",
-          "--kafka-sink-topic", "sink-topic"]
+          "--kafka-sink-topic", "<sink-topic>"]
     parallelism: 5
     upgradeMode: stateless

@@ -7,7 +7,7 @@ metadata:
 spec:
   containers:
   - name: kafka-cli
-    image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/kafka-cli:20240528
+    image: <IMAGE>
     command: ["/bin/sh"]
     args: ["-c", "./entrypoint.sh; while true; do sleep 3600; done"]
     env:
