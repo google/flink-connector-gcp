@@ -40,6 +40,7 @@ import com.google.cloud.flink.bigquery.table.config.BigQueryTableConfig;
 import java.time.Duration;
 
 import static org.apache.flink.table.api.Expressions.$;
+import static org.apache.flink.table.api.Expressions.call;
 import static org.apache.flink.table.api.Expressions.lit;
 
 /** BQ Wordcount using TableAPI. */
@@ -100,7 +101,7 @@ public class BQTableAPI {
         tableEnv.createTemporarySystemFunction("split", SplitWords.class);
 
         Table result = tableEnv.from("words")
-            .select($("text").as("word"), $("timestamp").as("ts"))
+            .select(call("split", $("text")).as("word"), $("timestamp").as("ts"))
             .window(Tumble.over(lit(1).minutes()).on($("ts")).as("w"))
             .groupBy($("w"), $("word"))
             .select(
