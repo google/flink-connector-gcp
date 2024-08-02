@@ -101,23 +101,26 @@ public class BQTableAPI {
         tableEnv.createTemporarySystemFunction("split", SplitWords.class);
 
         Table result = tableEnv.from("words")
-            .select(call("split", $("text")).as("word"), $("timestamp").as("ts"))
-            .window(Tumble.over(lit(1).minutes()).on($("ts")).as("w"))
-            .groupBy($("w"), $("word"))
+            .flatMap(call("split", $("text"), $("timestamp")).as("wordRow"))
+            .window(Tumble.over(lit(1).minutes()).on($("timestamp")).as("w"))
+            .groupBy($("w"), $("wordRow"))
             .select(
-                $("word"),
-                $("word").count().as("counted"), $("w").start().as("window_start"), $("w").end().as("window_end"));
+                $("wordRow").get("word"),
+                $("wordRow").count().as("counted"), $("w").start().as("window_start"), $("w").end().as("window_end"));
 
         result.executeInsert("bigQuerySinkTable");
     }
 
     /** Split words. */
-    @FunctionHint(output = @DataTypeHint("ROW<word STRING>"))
+    @FunctionHint(input = {@DataTypeHint("STRING"), @DataTypeHint("TIMESTAMP(3)")}, output = @DataTypeHint("ROW<word STRING, ts TIMESTAMP(3)>"))
     public static final class SplitWords extends TableFunction<Row> {
-        public void eval(String sentence) {
+        public void eval(String sentence, java.time.LocalDateTime ts) {
             for (String split : sentence.split("[^\\p{L}]+")) {
                 if (!split.equals(",") && !split.isEmpty()) {
-                    collect(Row.of(split.toLowerCase()));
+                    Row row = Row.withNames();
+                    row.setField("word", split.toLowerCase());
+                    row.setField("ts", ts);
+                    collect(row);
                 }
             }
         }

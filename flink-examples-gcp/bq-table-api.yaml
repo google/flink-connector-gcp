@@ -3,7 +3,7 @@ kind: FlinkDeployment
 metadata:
   name: bq-table-api
 spec:
-  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/bq-table-api:113
+  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/bq-table-api:148
   flinkVersion: v1_19
   flinkConfiguration:
     taskmanager.numberOfTaskSlots: "1"
