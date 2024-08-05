@@ -60,6 +60,7 @@ public class GMKLoadGenerator {
         Long loadPeriod = parameters.getLong("load-period-in-second", 3600);
         String pattern = parameters.get("pattern", "static");
         String jobName = parameters.get("job-name", "GMK-load-gen");
+        String secretID = parameters.get("secret-id", "");
         System.out.println("Starting job ".concat(jobName));
         System.out.println("Using SASL_SSL " + (oauth ? "OAUTHBEARER" : "PLAIN") + " to authenticate");
 
@@ -99,9 +100,13 @@ public class GMKLoadGenerator {
                                             "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required;");
         } else {
                 String password = "";
-                InputStream inputStream = new FileInputStream("/etc/secret-volume/chengedward-test-secret");
-                password = IOUtils.toString(inputStream, StandardCharsets.UTF_8);
-                System.out.println("gmk password: " + password);
+                String path = "/etc/secret-volume/" + secretID;
+                try {
+                        InputStream inputStream = new FileInputStream(path);
+                        password = IOUtils.toString(inputStream, StandardCharsets.UTF_8);
+                } catch (Exception e){
+                        System.out.println("path not found (might see this message during job graph creation): " + path);
+                }
 
                 String config = "org.apache.kafka.common.security.plain.PlainLoginModule required"
                 + " username=\'"
