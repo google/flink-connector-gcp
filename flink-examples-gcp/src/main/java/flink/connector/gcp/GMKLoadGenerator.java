@@ -33,6 +33,11 @@ import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
+import org.apache.commons.io.IOUtils;
+
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.Random;
 
@@ -59,6 +64,14 @@ public class GMKLoadGenerator {
         System.out.println("Using SASL_SSL " + (oauth ? "OAUTHBEARER" : "PLAIN") + " to authenticate");
 
         env.getConfig().setGlobalJobParameters(parameters);
+        // System.out.println("printing volumes");
+        // File curDir = new File("/etc/secret-volume/");
+        // File[] filesList = curDir.listFiles();
+        // for (File f : filesList){
+        //     if (f.isFile()){
+        //         System.out.println("volumes: /etc/secret-volume/" + f.getName());
+        //     }
+        // }
 
         // Source (Data Generator)
         GeneratorFunction<Long, Long> generatorFunction = n -> n;
@@ -68,7 +81,6 @@ public class GMKLoadGenerator {
                         maxRecords,
                         RateLimiterStrategy.perSecond(rate),
                         Types.LONG);
-        java.util.Base64.Encoder encoder = java.util.Base64.getEncoder();
 
         KafkaSinkBuilder<String> sinkBuilder = KafkaSink.<String>builder()
                 .setBootstrapServers(brokers)
@@ -86,13 +98,17 @@ public class GMKLoadGenerator {
                                             "sasl.jaas.config",
                                             "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required;");
         } else {
+                String password = "";
+                InputStream inputStream = new FileInputStream("/etc/secret-volume/chengedward-test-secret");
+                password = IOUtils.toString(inputStream, StandardCharsets.UTF_8);
+                System.out.println("gmk password: " + password);
+
                 String config = "org.apache.kafka.common.security.plain.PlainLoginModule required"
                 + " username=\'"
                 + gmkUsername
                 + "\'"
                 + " password=\'"
-                + System.getenv("GMK_PASSWORD")
-                                                + "\';";
+                + password + "\';";
                 sinkBuilder.setProperty("sasl.mechanism", "PLAIN")
                                 .setProperty(
                                         "sasl.jaas.config", config);
