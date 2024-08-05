@@ -4,19 +4,22 @@ This repository contains GCP connectors for Apache Flink.
 
 ## Examples
 
-You can find multiple examples that use GCP connectors on `flink-examples-gcp`.
+You can find multiple examples that use GCP connectors in `flink-examples-gcp`. These are:
 
-These are:
+DataStream API:
 - Google Cloud Storage Load Generator
-- Google Cloud Storage to Google Cloud Storage with Table API
 - Google Cloud Storage to Google Cloud Storage Unbounded WordCount
 - Google Cloud Storage to Google Cloud Storage Bounded WordCount
 - Google Managed Kafka Load Generator
 - Google Managed Kafka to BigQuery
 - Google Managed Kafka to Google Managed Kafka WordCount
-- Google Managed Kafka to Google Managed Kafka with Table API
-- PubSub Load generator
+- PubSub Load Generator
 - PubSub to BigQuery WordCount
+
+Table API:
+- Google Cloud Storage to Google Cloud Storage with Table API
+- Google Managed Kafka to Google Managed Kafka with Table API
+
 
 ## Scripts
 
