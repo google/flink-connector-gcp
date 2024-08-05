@@ -65,14 +65,6 @@ public class GMKLoadGenerator {
         System.out.println("Using SASL_SSL " + (oauth ? "OAUTHBEARER" : "PLAIN") + " to authenticate");
 
         env.getConfig().setGlobalJobParameters(parameters);
-        // System.out.println("printing volumes");
-        // File curDir = new File("/etc/secret-volume/");
-        // File[] filesList = curDir.listFiles();
-        // for (File f : filesList){
-        //     if (f.isFile()){
-        //         System.out.println("volumes: /etc/secret-volume/" + f.getName());
-        //     }
-        // }
 
         // Source (Data Generator)
         GeneratorFunction<Long, Long> generatorFunction = n -> n;
