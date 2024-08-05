@@ -1,6 +1,34 @@
 # Apache Flink GCP Connectors
 
-This repository contains GCP connectors for Apache Flink.
+## Examples
+
+You can find multiple examples that use GCP connectors in `flink-examples-gcp`. These are:
+
+DataStream API:
+- Google Cloud Storage Load Generator
+- Google Cloud Storage to Google Cloud Storage WordCount
+- Google Cloud Storage to Google Cloud Storage WordCount (Batch)
+- Apache Kafka for BigQuery Load Generator
+- Apache Kafka for BigQuery to BigQuery
+- Apache Kafka for BigQuery to Apache Kafka for BigQuery WordCount
+- PubSub Load Generator
+- PubSub to BigQuery WordCount
+
+Table API:
+- Google Cloud Storage to Google Cloud Storage
+- Apache Kafka for BigQuery to Apache Kafka for BigQuery
+
+## Scripts
+
+Contains scripts to create a BigQuery Engine for Apache Flink deployment and start a Flink job.
+
+## Tools
+
+Collections of handy tools for development.
+
+These contain:
+- Kafka CLI
+- Maven checkstyle
 
 ## Source Code Headers
 

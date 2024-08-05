@@ -1,9 +1,15 @@
+# To run this, from inside flink-examples-gcp:
+#   mvn clean package -DskipTests -Denforcer.skip=true -Dcheckstyle.skip -U
+#   docker build ./ -t <IMAGE>
+#   docker push <IMAGE>
+#   kubectl apply -f gmk-load-gen.yaml
+#
 apiVersion: flink.apache.org/v1beta1
 kind: FlinkDeployment
 metadata:
-  name: gmk-to-gmk-wordcount
+  name: gmk-load-gen
 spec:
-  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/flink-examples-gcp:latest
+  image: <IMAGE>
   flinkVersion: v1_19
   flinkConfiguration:
     taskmanager.numberOfTaskSlots: "1"
@@ -32,13 +38,13 @@ spec:
       memory: "4096m"
       cpu: 1
   job:
-    entryClass: flink.connector.gcp.GMKToGMKWordCount
+    entryClass: flink.connector.gcp.GMKLoadGenerator
     jarURI: local:///opt/flink/usrlib/gmf-examples.jar
     # Replace these with your values:
-    args: ["--brokers", "bootstrap.<gmk-cluster-name>.us-central1.managedkafka-<env>.<project-name>.cloud-staging.goog:9092",
+    args: ["--brokers", "bootstrap.<gmk-cluster-name>.us-central1.managedkafka.<project-name>.cloud-staging.goog:9092",
           "--gmk-username", "<service-account-name>@<project-name>.iam.gserviceaccount.com",
           "--kafka-topic", "my-topic",
-          "--project-id", "<project-name>",
-          "--kafka-sink-topic", "sink-topic"]
-    parallelism: 5
+          "--messageSizeKB", "10",
+          "--messagesPerSecond", "1000"]
+    parallelism: 10
     upgradeMode: stateless

@@ -4,15 +4,11 @@ This repository contains GCP connector examples
 
 ## GMK
 
-This is assuming GMK is already set up. If not, learn more [here](https://cloud.google.com/products/apache-kafka-for-bigquery)
-
-To quickly try a GMK example, go to `gmk-to-gmk-oauth.yaml` and replace the variables in < > with your actual values.
-
-`kubectl apply -f gmk-to-gmk-oauth.yaml`
+This is assuming Apache Kafka for BigQuery is already set up. If not, learn more [here](https://cloud.google.com/products/apache-kafka-for-bigquery)
 
 ### Authentication
 
-Authenticating with Oauth for GMK just requires adding a few properties when building the GMK source/sink.
+Authenticating with Oauth for Apache Kafka for BigQuery just requires adding a few properties when building the Apache Kafka for BigQuery source/sink.
 
 ```
 .setProperty("security.protocol", "SASL_SSL")

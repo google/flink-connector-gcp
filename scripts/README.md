@@ -1,4 +1,4 @@
-This is a collection of scripts to create a Google Manage Flink deployment and start a Flink job
+This is a collection of scripts to create a BigQuery Engine for Apache Flink deployment and start a Flink job
 
 # Scripts
 
@@ -25,7 +25,7 @@ There are scripts for each in folder `util-scripts`.
     -e Entry class name for the Flink job
     -m Min parallelism for the Flink job, defaults to 1
     -M Max parallelsim for the Flink job, defaults to 10
-    -k List of Managed Kafka Clusters, comma separated
+    -k List of Apache Kafka for BigQuery Clusters, comma separated
 
     # Booleans
     -P Compiles `flink-examples-gcp` and uploads the JAR to the `jar_uri`
@@ -58,9 +58,7 @@ If you need to create a deployment and generate the JAR:
 bash run_flink_job.sh -j gs://my-bucket/my-job.jar -J -d my-deployment -D
 ```
 
-## Create an on demand job with custom class, max parallelism, Managed Kafka Clusters and arguments
-
-Creates a GMF cluster with a non-default Service Account and builds a Docker image using Cloud Build
+## Create an on demand job with custom class, max parallelism, Apache Kafka for BigQuery Clusters and arguments
 
 ```
 bash run_flink_job.sh -j gs://my-bucket/my-job.jar -e path.to.entry.Class -M 1 -a arg1=value1,arg2=value2 -k projects/my-project/locations/us-central1/clusters/my-cluster,projects/my-project/locations/us-central1/clusters/my-cluster2

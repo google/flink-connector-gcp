@@ -1,9 +1,10 @@
 apiVersion: flink.apache.org/v1beta1
 kind: FlinkDeployment
 metadata:
-  name: gcs-unbounded-wc
+  name: gcs-load-gen
 spec:
-  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/gcs-load-gen:latest
+  image: <IMAGE>
+  imagePullPolicy: "Always"
   flinkVersion: v1_19
   flinkConfiguration:
     taskmanager.numberOfTaskSlots: "1"
@@ -17,10 +18,12 @@ spec:
       memory: "4096m"
       cpu: 1
   job:
-    entryClass: flink.connector.gcp.GCStoGCSUnboundedWC
+    entryClass: flink.connector.gcp.GCSLoadGenerator
     jarURI: local:///opt/flink/usrlib/gmf-examples.jar
+    # Replace with your own values
     args: [ 
-      "--input", "gs://<your-source-bucket>/",
-      "--output", "gs://<your-sink-bucket>/"] 
-    parallelism: 1
+      "--output", "gs://<your-source-bucket>/",
+      "--messageSizeKB", "10",
+      "--messagesPerSec", "1000" ] 
+    parallelism: 10
     upgradeMode: stateless

@@ -25,7 +25,7 @@
 2. **Execute Command:** 
 
    ```bash
-   kubectl exec -it kafka-cli -- kafka-consumer-groups.sh --command-config /opt/kafka-config.properties --bootstrap-server bootstrap.ellading-gmk-prod.us-central1.managedkafka.managed-flink-shared-dev.cloud.goog:9092 --describe --group ellading-group3
+   kubectl exec -it kafka-cli -- kafka-consumer-groups.sh --command-config /opt/kafka-config.properties --bootstrap-server bootstrap.<CLUSTER>.<REGION>.managedkafka.<PROJECT>.cloud.goog:9092 --describe --group <GROUP>
    ```
 
 **Important Note:** Remember to replace placeholders with your actual values.
