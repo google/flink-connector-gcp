@@ -33,11 +33,6 @@ import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
-import org.apache.commons.io.IOUtils;
-
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.Random;
 
@@ -60,7 +55,9 @@ public class GMKLoadGenerator {
         Long loadPeriod = parameters.getLong("load-period-in-second", 3600);
         String pattern = parameters.get("pattern", "static");
         String jobName = parameters.get("job-name", "GMK-load-gen");
+        String project = parameters.get("project", "");
         String secretID = parameters.get("secret-id", "");
+        String secretVersion = parameters.get("secret-version", "1");
         System.out.println("Starting job ".concat(jobName));
         System.out.println("Using SASL_SSL " + (oauth ? "OAUTHBEARER" : "PLAIN") + " to authenticate");
 
@@ -91,14 +88,8 @@ public class GMKLoadGenerator {
                                             "sasl.jaas.config",
                                             "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required;");
         } else {
-                String password = "";
-                String path = "/etc/secret-volume/" + secretID;
-                try {
-                        InputStream inputStream = new FileInputStream(path);
-                        password = IOUtils.toString(inputStream, StandardCharsets.UTF_8);
-                } catch (Exception e){
-                        System.out.println("path not found (might see this message during job graph creation): " + path);
-                }
+                String password = GetSecretVersion.getSecretVersionPayload(project, secretID, secretVersion);
+                System.out.println("Got secret password for " + project + "/" + secretID + "/" + secretVersion);
 
                 String config = "org.apache.kafka.common.security.plain.PlainLoginModule required"
                 + " username=\'"
