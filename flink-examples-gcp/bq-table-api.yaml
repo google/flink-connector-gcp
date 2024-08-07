@@ -1,0 +1,24 @@
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkDeployment
+metadata:
+  name: bq-table-api
+spec:
+  image: <IMAGE>
+  flinkVersion: v1_19
+  flinkConfiguration:
+    taskmanager.numberOfTaskSlots: "1"
+  serviceAccount: flink
+  jobManager:
+    resource:
+      memory: "4096m"
+      cpu: 1
+  taskManager:
+    resource:
+      memory: "4096m"
+      cpu: 1
+  job:
+    entryClass: flink.connector.gcp.BQTableAPI
+    jarURI: local:///opt/flink/usrlib/gmf-examples.jar
+    args: ["--project-id", "<project-name>", "--dataset-name", "<dataset-name>", "--table-name", "<table-name>", "--rows-per-second", "10000"] 
+    parallelism: 1
+    upgradeMode: stateless
