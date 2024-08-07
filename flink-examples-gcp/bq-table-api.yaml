@@ -19,6 +19,6 @@ spec:
   job:
     entryClass: flink.connector.gcp.BQTableAPI
     jarURI: local:///opt/flink/usrlib/gmf-examples.jar
-    args: ["--projectId", "<project-name>", "--dataset-name", "<dataset-name>", "--table-name", "<table-name>", "--rows-per-second", "10000"] 
+    args: ["--project-id", "<project-name>", "--dataset-name", "<dataset-name>", "--table-name", "<table-name>", "--rows-per-second", "10000"] 
     parallelism: 1
     upgradeMode: stateless

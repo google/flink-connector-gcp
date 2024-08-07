@@ -19,6 +19,7 @@
 package flink.connector.gcp;
 
 import org.apache.flink.api.java.utils.ParameterTool;
+import org.apache.flink.connector.base.DeliveryGuarantee;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.annotation.DataTypeHint;
 import org.apache.flink.table.annotation.FunctionHint;
@@ -39,7 +40,6 @@ import java.time.Duration;
 
 import static org.apache.flink.table.api.Expressions.$;
 import static org.apache.flink.table.api.Expressions.call;
-import static org.apache.flink.table.api.Expressions.lit;
 
  /** Generates data and writes it to BQ using TableAPI. */
  public class BQTableAPI {
@@ -72,9 +72,9 @@ import static org.apache.flink.table.api.Expressions.lit;
         // Declare Write Options.
         BigQueryTableConfig sinkTableConfig =
                 BigQuerySinkTableConfig.newBuilder()
-                        .table(datasetName)
+                        .table(tableName)
                         .project(projectId)
-                        .dataset(tableName)
+                        .dataset(datasetName)
                         .testMode(false)
                         .deliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
                         .build();
@@ -89,9 +89,6 @@ import static org.apache.flink.table.api.Expressions.lit;
 
         tableEnv.createTemporarySystemFunction("split", SplitWords.class);
 
-         tableEnv.createTemporaryTable("words",
-                sourceBuilder.build());
-
          Table result = tableEnv.from("words")
              .flatMap(call("split", $("text"))).as("word");
 
@@ -99,15 +96,12 @@ import static org.apache.flink.table.api.Expressions.lit;
     }
 
     /** Split words. */
-    @FunctionHint(input = {@DataTypeHint("STRING"), @DataTypeHint("TIMESTAMP(3)")}, output = @DataTypeHint("ROW<word STRING, ts TIMESTAMP(3)>"))
+    @FunctionHint(output = @DataTypeHint("ROW<word STRING>"))
     public static final class SplitWords extends TableFunction<Row> {
-        public void eval(String sentence, java.time.LocalDateTime ts) {
+        public void eval(String sentence) {
             for (String split : sentence.split("[^\\p{L}]+")) {
                 if (!split.equals(",") && !split.isEmpty()) {
-                    Row row = Row.withNames();
-                    row.setField("word", split.toLowerCase());
-                    row.setField("ts", ts);
-                    collect(row);
+                    collect(Row.of(split.toLowerCase()));
                 }
             }
         }
