@@ -3,7 +3,7 @@ kind: FlinkDeployment
 metadata:
   name: bq-table-api
 spec:
-  image: us-central1-docker.pkg.dev/managed-flink-shared-dev/flink-connector-repo/bq-table-api:148
+  image: <IMAGE>
   flinkVersion: v1_19
   flinkConfiguration:
     taskmanager.numberOfTaskSlots: "1"
@@ -19,11 +19,6 @@ spec:
   job:
     entryClass: flink.connector.gcp.BQTableAPI
     jarURI: local:///opt/flink/usrlib/gmf-examples.jar
-    args: [
-          "--output-project", "managed-flink-shared-dev",
-          "--output-dataset", "test_table_ds",
-          "--output-table", "test_table_2",
-          "--kafka-topic", "bq-load-topic", 
-          "--brokers", "bootstrap.gmf-load-clstr-4.us-central1.managedkafka.managed-flink-shared-dev.cloud.goog:9092"] 
+    args: ["--projectId", "<project-name>", "--dataset-name", "<dataset-name>", "--table-name", "<table-name>", "--rows-per-second", "10000"] 
     parallelism: 1
     upgradeMode: stateless

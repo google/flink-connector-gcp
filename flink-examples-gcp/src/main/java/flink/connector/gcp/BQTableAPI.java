@@ -24,11 +24,9 @@ import org.apache.flink.table.annotation.DataTypeHint;
 import org.apache.flink.table.annotation.FunctionHint;
 import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.api.EnvironmentSettings;
-import org.apache.flink.table.api.FormatDescriptor;
 import org.apache.flink.table.api.Schema;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableDescriptor;
-import org.apache.flink.table.api.Tumble;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.table.functions.TableFunction;
 import org.apache.flink.types.Row;
@@ -43,16 +41,15 @@ import static org.apache.flink.table.api.Expressions.$;
 import static org.apache.flink.table.api.Expressions.call;
 import static org.apache.flink.table.api.Expressions.lit;
 
-/** BQ Wordcount using TableAPI. */
-public class BQTableAPI {
+ /** Generates data and writes it to BQ using TableAPI. */
+ public class BQTableAPI {
 
-    public static void main(String[] args) throws Exception {
-        ParameterTool params = ParameterTool.fromArgs(args);
-        String outputProject = params.get("output-project");
-        String outputDataset = params.get("output-dataset");
-        String outputTable = params.get("output-table");
-        String brokers = params.get("brokers", "localhost:9092");
-        String kafkaTopic = params.get("kafka-topic", "my-topic");
+     public static void main(String[] args) throws Exception {
+         ParameterTool params = ParameterTool.fromArgs(args);
+         String projectId = params.get("project-id");
+         String datasetName = params.get("dataset-name");
+         String tableName = params.get("table-name");
+         String rowsPerSec = params.get("rows-per-second");
 
         EnvironmentSettings settings = EnvironmentSettings
                 .newInstance()
@@ -63,33 +60,25 @@ public class BQTableAPI {
         env.getConfig().setGlobalJobParameters(params);
         env.enableCheckpointing(Duration.ofSeconds(5).toMillis());
 
-        StreamTableEnvironment tableEnv = StreamTableEnvironment.create(env, settings);
-        tableEnv.getConfig().set("table.exec.source.idle-timeout", "5000");
+         StreamTableEnvironment tableEnv = StreamTableEnvironment.create(env, settings);
 
-        final Schema schemaInput = Schema.newBuilder()
+         final Schema schemaInput = Schema.newBuilder()
                 .column("text", DataTypes.STRING())
-                .columnByMetadata("timestamp", DataTypes.TIMESTAMP_LTZ(3)).watermark("timestamp", $("timestamp").minus(lit(5).seconds()))
                 .build();
 
         TableDescriptor.Builder sourceBuilder = TableDescriptor
-            .forConnector("kafka")
-            .schema(schemaInput)
-            .option("topic", kafkaTopic)
-            .option("properties.bootstrap.servers", brokers)
-            .option("scan.startup.mode", "earliest-offset")
-            .format(FormatDescriptor.forFormat("csv").build());
-        sourceBuilder.option("properties.security.protocol", "SASL_SSL")
-            .option("properties.sasl.mechanism", "OAUTHBEARER")
-            .option("properties.sasl.login.callback.handler.class", "com.google.cloud.hosted.kafka.auth.GcpLoginCallbackHandler")
-            .option("properties.sasl.jaas.config", "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required;");
+            .forConnector("datagen").schema(schemaInput).option("rows-per-second", rowsPerSec);
 
         // Declare Write Options.
-        BigQueryTableConfig sinkTableConfig = BigQuerySinkTableConfig.newBuilder()
-                .table(outputTable)
-                .project(outputProject)
-                .dataset(outputDataset)
-                .testMode(false)
-                .build();
+        BigQueryTableConfig sinkTableConfig =
+                BigQuerySinkTableConfig.newBuilder()
+                        .table(datasetName)
+                        .project(projectId)
+                        .dataset(tableName)
+                        .testMode(false)
+                        .deliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
+                        .build();
+
         // Register the Sink Table
         tableEnv.createTable(
             "bigQuerySinkTable",
@@ -100,13 +89,11 @@ public class BQTableAPI {
 
         tableEnv.createTemporarySystemFunction("split", SplitWords.class);
 
-        Table result = tableEnv.from("words")
-            .flatMap(call("split", $("text"), $("timestamp")).as("wordRow"))
-            .window(Tumble.over(lit(1).minutes()).on($("timestamp")).as("w"))
-            .groupBy($("w"), $("wordRow"))
-            .select(
-                $("wordRow").get("word"),
-                $("wordRow").count().as("counted"), $("w").start().as("window_start"), $("w").end().as("window_end"));
+         tableEnv.createTemporaryTable("words",
+                sourceBuilder.build());
+
+         Table result = tableEnv.from("words")
+             .flatMap(call("split", $("text"))).as("word");
 
         result.executeInsert("bigQuerySinkTable");
     }
