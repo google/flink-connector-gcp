@@ -36,8 +36,8 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import java.time.Clock;
 import java.util.Random;
 
-/** Pipeline code for generating load to Managed Kafka. */
-public class GMKLoadGenerator {
+/** Pipeline code for generating load to Kafka. */
+public class KafkaLoadGenerator {
     private static final int KB = 1024;
     private static final int MB = 1024 * 1024;
 
@@ -46,15 +46,15 @@ public class GMKLoadGenerator {
 
         final ParameterTool parameters = ParameterTool.fromArgs(args);
         String brokers = parameters.get("brokers", "localhost:9092");
-        String gmkUsername = parameters.get("gmk-username");
+        String kafkaUsername = parameters.get("kafka-username");
         String kafkaTopic = parameters.get("kafka-topic", "my-topic");
         int load = parameters.getInt("messageSizeKB", 10);
         int rate = parameters.getInt("messagesPerSecond", 1000);
-        boolean oauth = parameters.getBoolean("oauth", false);
+        boolean oauth = parameters.getBoolean("oauth", true); // Only oauth is supported for Kafka for Big Query authentication
         Long maxRecords = parameters.getLong("max-records", 1_000_000_000L);
         Long loadPeriod = parameters.getLong("load-period-in-second", 3600);
         String pattern = parameters.get("pattern", "static");
-        String jobName = parameters.get("job-name", "GMK-load-gen");
+        String jobName = parameters.get("job-name", "Kafka-load-gen");
         String project = parameters.get("project", "");
         String secretID = parameters.get("secret-id", "");
         String secretVersion = parameters.get("secret-version", "1");
@@ -90,13 +90,12 @@ public class GMKLoadGenerator {
         } else {
                 String password = GetSecretVersion.getSecretVersionPayload(project, secretID, secretVersion);
                 System.out.println("Got secret password for " + project + "/" + secretID + "/" + secretVersion);
-
                 String config = "org.apache.kafka.common.security.plain.PlainLoginModule required"
-                + " username=\'"
-                + gmkUsername
-                + "\'"
-                + " password=\'"
-                + password + "\';";
+                        + " username=\'"
+                        + kafkaUsername
+                        + "\'"
+                        + " password=\'"
+                        + password + "\';";
                 sinkBuilder.setProperty("sasl.mechanism", "PLAIN")
                                 .setProperty(
                                         "sasl.jaas.config", config);
