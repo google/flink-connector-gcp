@@ -76,6 +76,10 @@ under the License.
         <artifactId>google-cloud-storage-control</artifactId>
     </dependency>
     <dependency>
+        <groupId>com.google.cloud</groupId>
+        <artifactId>google-cloud-secretmanager</artifactId>
+    </dependency>
+    <dependency>
         <groupId>com.google.cloud.flink</groupId>
         <artifactId>flink-1.17-connector-bigquery</artifactId>
         <version>${flink-connector-bigquery.version}</version>
