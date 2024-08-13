@@ -2,12 +2,12 @@
 #   mvn clean package -DskipTests -Denforcer.skip=true -Dcheckstyle.skip -U
 #   docker build ./ -t <IMAGE>
 #   docker push <IMAGE>
-#   kubectl apply -f kafka-load-gen.yaml
+#   kubectl apply -f gmk-load-gen.yaml
 #
 apiVersion: flink.apache.org/v1beta1
 kind: FlinkDeployment
 metadata:
-  name: kafka-load-gen
+  name: gmk-load-gen
 spec:
   image: <IMAGE>
   flinkVersion: v1_19
@@ -25,22 +25,26 @@ spec:
         name: pod-template
       spec:
         serviceAccount: flink
+        containers:
+          - name: flink-main-container
+            env:
+            - name: GMK_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: gmk-sasl-plain-login
+                  key: password
   taskManager:
     resource:
       memory: "4096m"
       cpu: 1
   job:
-    entryClass: flink.connector.gcp.KafkaLoadGenerator
+    entryClass: flink.connector.gcp.GMKLoadGenerator
     jarURI: local:///opt/flink/usrlib/gmf-examples.jar
     # Replace these with your values:
-    args: ["--brokers", "bootstrap.<kafka-cluster-name>.us-central1.managedkafka.<project-name>.cloud-staging.goog:9092",
-          "--kafka-username", "<service-account-name>@<project-name>.iam.gserviceaccount.com",
+    args: ["--brokers", "bootstrap.<gmk-cluster-name>.us-central1.managedkafka.<project-name>.cloud-staging.goog:9092",
+          "--gmk-username", "<service-account-name>@<project-name>.iam.gserviceaccount.com",
           "--kafka-topic", "my-topic",
           "--messageSizeKB", "10",
-          "--messagesPerSecond", "1000",
-          "--project", "<project-name>",
-          "--secret-id", "<secret-id>",
-          "--secret-version", "<secret-version>",
-          "--oauth", "false"]
+          "--messagesPerSecond", "1000"]
     parallelism: 10
     upgradeMode: stateless

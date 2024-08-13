@@ -1,7 +1,7 @@
 apiVersion: flink.apache.org/v1beta1
 kind: FlinkDeployment
 metadata:
-  name: kafka-to-kafka-wordcount
+  name: gmk-to-bq-wordcount
 spec:
   image: <IMAGE>
   flinkVersion: v1_19
@@ -19,22 +19,27 @@ spec:
         name: pod-template
       spec:
         serviceAccount: flink
+        containers:
+          - name: flink-main-container
+            env:
+            - name: GMK_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: gmk-sasl-plain-login
+                  key: password
   taskManager:
     resource:
       memory: "4096m"
       cpu: 1
   job:
-    entryClass: flink.connector.gcp.KafkaToKafkaWordCount
+    entryClass: flink.connector.gcp.GMKToBQWordCount
     jarURI: local:///opt/flink/usrlib/gmf-examples.jar
     # Replace these with your values:
-    args: ["--brokers", "bootstrap.<kafka-cluster-name>.<region>.managedkafka.<project-name>.cloud-staging.goog:9092",
-          "--kafka-username", "<service-account-name>@<project-name>.iam.gserviceaccount.com",
-          "--kafka-topic", "<source-topic>",
+    args: ["--brokers", "bootstrap.<gmk-cluster-name>.<region>.managedkafka.<project-name>.cloud.goog:9092",
+          "--gmk-username", "<service-account-name>@<project-name>.iam.gserviceaccount.com",
+          "--kafka-topic", "my-topic",
           "--project-id", "<project-name>",
-          "--kafka-sink-topic", "<sink-topic>",
-          "--project", "<project-name>",
-          "--secret-id", "<secret-id>",
-          "--secret-version", "<secret-version>",
-          "--oauth", "false"]
+          "--dataset-name", "<dataset-name>",
+          "--table-name", "<table-name>"]
     parallelism: 5
     upgradeMode: stateless
