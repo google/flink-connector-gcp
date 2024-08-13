@@ -35,21 +35,18 @@ import org.apache.flink.types.Row;
 import static org.apache.flink.table.api.Expressions.$;
 import static org.apache.flink.table.api.Expressions.call;
 
-/** Pipeline code for running word count reading from Kafka and writing to Kafka. */
-public class KafkaToKafkaTableApi {
+/** Pipeline code for running word count reading from GMK and writing to GMK. */
+public class GMKToGMKTableApi {
     static Schema schema;
 
     public static void main(String[] args) throws Exception {
         final MultipleParameterTool parameters = MultipleParameterTool.fromArgs(args);
         String brokers = parameters.get("brokers", "localhost:9092");
-        String kafkaUsername = parameters.get("kafka-username");
+        String gmkUsername = parameters.get("gmk-username");
         String kafkaTopic = parameters.get("kafka-topic", "my-topic");
         String kafkaSinkTopic = parameters.get("kafka-sink-topic", "sink-topic");
-        boolean oauth = parameters.getBoolean("oauth", true); // Only oauth is supported for Kafka for Big Query authentication
-        String jobName = parameters.get("job-name", "Kafka-Kafka-word-count");
-        String project = parameters.get("project", "");
-        String secretID = parameters.get("secret-id", "");
-        String secretVersion = parameters.get("secret-version", "1");
+        boolean oauth = parameters.getBoolean("oauth", false);
+        String jobName = parameters.get("job-name", "GMK-GMK-word-count");
         System.out.println("Starting job ".concat(jobName));
         System.out.println("Using SASL_SSL " + (oauth ? "OAUTHBEARER" : "PLAIN") + " to authenticate");
 
@@ -99,14 +96,13 @@ public class KafkaToKafkaTableApi {
                 .option("properties.sasl.login.callback.handler.class", "com.google.cloud.hosted.kafka.auth.GcpLoginCallbackHandler")
                 .option("properties.sasl.jaas.config", "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required;");
         } else {
-            String password = GetSecretVersion.getSecretVersionPayload(project, secretID, secretVersion);
-            System.out.println("Got secret password for " + project + "/" + secretID + "/" + secretVersion);
             String config = "org.apache.kafka.common.security.plain.PlainLoginModule required"
                 + " username=\'"
-                + kafkaUsername
+                + gmkUsername
                 + "\'"
                 + " password=\'"
-                + password + "\';";
+                + System.getenv("GMK_PASSWORD")
+                + "\';";
             sourceBuilder.option("properties.security.protocol", "SASL_SSL")
                 .option("properties.sasl.mechanism", "PLAIN")
                 .option("properties.sasl.jaas.config", config);
