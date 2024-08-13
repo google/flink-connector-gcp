@@ -94,8 +94,8 @@ under the License.
     </dependency>
     <!-- Must be built from source: https://github.com/googleapis/managedkafka -->
     <dependency>
-        <groupId>com.google.cloud</groupId>
-        <artifactId>google-managed-kafka-auth-login-handler</artifactId>
+        <groupId>com.google.cloud.hosted.kafka</groupId>
+        <artifactId>managed-kafka-auth-login-handler</artifactId>
         <version>1.0.0</version>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.apache.flink/flink-test-utils-junit -->
