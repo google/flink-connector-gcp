@@ -10,10 +10,4 @@ spec:
     image: <IMAGE>
     command: ["/bin/sh"]
     args: ["-c", "./entrypoint.sh; while true; do sleep 3600; done"]
-    env:
-      - name: GMK_PASSWORD
-        valueFrom:
-          secretKeyRef:
-            key: password
-            name: gmk-sasl-plain-login
   restartPolicy: OnFailure
