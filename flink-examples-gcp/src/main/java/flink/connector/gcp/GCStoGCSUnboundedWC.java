@@ -97,7 +97,7 @@ public class GCStoGCSUnboundedWC {
         // Continuously read the written stream
         DataStreamSource<String> readUnbounded =
                 env.fromSource(
-                        textUnboundedSource, WatermarkStrategy.noWatermarks(), "Unbounded Read");
+                        textUnboundedSource, WatermarkStrategy.forMonotonousTimestamps(), "Unbounded Read");
         DataStream<Tuple2<String, Integer>> shuffleStream = readUnbounded.flatMap(new PrepareWC())
                 .keyBy(tuple -> tuple.f0)
                 .sum(1);
