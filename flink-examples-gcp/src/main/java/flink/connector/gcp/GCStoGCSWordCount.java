@@ -73,7 +73,7 @@ public class GCStoGCSWordCount {
 
         //  Start Pipeline
         DataStreamSource<String> read =
-                env.fromSource(source, WatermarkStrategy.noWatermarks(), "Read files");
+                env.fromSource(source, WatermarkStrategy.forMonotonousTimestamps(), "Read files");
 
         read.flatMap(new PrepareWC())
                 .keyBy(tuple -> tuple.f0)

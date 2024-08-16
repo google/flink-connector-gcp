@@ -75,7 +75,7 @@ public class PubSubLoadGenerator {
                         .build();
 
         DataStreamSource<Long> generator =
-                env.fromSource(generatorSource, WatermarkStrategy.noWatermarks(), "Data Generator");
+                env.fromSource(generatorSource, WatermarkStrategy.forMonotonousTimestamps(), "Data Generator");
 
         // Apply the input load filter.
         SingleOutputStreamOperator<Long> filteredGenerator = generator.filter(new InputLoadFilter(loadPeriod, pattern, Clock.systemDefaultZone(), new Random())).uid(pattern.concat(" filter"));

@@ -108,7 +108,7 @@ public class GMKToBQWordCount {
                         .serializer(new AvroToProtoSerializer())
                         .build();
 
-        env.fromSource(source, WatermarkStrategy.noWatermarks(), "Kafka Source")
+        env.fromSource(source, WatermarkStrategy.forMonotonousTimestamps(), "Kafka Source")
                 .flatMap(new PrepareWC())
                 .keyBy(tuple -> tuple.f0)
                 .sum(1)
