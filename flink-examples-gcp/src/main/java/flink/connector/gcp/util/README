@@ -1,6 +1,6 @@
 # How to use JobGraph Utils
-wget https://archive.apache.org/dist/flink/flink-1.19.1/flink-1.19.1-bin-scala_2.12.tgz /tmp/
-tar xvzf flink-1.19.1-bin-scala_2.12.tgz
+wget https://archive.apache.org/dist/flink/flink-1.19.1/flink-1.19.1-bin-scala_2.12.tgz -P /tmp/
+tar xvzf /tmp/flink-1.19.1-bin-scala_2.12.tgz --directory /tmp/
 cd flink-examples-gcp/
 mvn clean package -DskipTests
 java -cp  target/flink-examples-gcp-0.0.0-shaded.jar:/tmp/flink-1.19.1/lib/flink-dist-1.19.1.jar flink.connector.gcp.JobGraphUtils <Jobgraph-file-path>
