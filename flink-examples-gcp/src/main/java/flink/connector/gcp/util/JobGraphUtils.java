@@ -23,6 +23,7 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobmanager.scheduler.SlotSharingGroup;
+import org.apache.flink.runtime.source.coordinator.SourceCoordinatorProvider;
 import org.apache.flink.runtime.state.storage.FileSystemCheckpointStorage;
 import org.apache.flink.util.SerializedValue;
 
@@ -69,7 +70,11 @@ public class JobGraphUtils {
       SimpleModule module = new SimpleModule();
       module.addSerializer(Path.class, new StringSerializer());
       module.addSerializer(SlotSharingGroup.class, new StringSerializer());
-      module.addSerializer(org.apache.flink.runtime.jobgraph.JobVertex.class,
+      module.addSerializer(org.apache.flink.runtime.jobgraph.JobEdge.class,
+           new StringSerializer());
+      module.addSerializer(org.apache.flink.api.common.operators.ResourceSpec.class,
+          new StringSerializer());
+      module.addSerializer(org.apache.flink.runtime.jobgraph.IntermediateDataSet.class,
           new StringSerializer());
       module.addSerializer(org.apache.flink.api.common.serialization.SerializerConfig.class,
           new StringSerializer());
@@ -139,6 +144,10 @@ public class JobGraphUtils {
 
         } else if (deserializedValue instanceof FileSystemCheckpointStorage) {
           FileSystemCheckpointStorage executionConfig = (FileSystemCheckpointStorage) deserializedValue;
+          String jsonString = objectMapper.writeValueAsString(executionConfig);
+          gen.writeString(jsonString);
+        } else if (deserializedValue instanceof SourceCoordinatorProvider) {
+          SourceCoordinatorProvider executionConfig = (SourceCoordinatorProvider) deserializedValue;
           String jsonString = objectMapper.writeValueAsString(executionConfig);
           gen.writeString(jsonString);
         } else {
