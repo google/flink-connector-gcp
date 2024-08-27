@@ -140,8 +140,6 @@ public class JobGraphUtils {
           ExecutionConfig executionConfig = (ExecutionConfig) deserializedValue;
           String jsonString = objectMapper.writeValueAsString(executionConfig);
           gen.writeString(jsonString);
-          //gen.writeString(executionConfig.toString());
-
         } else if (deserializedValue instanceof FileSystemCheckpointStorage) {
           FileSystemCheckpointStorage executionConfig = (FileSystemCheckpointStorage) deserializedValue;
           String jsonString = objectMapper.writeValueAsString(executionConfig);
