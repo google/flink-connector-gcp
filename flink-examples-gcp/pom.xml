@@ -86,12 +86,6 @@ under the License.
         <version>${kafka.connector.version}</version>
         <scope>compile</scope>
     </dependency>
-    <!-- Must be built from source: https://github.com/GoogleCloudPlatform/pubsub/tree/master/flink-connector -->
-    <dependency>
-        <groupId>com.google.pubsub.flink</groupId>
-        <artifactId>flink-connector-gcp-pubsub</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
-    </dependency>
     <!-- Must be built from source: https://github.com/googleapis/managedkafka -->
     <dependency>
         <groupId>com.google.cloud.hosted.kafka</groupId>

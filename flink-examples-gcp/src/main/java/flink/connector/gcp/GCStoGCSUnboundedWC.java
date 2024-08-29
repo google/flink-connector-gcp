@@ -39,6 +39,8 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.filesystem.OutputFileConfig;
 import org.apache.flink.streaming.api.functions.sink.filesystem.rollingpolicies.DefaultRollingPolicy;
 import org.apache.flink.util.Collector;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.CheckpointingOptions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,6 +61,19 @@ public class GCStoGCSUnboundedWC {
 
         env.setRuntimeMode(RuntimeExecutionMode.STREAMING);
         env.getConfig().setGlobalJobParameters(parameters);
+        env.getCheckpointConfig().disableCheckpointing();
+        env.getCheckpointConfig().setCheckpointInterval(2000);
+        env.getConfig().setParallelism(10);
+        env.getConfig().setMaxParallelism(300);
+
+
+        Configuration config = new Configuration();
+        config.set(CheckpointingOptions.CHECKPOINT_STORAGE, "filesystem");
+        config.set(CheckpointingOptions.CHECKPOINTS_DIRECTORY, "hdfs:///my/checkpoint/dir");
+        config.setString("kubernetes.taskmanager.cpu.amount", "2");
+        config.setString("taskmanager.numberOfTaskSlots", "2");
+        config.setString("state.backend.type", "hashmap");
+        env.configure(config);
 
         String inputPath = parameters.get("input");
         String outputPath = parameters.get("output");
@@ -100,7 +115,8 @@ public class GCStoGCSUnboundedWC {
                         textUnboundedSource, WatermarkStrategy.noWatermarks(), "Unbounded Read");
         DataStream<Tuple2<String, Integer>> shuffleStream = readUnbounded.flatMap(new PrepareWC())
                 .keyBy(tuple -> tuple.f0)
-                .sum(1);
+                .sum(1)
+                .setParallelism(25);
 
         for (int i = 0; i < shuffleStages; i++) {
                 shuffleStream = shuffleStream.shuffle()
@@ -109,7 +125,9 @@ public class GCStoGCSUnboundedWC {
                                         public Tuple2<String, Integer> map(Tuple2<String, Integer> kv) {
                                                 return Tuple2.of(kv.f0, kv.f1 + 1);
                                         }
-                }).name("Map " + String.valueOf(i));
+                }).name("Map " + String.valueOf(i))
+                .setParallelism(i + 1)
+                .setMaxParallelism(i + 1);
         }
         shuffleStream.map(kv -> String.format("Word: %s Count: %s", kv.f0, kv.f1)).sinkTo(sink).uid("gcsToGcsWriter");
 
