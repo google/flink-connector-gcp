@@ -111,7 +111,7 @@ public class GMKLoadGenerator {
                                         "sasl.jaas.config", config);
         }
         KafkaSink<String> sink = sinkBuilder.build();
-        DataStreamSource<Long> generator = env.fromSource(generatorSource, WatermarkStrategy.noWatermarks(),
+        DataStreamSource<Long> generator = env.fromSource(generatorSource, WatermarkStrategy.forMonotonousTimestamps(),
                         "Data Generator");
         // Apply the input load filter.
         SingleOutputStreamOperator<Long> filteredGenerator = generator
