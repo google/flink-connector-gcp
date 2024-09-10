@@ -24,7 +24,7 @@ spec:
       memory: "4096m"
       cpu: 1
   job:
-    entryClass: flink.connector.gcp.KafkaToBQWordCount
+    entryClass: flink.connector.gcp.GMKToBQWordCount
     jarURI: local:///opt/flink/usrlib/gmf-examples.jar
     # Replace these with your values:
     args: ["--brokers", "bootstrap.<kafka-cluster-name>.<region>.managedkafka.<project-name>.cloud.goog:9092",

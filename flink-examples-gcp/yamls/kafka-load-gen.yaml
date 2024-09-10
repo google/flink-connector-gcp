@@ -30,7 +30,7 @@ spec:
       memory: "4096m"
       cpu: 1
   job:
-    entryClass: flink.connector.gcp.KafkaLoadGenerator
+    entryClass: flink.connector.gcp.GMKLoadGenerator
     jarURI: local:///opt/flink/usrlib/gmf-examples.jar
     # Replace these with your values:
     args: ["--brokers", "bootstrap.<kafka-cluster-name>.us-central1.managedkafka.<project-name>.cloud-staging.goog:9092",
