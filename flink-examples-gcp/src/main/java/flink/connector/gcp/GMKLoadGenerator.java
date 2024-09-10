@@ -37,7 +37,7 @@ import java.time.Clock;
 import java.util.Random;
 
 /** Pipeline code for generating load to Kafka. */
-public class GMKLoadGeneratorLoadGenerator {
+public class GMKLoadGenerator {
     private static final int KB = 1024;
     private static final int MB = 1024 * 1024;
 
