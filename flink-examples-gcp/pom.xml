@@ -24,7 +24,7 @@ under the License.
   <parent>
     <groupId>com.google.flink.connector.gcp</groupId>
     <artifactId>flink-connector-gcp-parent</artifactId>
-    <version>0.0.4-SNAPSHOT</version>
+    <version>0.0.0</version>
   </parent>
 
   <artifactId>flink-examples-gcp</artifactId>
@@ -39,32 +39,50 @@ under the License.
     <flink-connector-bigquery.version>0.3-SNAPSHOT</flink-connector-bigquery.version>
   </properties>
 
-      <repositories>
-        <repository>
-            <id>central</id>
-            <name>Central Repository</name>
-            <url>https://repo.maven.apache.org/maven2</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </repository>
-		<repository>
-			<id>example-repo</id>
-			<name>Example Repository</name>
-			<url>file:///usr/local/google/home/${USER}/.m2/repository</url>
-		</repository>
-	</repositories>
-<dependencyManagement>
-  <dependencies>
-    <dependency>
-      <groupId>com.google.cloud</groupId>
-      <artifactId>libraries-bom</artifactId>
-      <version>26.39.0</version>
-      <type>pom</type>
-      <scope>import</scope>
-    </dependency>
-  </dependencies>
-</dependencyManagement>
+  <repositories>
+    <repository>
+        <id>central</id>
+        <name>Central Repository</name>
+        <url>https://repo.maven.apache.org/maven2</url>
+        <snapshots>
+            <enabled>false</enabled>
+        </snapshots>
+    </repository>
+    <repository>
+      <id>example-repo</id>
+      <name>Example Repository</name>
+      <url>file:///usr/local/google/home/${USER}/.m2/repository</url>
+    </repository>
+    <repository>
+      <id>artifact-registry</id>
+      <url>artifactregistry://us-central1-maven.pkg.dev/managed-flink-shared-dev/chengedward-jars</url>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
+
+  <distributionManagement>
+    <snapshotRepository>
+      <id>artifact-registry</id>
+      <url>artifactregistry://us-central1-maven.pkg.dev/managed-flink-shared-dev/chengedward-jars</url>
+    </snapshotRepository>
+  </distributionManagement>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.google.cloud</groupId>
+        <artifactId>libraries-bom</artifactId>
+        <version>26.39.0</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
  <dependencies>
     <dependency>
@@ -181,7 +199,7 @@ under the License.
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-deploy-plugin</artifactId>
             <configuration>
-                <skip>true</skip>
+                <skip>false</skip>
             </configuration>
         </plugin>
         <plugin>
@@ -262,5 +280,12 @@ under the License.
             </executions>
         </plugin>
     </plugins>
+    <extensions>
+      <extension>
+        <groupId>com.google.cloud.artifactregistry</groupId>
+        <artifactId>artifactregistry-maven-wagon</artifactId>
+        <version>2.2.0</version>
+      </extension>
+    </extensions>
   </build>
 </project>
