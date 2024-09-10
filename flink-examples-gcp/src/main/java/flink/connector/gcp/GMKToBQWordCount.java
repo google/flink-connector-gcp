@@ -42,7 +42,7 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericRecordBuilder;
 
 /** Pipeline code for running word count reading from Kafka and writing to BQ. */
-public class KafkaToBQWordCount {
+public class GMKToBQWordCount {
     static Schema schema;
 
     public static void main(String[] args) throws Exception {

@@ -36,7 +36,7 @@ import static org.apache.flink.table.api.Expressions.$;
 import static org.apache.flink.table.api.Expressions.call;
 
 /** Pipeline code for running word count reading from Kafka and writing to Kafka. */
-public class KafkaToKafkaTableApi {
+public class GMKToGMKTableApi {
     static Schema schema;
 
     public static void main(String[] args) throws Exception {

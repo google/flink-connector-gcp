@@ -36,7 +36,7 @@ import org.apache.flink.util.Collector;
 import org.apache.avro.Schema;
 
 /** Pipeline code for running word count reading from Kafka and writing to Kafka. */
-public class KafkaToKafkaWordCount {
+public class GMKToGMKWordCount{
     static Schema schema;
 
     public static void main(String[] args) throws Exception {
