@@ -33,15 +33,10 @@ import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
-import org.apache.commons.io.IOUtils;
-
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.Random;
 
-/** Pipeline code for generating load to Managed Kafka. */
+/** Pipeline code for generating load to Kafka. */
 public class GMKLoadGenerator {
     private static final int KB = 1024;
     private static final int MB = 1024 * 1024;
@@ -51,16 +46,18 @@ public class GMKLoadGenerator {
 
         final ParameterTool parameters = ParameterTool.fromArgs(args);
         String brokers = parameters.get("brokers", "localhost:9092");
-        String gmkUsername = parameters.get("gmk-username");
+        String kafkaUsername = parameters.get("kafka-username");
         String kafkaTopic = parameters.get("kafka-topic", "my-topic");
         int load = parameters.getInt("messageSizeKB", 10);
         int rate = parameters.getInt("messagesPerSecond", 1000);
-        boolean oauth = parameters.getBoolean("oauth", false);
+        boolean oauth = parameters.getBoolean("oauth", true); // Only oauth is supported for Kafka for Big Query authentication
         Long maxRecords = parameters.getLong("max-records", 1_000_000_000L);
         Long loadPeriod = parameters.getLong("load-period-in-second", 3600);
         String pattern = parameters.get("pattern", "static");
-        String jobName = parameters.get("job-name", "GMK-load-gen");
+        String jobName = parameters.get("job-name", "Kafka-load-gen");
+        String project = parameters.get("project", "");
         String secretID = parameters.get("secret-id", "");
+        String secretVersion = parameters.get("secret-version", "1");
         System.out.println("Starting job ".concat(jobName));
         System.out.println("Using SASL_SSL " + (oauth ? "OAUTHBEARER" : "PLAIN") + " to authenticate");
 
@@ -91,21 +88,14 @@ public class GMKLoadGenerator {
                                             "sasl.jaas.config",
                                             "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required;");
         } else {
-                String password = "";
-                String path = "/etc/secret-volume/" + secretID;
-                try {
-                        InputStream inputStream = new FileInputStream(path);
-                        password = IOUtils.toString(inputStream, StandardCharsets.UTF_8);
-                } catch (Exception e){
-                        System.out.println("path not found (might see this message during job graph creation): " + path);
-                }
-
+                String password = GetSecretVersion.getSecretVersionPayload(project, secretID, secretVersion);
+                System.out.println("Got secret password for " + project + "/" + secretID + "/" + secretVersion);
                 String config = "org.apache.kafka.common.security.plain.PlainLoginModule required"
-                + " username=\'"
-                + gmkUsername
-                + "\'"
-                + " password=\'"
-                + password + "\';";
+                        + " username=\'"
+                        + kafkaUsername
+                        + "\'"
+                        + " password=\'"
+                        + password + "\';";
                 sinkBuilder.setProperty("sasl.mechanism", "PLAIN")
                                 .setProperty(
                                         "sasl.jaas.config", config);
