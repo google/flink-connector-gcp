@@ -18,6 +18,41 @@ Table API:
 - Google Cloud Storage to Google Cloud Storage
 - Apache Kafka for BigQuery to Apache Kafka for BigQuery
 
+Python:
+-  Google Cloud Storage to Google Cloud Storage WordCount
+
+## Building the Project
+
+This project uses the Maven wrapper for building. You don't need to install Maven separately.
+
+To build the project and package all examples with their dependencies into an uber JAR, follow these steps:
+
+1. **First, clone the repository.**
+
+    ```bash
+    git clone https://github.com/google/flink-connector-gcp.git
+    cd flink-connector-gcp
+    ```
+
+2. **Run the following command:**
+
+   ```bash
+   ./mvnw clean package
+   ```
+
+   This command will:
+
+    - `clean`: Delete any previous build artifacts.
+    - `package`: Compile the code, run tests, and package the project. In this case, it will create an uber JAR containing all examples and their dependencies.
+
+3. **The uber JAR will be located at:**
+
+   ```
+   flink-examples-gcp/target/flink-examples-gcp-0.0.0-shaded.jar
+   ```
+
+You can now use this JAR to run the examples.
+
 ## Scripts
 
 Contains scripts to create a BigQuery Engine for Apache Flink deployment and start a Flink job.
