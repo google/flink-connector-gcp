@@ -55,6 +55,7 @@ under the License.
   
     <modules>
         <module>flink-examples-gcp</module>
+        <module>beam-examples</module>
     </modules>
 
     <properties>
