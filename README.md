@@ -39,7 +39,10 @@ To build the project and package all examples with their dependencies into an ub
    ```bash
    ./mvnw clean package
    ```
-
+   **Caution:** This project includes examples demonstrating the use of Google Cloud Pub/Sub. To build these examples, you'll need to activate the pubsub Maven profile. This profile incorporates the necessary Pub/Sub dependencies and configurations. To build the examples with this profile, use the following command:
+   ```bash
+   ./mvnw clean package -Ppubsub
+   ```
    This command will:
 
     - `clean`: Delete any previous build artifacts.
