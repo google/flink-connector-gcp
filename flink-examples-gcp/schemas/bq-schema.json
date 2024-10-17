@@ -1,0 +1,14 @@
+{
+  "schema": [
+    {
+      "name": "word",
+      "type": "STRING",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "countStr",
+      "type": "STRING",
+      "mode": "REQUIRED"
+    }
+  ]
+}
