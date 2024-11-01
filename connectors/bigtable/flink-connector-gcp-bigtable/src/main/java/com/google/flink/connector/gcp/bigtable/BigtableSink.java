@@ -78,8 +78,6 @@ public abstract class BigtableSink<T> implements Sink<T> {
 
         public abstract Builder<T> setSerializer(BaseSerializer<T> serializer);
 
-        public abstract Builder<T> setColumnFamily(String columnFamily);
-
         public abstract BigtableSink<T> build();
     }
 }
