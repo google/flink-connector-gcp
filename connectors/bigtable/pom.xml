@@ -193,7 +193,6 @@
                 <scope>test</scope>
             </dependency>
         </dependencies>
-
     </dependencyManagement>
 
     <build>
@@ -245,22 +244,20 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.0.0-M6</version>
             </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>
                 <configuration>
-                  <annotationProcessorPaths>
-                    <path>
-                      <groupId>com.google.auto.value</groupId>
-                      <artifactId>auto-value</artifactId>
-                      <version>${google-auto-value.version}</version>
-                    </path>
-                  </annotationProcessorPaths>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>com.google.auto.value</groupId>
+                            <artifactId>auto-value</artifactId>
+                            <version>${google-auto-value.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
-              </plugin>
-
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
@@ -307,13 +304,11 @@
                             <version>1.17.0</version>
                             <style>AOSP</style>
                         </googleJavaFormat>
-
                         <!-- \# refers to the static imports -->
                         <importOrder>
                             <order>org.apache.flink,org.apache.flink.shaded,,javax,java,scala,\#</order>
                         </importOrder>
-
-                        <removeUnusedImports />
+                        <removeUnusedImports/>
                     </java>
                 </configuration>
                 <executions>
@@ -326,8 +321,6 @@
                     </execution>
                 </executions>
             </plugin>
-
-
         </plugins>
     </build>
 </project>
