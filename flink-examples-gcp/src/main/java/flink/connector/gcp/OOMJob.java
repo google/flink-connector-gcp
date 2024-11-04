@@ -49,7 +49,7 @@ public class OOMJob {
 
     int memAllocMb = params.getInt(PARAM_MEM_ALLOC_MB, DEFAULT_MEM_ALLOC_MB);
 
-    DataStreamSource<Long> read = env.fromSource(new NumberSequenceSource(1L, 10L),
+    DataStreamSource<Long> read = env.fromSource(new NumberSequenceSource(1L, Long.MAX_VALUE),
         WatermarkStrategy.noWatermarks(), "Read");
 
     read.flatMap(new FlatMapFunction<Long, Void>() {
@@ -68,6 +68,9 @@ public class OOMJob {
             Runtime runtime = Runtime.getRuntime();
             LOG.info("Allocated {} MB so far. maxMemory: {}, totalMemory: {}, freeMemory: {}",
                 i, runtime.maxMemory(), runtime.totalMemory(), runtime.freeMemory());
+            if (runtime.totalMemory() - runtime.freeMemory() >= memAllocMb) {
+              LOG.info("Memory has been allocated successfully from other places.");
+            }
           }
           LOG.info("Memory allocated successfully.");
         }
