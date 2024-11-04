@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package com.google.flink.connector.gcp.bigtable.serializers;
+package com.google.flink.connector.gcp.bigtable.internal.serializers;
 
 import org.apache.flink.api.connector.sink2.SinkWriter;
 
@@ -29,6 +29,6 @@ import java.io.Serializable;
  *
  * <p>This class implements the interface to serialize to {@link RowMutationEntry}.
  */
-public interface BaseSerializer<T> extends Serializable {
+public interface BaseRowMutationSerializer<T> extends Serializable {
     RowMutationEntry serialize(T element, SinkWriter.Context context);
 }

@@ -23,10 +23,10 @@ import org.apache.flink.api.connector.sink2.SinkWriter;
 
 import com.google.auto.value.AutoValue;
 import com.google.cloud.bigtable.data.v2.BigtableDataClient;
-import com.google.flink.connector.gcp.bigtable.serializers.BaseSerializer;
-import com.google.flink.connector.gcp.bigtable.utils.CreateBigtableClients;
-import com.google.flink.connector.gcp.bigtable.writer.BigtableFlushableWriter;
-import com.google.flink.connector.gcp.bigtable.writer.BigtableSinkWriter;
+import com.google.flink.connector.gcp.bigtable.internal.serializers.BaseRowMutationSerializer;
+import com.google.flink.connector.gcp.bigtable.internal.utils.CreateBigtableClients;
+import com.google.flink.connector.gcp.bigtable.internal.writer.BigtableFlushableWriter;
+import com.google.flink.connector.gcp.bigtable.internal.writer.BigtableSinkWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,9 +48,7 @@ public abstract class BigtableSink<T> implements Sink<T> {
 
     public abstract String table();
 
-    public abstract BaseSerializer<T> serializer();
-
-    public abstract String columnFamily();
+    public abstract BaseRowMutationSerializer<T> serializer();
 
     public static <T> Builder<T> builder() {
         return new AutoValue_BigtableSink.Builder<T>();
@@ -60,6 +58,7 @@ public abstract class BigtableSink<T> implements Sink<T> {
 
     @Override
     public SinkWriter<T> createWriter(Sink.InitContext sinkInitContext) throws IOException {
+
         BigtableDataClient client =
                 CreateBigtableClients.createDataClient(projectId(), instanceId());
 
@@ -76,7 +75,7 @@ public abstract class BigtableSink<T> implements Sink<T> {
 
         public abstract Builder<T> setTable(String table);
 
-        public abstract Builder<T> setSerializer(BaseSerializer<T> serializer);
+        public abstract Builder<T> setSerializer(BaseRowMutationSerializer<T> serializer);
 
         public abstract BigtableSink<T> build();
     }

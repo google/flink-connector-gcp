@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package com.google.flink.connector.gcp.bigtable.utils;
+package com.google.flink.connector.gcp.bigtable.internal.utils;
 
 import com.google.cloud.bigtable.data.v2.BigtableDataClient;
 import com.google.cloud.bigtable.data.v2.BigtableDataSettings;
@@ -26,7 +26,7 @@ import java.io.IOException;
 /** Utily class to create Bigtable Clients. */
 public class CreateBigtableClients {
 
-    /** Creates Data client. */
+    /** Creates Data client used for writing. */
     public static BigtableDataClient createDataClient(String project, String instance)
             throws IOException {
         BigtableDataSettings.Builder bigtableBuilder = BigtableDataSettings.newBuilder();

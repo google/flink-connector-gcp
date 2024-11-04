@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package com.google.flink.connector.gcp.bigtable.writer;
+package com.google.flink.connector.gcp.bigtable.internal.writer;
 
 import org.apache.flink.api.connector.sink2.Sink;
 
@@ -30,7 +30,7 @@ import com.google.cloud.bigtable.data.v2.models.TableId;
  *
  * <p>Method "collect" adds elements to the {@link Batcher}, which gets flushed during "flush".
  *
- * <p>At closing, all records are flushed and clients closed.
+ * <p>At closing, all records are flushed and clients are closed.
  */
 public class BigtableFlushableWriter {
     BigtableDataClient client;
@@ -55,7 +55,7 @@ public class BigtableFlushableWriter {
         batcher.flush();
     }
 
-    /** Send outstanding mutations and close clients. */
+    /** Send outstanding mutations and closes clients. */
     public void close() throws InterruptedException {
         flush();
         batcher.close();

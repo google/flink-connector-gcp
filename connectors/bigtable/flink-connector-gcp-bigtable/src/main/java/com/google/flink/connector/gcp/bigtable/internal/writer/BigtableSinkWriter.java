@@ -16,17 +16,17 @@
  * limitations under the License.
  */
 
-package com.google.flink.connector.gcp.bigtable.writer;
+package com.google.flink.connector.gcp.bigtable.internal.writer;
 
 import org.apache.flink.api.connector.sink2.SinkWriter;
 
-import com.google.flink.connector.gcp.bigtable.serializers.BaseSerializer;
+import com.google.flink.connector.gcp.bigtable.internal.serializers.BaseRowMutationSerializer;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 
 /**
- * Base writer class.
+ * Entry class for the writer.
  *
  * <p>This class implements the interface for the actual writer {@link BigtableFlushableWriter}.
  *
@@ -35,9 +35,10 @@ import java.util.concurrent.ExecutionException;
  */
 public class BigtableSinkWriter<T> implements SinkWriter<T> {
     private final BigtableFlushableWriter writer;
-    private final BaseSerializer<T> serializer;
+    private final BaseRowMutationSerializer<T> serializer;
 
-    public BigtableSinkWriter(BigtableFlushableWriter writer, BaseSerializer<T> serializer)
+    public BigtableSinkWriter(
+            BigtableFlushableWriter writer, BaseRowMutationSerializer<T> serializer)
             throws IOException {
         this.writer = writer;
         this.serializer = serializer;
