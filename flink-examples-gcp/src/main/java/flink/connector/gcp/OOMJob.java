@@ -62,15 +62,15 @@ public class OOMJob {
           LOG.info("Allocating memory {} MB", memAllocMb);
           memAlloc = new ArrayList<>();
           for (int i = 0; i < memAllocMb; ++i) {
-            byte[] block = new byte[MiB];
-            // Arrays.fill(block, (byte) -1);
-            memAlloc.add(block);
             Runtime runtime = Runtime.getRuntime();
-            LOG.info("Allocated {} MB so far. maxMemory: {}, totalMemory: {}, freeMemory: {}",
-                i, runtime.maxMemory(), runtime.totalMemory(), runtime.freeMemory());
             if (runtime.totalMemory() - runtime.freeMemory() >= memAllocMb) {
               LOG.info("Memory has been allocated successfully from other places.");
             }
+            byte[] block = new byte[MiB];
+            // Arrays.fill(block, (byte) -1);
+            memAlloc.add(block);
+            LOG.info("Allocated {} MB so far. maxMemory: {}, totalMemory: {}, freeMemory: {}",
+                i, runtime.maxMemory(), runtime.totalMemory(), runtime.freeMemory());
           }
           LOG.info("Memory allocated successfully.");
         }
