@@ -60,8 +60,12 @@ public class BQLoadGenerator {
                 Long maxRecords = parameters.getLong("max-records", 1_000_000_000L);
                 String pattern = parameters.get("pattern", "static");
                 Long loadPeriod = parameters.getLong("load-period-in-second", 3600);
+                Long checkpointInterval = parameters.getLong("checkpoint-interval", 60000L);
+                boolean wordGen = parameters.getBoolean("word-gen", true);
+                boolean exactlyOnce = parameters.getBoolean("exactly-once", true);
                 System.out.println("Starting job ".concat(jobName));
                 final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+                env.enableCheckpointing(checkpointInterval);
                 env.getConfig().setGlobalJobParameters(parameters);
                 // BQ sink can only support up to 100 parallelism.
                 env.getConfig().setMaxParallelism(100);
@@ -84,7 +88,10 @@ public class BQLoadGenerator {
                 BigQuerySinkConfig sinkConfig =
                         BigQuerySinkConfig.newBuilder()
                                 .connectOptions(sinkConnectOptions)
-                                .deliveryGuarantee(DeliveryGuarantee.EXACTLY_ONCE)
+                                .deliveryGuarantee(
+                                        exactlyOnce
+                                                ? DeliveryGuarantee.EXACTLY_ONCE
+                                                : DeliveryGuarantee.AT_LEAST_ONCE)
                                 .schemaProvider(schemaProvider)
                                 .serializer(new AvroToProtoSerializer())
                                 .build();
@@ -95,21 +102,43 @@ public class BQLoadGenerator {
                 SingleOutputStreamOperator<Long> filteredGenerator = generator
                                 .filter(new InputLoadFilter(loadPeriod, pattern, Clock.systemDefaultZone(), new Random()))
                                 .uid(pattern.concat(" filter")).name("filtered load");
-                filteredGenerator.flatMap(new WordLoadGenerator(load * KB))
-                .map(
-                        kv -> {
-                            GenericRecord rec =
-                                    new GenericRecordBuilder(schemaProvider.getAvroSchema())
-                                            .set(bqWordFieldName, kv)
-                                            .set(bqCountFieldName, '1')
-                                            .build();
-                            return rec;
-                        })
-                .returns(
-                        new GenericRecordAvroTypeInfo(
-                                sinkConfig.getSchemaProvider().getAvroSchema()))
-                .sinkTo(BigQuerySink.get(sinkConfig, env)).uid("writer");
 
+                if (wordGen) {
+                        filteredGenerator
+                                .flatMap(new WordLoadGenerator(load * KB))
+                                .map(
+                                        kv -> {
+                                        GenericRecord rec =
+                                                new GenericRecordBuilder(schemaProvider.getAvroSchema())
+                                                        .set(bqWordFieldName, kv + "")
+                                                        .set(bqCountFieldName, '1')
+                                                        .build();
+                                        return rec;
+                                        })
+                                .returns(
+                                        new GenericRecordAvroTypeInfo(
+                                                sinkConfig.getSchemaProvider().getAvroSchema()))
+                                .sinkTo(BigQuerySink.get(sinkConfig, env)).uid("writer");
+                }
+                else {
+                        filteredGenerator.map(
+                                kv -> {
+                                GenericRecord rec =
+                                        new GenericRecordBuilder(schemaProvider.getAvroSchema())
+                                                .set(bqWordFieldName, kv + "")
+                                                .set(bqCountFieldName, '1')
+                                                .build();
+                                return rec;
+                                })
+                        .returns(
+                                new GenericRecordAvroTypeInfo(
+                                        sinkConfig.getSchemaProvider().getAvroSchema()))
+                        .map(new FailingMapper()) // Fails on checkpoint with 20% probability
+                        .returns(
+                                new GenericRecordAvroTypeInfo(
+                                        sinkConfig.getSchemaProvider().getAvroSchema()))
+                        .sinkTo(BigQuerySink.get(sinkConfig, env)).uid("writer");
+                }
                 env.execute(jobName);
         }
 }

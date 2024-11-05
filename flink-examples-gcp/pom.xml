@@ -24,7 +24,7 @@ under the License.
   <parent>
     <groupId>com.google.flink.connector.gcp</groupId>
     <artifactId>flink-connector-gcp-parent</artifactId>
-    <version>0.0.2-SNAPSHOT</version>
+    <version>0.0.4-SNAPSHOT</version>
   </parent>
 
   <artifactId>flink-examples-gcp</artifactId>
