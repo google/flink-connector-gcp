@@ -23,11 +23,17 @@ import org.apache.flink.api.common.state.CheckpointListener;
 
 import org.apache.avro.generic.GenericRecord;
 
-import java.util.Random;
-
-/** Fails 20% of the time after a checkpoint.*/
+/** Fails some % of the time after a checkpoint (20% by default).*/
 public class FailingMapper
             implements MapFunction<GenericRecord, GenericRecord>, CheckpointListener {
+    double odds;
+    public FailingMapper(){
+        odds = .2;
+    }
+
+    public FailingMapper(double customOdds){
+        odds = customOdds;
+    }
 
     @Override
     public GenericRecord map(GenericRecord value) {
@@ -36,8 +42,7 @@ public class FailingMapper
 
     @Override
     public void notifyCheckpointComplete(long checkpointId) throws Exception {
-        int seed = new Random().nextInt(5);
-        if (seed % 5 == 2) {
+        if (Math.random() > odds) {
             throw new RuntimeException("Intentional failure in map");
         }
     }

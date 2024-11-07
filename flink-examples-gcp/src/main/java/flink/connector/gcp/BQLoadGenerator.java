@@ -43,7 +43,7 @@ import org.apache.avro.generic.GenericRecordBuilder;
 import java.time.Clock;
 import java.util.Random;
 
-/** Pipeline code for running word count reading from Kafka and writing to BQ. */
+/** Pipeline code for generating load to BQ. */
 public class BQLoadGenerator {
         static Schema schema;
         private static final int KB = 1024;
@@ -65,9 +65,9 @@ public class BQLoadGenerator {
                 boolean exactlyOnce = parameters.getBoolean("exactly-once", true);
                 System.out.println("Starting job ".concat(jobName));
                 final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-                env.enableCheckpointing(checkpointInterval);
                 // BQ sink requires checkpointing, which is enabled by default on Big Query Engine for Apache Flink
                 // Enable checkpointing if trying to run with OSS Flink
+                env.enableCheckpointing(checkpointInterval);
                 env.getConfig().setGlobalJobParameters(parameters);
                 // BQ sink can only support up to 100 parallelism.
                 env.getConfig().setMaxParallelism(100);
