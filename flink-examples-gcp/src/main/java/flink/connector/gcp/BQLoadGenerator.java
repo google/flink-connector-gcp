@@ -66,6 +66,8 @@ public class BQLoadGenerator {
                 System.out.println("Starting job ".concat(jobName));
                 final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
                 env.enableCheckpointing(checkpointInterval);
+                // BQ sink requires checkpointing, which is enabled by default on Big Query Engine for Apache Flink
+                // Enable checkpointing if trying to run with OSS Flink
                 env.getConfig().setGlobalJobParameters(parameters);
                 // BQ sink can only support up to 100 parallelism.
                 env.getConfig().setMaxParallelism(100);
@@ -88,6 +90,7 @@ public class BQLoadGenerator {
                 BigQuerySinkConfig sinkConfig =
                         BigQuerySinkConfig.newBuilder()
                                 .connectOptions(sinkConnectOptions)
+                                .streamExecutionEnvironment(env)
                                 .deliveryGuarantee(
                                         exactlyOnce
                                                 ? DeliveryGuarantee.EXACTLY_ONCE
@@ -118,7 +121,7 @@ public class BQLoadGenerator {
                                 .returns(
                                         new GenericRecordAvroTypeInfo(
                                                 sinkConfig.getSchemaProvider().getAvroSchema()))
-                                .sinkTo(BigQuerySink.get(sinkConfig, env)).uid("writer");
+                                .sinkTo(BigQuerySink.get(sinkConfig)).uid("writer");
                 }
                 else {
                         filteredGenerator.map(
@@ -137,7 +140,7 @@ public class BQLoadGenerator {
                         .returns(
                                 new GenericRecordAvroTypeInfo(
                                         sinkConfig.getSchemaProvider().getAvroSchema()))
-                        .sinkTo(BigQuerySink.get(sinkConfig, env)).uid("writer");
+                        .sinkTo(BigQuerySink.get(sinkConfig)).uid("writer");
                 }
                 env.execute(jobName);
         }
