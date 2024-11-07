@@ -64,6 +64,8 @@ public class GMKToBQWordCount {
         System.out.println("Starting job ".concat(jobName).concat(" with Kafka group id: ".concat(kafkaGroupId)));
         System.out.println("Using SASL_SSL " + (oauth ? "OAUTHBEARER" : "PLAIN") + " to authenticate");
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        // BQ sink requires checkpointing, which is enabled by default on Big Query Engine for Apache Flink
+        // Enable checkpointing if trying to run with OSS Flink
         env.getConfig().setGlobalJobParameters(parameters);
         // BQ sink can only support up to 100 parallelism.
         env.getConfig().setMaxParallelism(100);
