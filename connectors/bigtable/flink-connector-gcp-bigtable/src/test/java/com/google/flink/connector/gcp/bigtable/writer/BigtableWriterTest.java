@@ -80,13 +80,6 @@ public class BigtableWriterTest {
         tableAdminClient.close();
     }
 
-    /**
-     * Tests the writing of data to a Bigtable table using the {@link BigtableSinkWriter}.
-     *
-     * @throws IOException If an error occurs while writing data.
-     * @throws InterruptedException If the thread is interrupted while waiting for write completion.
-     * @throws ExecutionException If an error occurs during the write operation.
-     */
     @Test
     public void testWriter() throws IOException, InterruptedException, ExecutionException {
         Schema schema =
