@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package com.google.flink.connector.gcp.bigtable.internal.serializers;
+package com.google.flink.connector.gcp.bigtable.serializers;
 
 import com.google.cloud.bigtable.data.v2.models.RowMutationEntry;
 import com.google.flink.connector.gcp.bigtable.testingutils.TestingUtils;
@@ -40,16 +40,17 @@ import static org.junit.Assert.assertEquals;
  */
 public class GenericRecordTest {
 
-    /** Tests the serialization of a {@link GenericRecord} into a {@link RowMutationEntry}. */
     @Test
-    public void testRowMutationSerialization() {
-        testSerialization();
+    public void testCorrectRowMutationSerialization() {
+        GenericRecordToRowMutationSerializer serializer = createTestSerializer();
+        RowMutationEntry wantedEntry = TestingUtils.getTestRowMutationEntry();
+
+        GenericRecord record = getTestGenericRecord();
+        RowMutationEntry serializedEntry = serializer.serialize(record, null);
+
+        TestingUtils.assertRowMutationEntryEquality(serializedEntry, wantedEntry);
     }
 
-    /**
-     * Tests the conversion of various data types from a {@link GenericRecord} to byte arrays and
-     * back.
-     */
     @Test
     public void testRecordToBytes() {
         Schema schema =
@@ -84,11 +85,6 @@ public class GenericRecordTest {
         }
     }
 
-    /**
-     * Creates a {@link GenericRecordToRowMutationSerializer} instance for testing.
-     *
-     * @return A configured {@link GenericRecordToRowMutationSerializer} instance.
-     */
     private GenericRecordToRowMutationSerializer createTestSerializer() {
         GenericRecordToRowMutationSerializer.Builder builder =
                 GenericRecordToRowMutationSerializer.builder()
@@ -98,11 +94,6 @@ public class GenericRecordTest {
         return builder.build();
     }
 
-    /**
-     * Creates a test {@link GenericRecord} with basic fields.
-     *
-     * @return A {@link GenericRecord} for testing serialization.
-     */
     private static GenericRecord getTestGenericRecord() {
         Schema schema =
                 SchemaBuilder.builder()
@@ -122,25 +113,6 @@ public class GenericRecordTest {
         return testRecord;
     }
 
-    /** Helper method to perform the serialization test with or without nested fields. */
-    private void testSerialization() {
-        GenericRecordToRowMutationSerializer serializer = createTestSerializer();
-        RowMutationEntry wantedEntry = TestingUtils.getTestRowMutationEntry();
-
-        GenericRecord record = getTestGenericRecord();
-        RowMutationEntry serializedEntry = serializer.serialize(record, null);
-
-        TestingUtils.assertRowMutationEntryEquality(serializedEntry, wantedEntry);
-    }
-
-    /**
-     * Helper method to convert a byte array back to its corresponding data type based on the
-     * provided {@link Schema.Type}.
-     *
-     * @param bytes The byte array to convert.
-     * @param type The {@link Schema.Type} of the data.
-     * @return The converted object.
-     */
     private static Object convertBytesToField(byte[] bytes, Schema.Type type) {
         ByteBuffer buffer = ByteBuffer.wrap(bytes);
         switch (type) {

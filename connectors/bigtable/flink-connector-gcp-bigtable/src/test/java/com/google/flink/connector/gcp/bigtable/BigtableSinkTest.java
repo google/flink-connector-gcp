@@ -19,7 +19,7 @@
 package com.google.flink.connector.gcp.bigtable;
 
 import com.google.cloud.bigtable.data.v2.models.RowMutationEntry;
-import com.google.flink.connector.gcp.bigtable.internal.serializers.FunctionRowMutationSerializer;
+import com.google.flink.connector.gcp.bigtable.serializers.FunctionRowMutationSerializer;
 import com.google.flink.connector.gcp.bigtable.testingutils.TestingUtils;
 import org.junit.Test;
 
@@ -33,10 +33,6 @@ import static org.junit.Assert.assertEquals;
  */
 public class BigtableSinkTest {
 
-    /**
-     * Tests the {@link BigtableSink} builder and verifies that the configured parameters are
-     * correctly assigned to the sink object.
-     */
     @Test
     public void testBigtableSink() {
         FunctionRowMutationSerializer<RowMutationEntry> serializer =

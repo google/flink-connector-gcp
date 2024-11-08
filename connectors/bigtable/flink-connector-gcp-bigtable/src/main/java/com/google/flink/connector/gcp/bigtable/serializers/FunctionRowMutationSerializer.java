@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package com.google.flink.connector.gcp.bigtable.internal.serializers;
+package com.google.flink.connector.gcp.bigtable.serializers;
 
 import org.apache.flink.api.connector.sink2.SinkWriter;
 import org.apache.flink.util.function.SerializableFunction;

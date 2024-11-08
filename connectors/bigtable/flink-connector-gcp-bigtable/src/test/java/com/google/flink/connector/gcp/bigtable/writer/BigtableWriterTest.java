@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package com.google.flink.connector.gcp.bigtable.internal.writer;
+package com.google.flink.connector.gcp.bigtable.writer;
 
 import com.google.cloud.bigtable.admin.v2.BigtableTableAdminClient;
 import com.google.cloud.bigtable.admin.v2.BigtableTableAdminSettings;
@@ -26,7 +26,7 @@ import com.google.cloud.bigtable.data.v2.BigtableDataSettings;
 import com.google.cloud.bigtable.data.v2.models.Row;
 import com.google.cloud.bigtable.data.v2.models.TableId;
 import com.google.cloud.bigtable.emulator.v2.BigtableEmulatorRule;
-import com.google.flink.connector.gcp.bigtable.internal.serializers.GenericRecordToRowMutationSerializer;
+import com.google.flink.connector.gcp.bigtable.serializers.GenericRecordToRowMutationSerializer;
 import com.google.flink.connector.gcp.bigtable.testingutils.TestingUtils;
 import com.google.protobuf.ByteString;
 import org.apache.avro.Schema;
@@ -59,11 +59,6 @@ public class BigtableWriterTest {
 
     @Rule public final BigtableEmulatorRule bigtableEmulator = BigtableEmulatorRule.create();
 
-    /**
-     * Sets up the test environment by creating a Bigtable table in the emulator.
-     *
-     * @throws IOException If an error occurs while creating the table.
-     */
     @Before
     public void setUp() throws IOException, InterruptedException {
         BigtableTableAdminSettings.Builder tableAdminSettings =
@@ -79,7 +74,6 @@ public class BigtableWriterTest {
         this.client = BigtableDataClient.create(dataSettings.build());
     }
 
-    /** Cleans up the test environment by closing the Bigtable clients. */
     @After
     public void close() {
         client.close();
@@ -121,35 +115,15 @@ public class BigtableWriterTest {
             testRecord.put(TestingUtils.INTEGER_FIELD, i);
             writer.write(testRecord, null);
         }
-        checkEmptyData();
-        writer.flush(false);
-        checkWrittenData();
-        writer.close();
-    }
 
-    /**
-     * Helper method to verify that the Bigtable table is empty before writing data.
-     *
-     * @throws InterruptedException If the thread is interrupted while waiting for the read
-     *     operation.
-     * @throws ExecutionException If an error occurs during the read operation.
-     */
-    private void checkEmptyData() {
+        // Check no data was written
         for (int i = 0; i < MAX_RANGE; i++) {
             Row row = client.readRow(TableId.of(TestingUtils.TABLE), "key" + i);
             assertNull(row);
         }
-    }
 
-    /**
-     * Helper method to verify that the data has been correctly written to the Bigtable table.
-     *
-     * @throws IOException If an error occurs while reading data from the table.
-     * @throws InterruptedException If the thread is interrupted while waiting for the read
-     *     operation.
-     * @throws ExecutionException If an error occurs during the read operation.
-     */
-    private void checkWrittenData() {
+        // Write and validate rows
+        writer.flush(false);
         for (int i = 0; i < MAX_RANGE; i++) {
             Row row = client.readRow(TableId.of(TestingUtils.TABLE), "key" + i);
             assertEquals(
@@ -164,14 +138,10 @@ public class BigtableWriterTest {
                             .getValue();
             assertEquals(i, bytesToInteger(readInt));
         }
+
+        writer.close();
     }
 
-    /**
-     * Helper method to convert a {@link ByteString} to an integer.
-     *
-     * @param byteString The {@link ByteString} to convert.
-     * @return The converted integer value.
-     */
     private int bytesToInteger(ByteString byteString) {
         return ByteBuffer.wrap(byteString.toByteArray()).getInt();
     }

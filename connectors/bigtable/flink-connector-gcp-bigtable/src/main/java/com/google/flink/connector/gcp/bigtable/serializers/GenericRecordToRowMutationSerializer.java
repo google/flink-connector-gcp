@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-package com.google.flink.connector.gcp.bigtable.internal.serializers;
+package com.google.flink.connector.gcp.bigtable.serializers;
 
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.connector.sink2.SinkWriter;
 
 import com.google.cloud.bigtable.data.v2.models.RowMutationEntry;
-import com.google.flink.connector.gcp.bigtable.internal.utils.BigtableUtils;
+import com.google.flink.connector.gcp.bigtable.utils.BigtableUtils;
 import com.google.protobuf.ByteString;
 import org.apache.avro.Schema;
 import org.apache.avro.Schema.Type;
@@ -43,7 +43,7 @@ import java.nio.ByteBuffer;
  *       specified column family.
  *   <li>**Nested Rows Mode:** Each field in the {@link GenericRecord} (except the row key field)
  *       represents a separate column family, and its value must be another {@link GenericRecord}
- *       containing the columns for that family.
+ *       containing the columns for that family. Only single nested rows are supported.
  * </ol>
  *
  * <p>The serialization process involves extracting data from the {@link GenericRecord} fields and
@@ -58,8 +58,11 @@ public class GenericRecordToRowMutationSerializer
      * Constructs a {@code GenericRecordToRowMutationSerializer}.
      *
      * @param rowKeyField The name of the field in the {@link GenericRecord} that represents the
-     *     Bigtable row key.
-     * @param columnFamily The name of the column family to use (only in column family mode).
+     *     Bigtable <a href="https://cloud.google.com/bigtable/docs/schema-design#row-keys">row
+     *     key</a>.
+     * @param columnFamily The name of the <a
+     *     href="https://cloud.google.com/bigtable/docs/schema-design#column-families">column
+     *     family</a> to use (only in column family mode).
      */
     public GenericRecordToRowMutationSerializer(
             String rowKeyField, Boolean useNestedRows, @Nullable String columnFamily) {

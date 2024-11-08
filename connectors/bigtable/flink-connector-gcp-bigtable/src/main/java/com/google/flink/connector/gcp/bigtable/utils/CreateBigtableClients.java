@@ -16,21 +16,23 @@
  * limitations under the License.
  */
 
-package com.google.flink.connector.gcp.bigtable.internal.utils;
+package com.google.flink.connector.gcp.bigtable.utils;
 
-import org.apache.flink.api.connector.sink2.SinkWriter;
+import com.google.cloud.bigtable.data.v2.BigtableDataClient;
+import com.google.cloud.bigtable.data.v2.BigtableDataSettings;
 
-import java.time.Instant;
+import java.io.IOException;
 
-/** Collection of utilities for Bigtable Connector. */
-public class BigtableUtils {
-    public static final String DEFAULT_COLUMN_FAMILY = "flink";
+/** Utily class to create Bigtable Clients. */
+public class CreateBigtableClients {
 
-    public static Long getTimestamp(SinkWriter.Context context) {
-        if ((context != null) && (context.timestamp() != null) && (context.timestamp() > 0)) {
-            return context.timestamp() * 1000;
-        } else {
-            return Instant.now().toEpochMilli() * 1000;
-        }
+    /** Creates Data client used for writing. */
+    public static BigtableDataClient createDataClient(String project, String instance)
+            throws IOException {
+        BigtableDataSettings.Builder bigtableBuilder = BigtableDataSettings.newBuilder();
+        bigtableBuilder.setProjectId(project).setInstanceId(instance);
+        bigtableBuilder.stubSettings().setQuotaProjectId(project);
+
+        return BigtableDataClient.create(bigtableBuilder.build());
     }
 }

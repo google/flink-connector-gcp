@@ -16,23 +16,19 @@
  * limitations under the License.
  */
 
-package com.google.flink.connector.gcp.bigtable.internal.utils;
+package com.google.flink.connector.gcp.bigtable.serializers;
 
-import com.google.cloud.bigtable.data.v2.BigtableDataClient;
-import com.google.cloud.bigtable.data.v2.BigtableDataSettings;
+import org.apache.flink.api.connector.sink2.SinkWriter;
 
-import java.io.IOException;
+import com.google.cloud.bigtable.data.v2.models.RowMutationEntry;
 
-/** Utily class to create Bigtable Clients. */
-public class CreateBigtableClients {
+import java.io.Serializable;
 
-    /** Creates Data client used for writing. */
-    public static BigtableDataClient createDataClient(String project, String instance)
-            throws IOException {
-        BigtableDataSettings.Builder bigtableBuilder = BigtableDataSettings.newBuilder();
-        bigtableBuilder.setProjectId(project).setInstanceId(instance);
-        bigtableBuilder.stubSettings().setQuotaProjectId(project);
-
-        return BigtableDataClient.create(bigtableBuilder.build());
-    }
+/**
+ * Base serializer class.
+ *
+ * <p>This class implements the interface to serialize to {@link RowMutationEntry}.
+ */
+public interface BaseRowMutationSerializer<T> extends Serializable {
+    RowMutationEntry serialize(T element, SinkWriter.Context context);
 }

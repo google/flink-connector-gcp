@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package com.google.flink.connector.gcp.bigtable.internal.utils;
+package com.google.flink.connector.gcp.bigtable.utils;
 
 import org.apache.flink.api.connector.sink2.SinkWriter;
 
@@ -49,10 +49,6 @@ public class BigtableUtilsTest {
 
     SinkWriter.Context mockContext = mock(SinkWriter.Context.class);
 
-    /**
-     * Tests the {@link BigtableUtils#getTimestamp(SinkWriter.Context)} method with a valid context
-     * and timestamp.
-     */
     @Test
     public void testGetTimestamp() {
         Long contextTimestampMillis = 1700000000L;
@@ -61,10 +57,6 @@ public class BigtableUtilsTest {
         assertEquals(contextTimestampMicros, BigtableUtils.getTimestamp(mockContext));
     }
 
-    /**
-     * Tests the {@link BigtableUtils#getTimestamp(SinkWriter.Context)} method with a null context.
-     * Verifies that the returned timestamp is within the allowed delta of the current time.
-     */
     @Test
     public void testNullContext() {
         Long currentMicros = Instant.now().toEpochMilli() * 1000;
@@ -72,13 +64,6 @@ public class BigtableUtilsTest {
                 .isBetween(currentMicros, currentMicros + ALLOWED_DELTA);
     }
 
-    /**
-     * Parameterized test that checks the behavior of {@link
-     * BigtableUtils#getTimestamp(SinkWriter.Context)} with various invalid timestamp values (null,
-     * negative, zero).
-     *
-     * @param mockedTimestamp The timestamp to mock in the context.
-     */
     @ParameterizedTest
     @MethodSource("timestampCases")
     public void testTimestampValidation(Long mockedTimestamp) {
@@ -88,11 +73,6 @@ public class BigtableUtilsTest {
                 .isBetween(currentMicros, currentMicros + ALLOWED_DELTA);
     }
 
-    /**
-     * Provides test cases for the {@link #testTimestampValidation(Long)} method.
-     *
-     * @return A stream of arguments representing different invalid timestamp scenarios.
-     */
     private static Stream<Arguments> timestampCases() {
         return Stream.of(
                 Arguments.of(Named.of("Null Timestamp", null)),

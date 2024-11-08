@@ -23,10 +23,10 @@ import org.apache.flink.api.connector.sink2.SinkWriter;
 
 import com.google.auto.value.AutoValue;
 import com.google.cloud.bigtable.data.v2.BigtableDataClient;
-import com.google.flink.connector.gcp.bigtable.internal.serializers.BaseRowMutationSerializer;
-import com.google.flink.connector.gcp.bigtable.internal.utils.CreateBigtableClients;
-import com.google.flink.connector.gcp.bigtable.internal.writer.BigtableFlushableWriter;
-import com.google.flink.connector.gcp.bigtable.internal.writer.BigtableSinkWriter;
+import com.google.flink.connector.gcp.bigtable.serializers.BaseRowMutationSerializer;
+import com.google.flink.connector.gcp.bigtable.utils.CreateBigtableClients;
+import com.google.flink.connector.gcp.bigtable.writer.BigtableFlushableWriter;
+import com.google.flink.connector.gcp.bigtable.writer.BigtableSinkWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

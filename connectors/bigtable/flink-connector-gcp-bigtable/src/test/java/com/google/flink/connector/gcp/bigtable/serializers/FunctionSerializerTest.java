@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package com.google.flink.connector.gcp.bigtable.internal.serializers;
+package com.google.flink.connector.gcp.bigtable.serializers;
 
 import org.apache.flink.util.function.SerializableFunction;
 
@@ -51,27 +51,41 @@ public class FunctionSerializerTest {
                 return entry;
             });
 
-    /**
-     * Tests the serialization of {@link String} objects into {@link RowMutationEntry} using a
-     * {@link FunctionRowMutationSerializer}.
-     */
     @Test
-    public void testRowMutationSerializationString() {
+    public void testCorrectRowMutationSerializationString() {
         FunctionRowMutationSerializer<String> serializerString =
                 new FunctionRowMutationSerializer<String>(stringFunction);
         TestingUtils.assertRowMutationEntryEquality(
                 stringFunction.apply("test"), serializerString.serialize("test", null));
     }
 
-    /**
-     * Tests the serialization of {@link Long} objects into {@link RowMutationEntry} using a {@link
-     * FunctionRowMutationSerializer}.
-     */
     @Test
-    public void testRowMutationSerializationLong() {
+    public void testCorrectRowMutationSerializationLong() {
         FunctionRowMutationSerializer<Long> serializerLong =
                 new FunctionRowMutationSerializer<Long>(longFunction);
         TestingUtils.assertRowMutationEntryEquality(
                 longFunction.apply(1729L), serializerLong.serialize(1729L, null));
+    }
+
+    @Test
+    public void testStringFunction() {
+        String s = "some-string";
+        String family = "family " + s;
+        String qualifier = "qualifier " + s;
+        String key = "key " + s;
+        RowMutationEntry entry = RowMutationEntry.create(key).setCell(family, qualifier, s);
+
+        TestingUtils.assertRowMutationEntryEquality(entry, stringFunction.apply(s));
+    }
+
+    @Test
+    public void testLongFunction() {
+        Long l = 1729L;
+        String family = "family " + l;
+        String qualifier = "qualifier " + l;
+        String key = "key " + l;
+        RowMutationEntry entry = RowMutationEntry.create(key).setCell(family, qualifier, l);
+
+        TestingUtils.assertRowMutationEntryEquality(entry, longFunction.apply(l));
     }
 }
