@@ -34,7 +34,7 @@ import static org.junit.Assert.assertEquals;
 public class BigtableSinkTest {
 
     @Test
-    public void testBigtableSinkBuilder() {
+    public void testCorrectBigtableSinkInitialization() {
         FunctionRowMutationSerializer<RowMutationEntry> serializer =
                 new FunctionRowMutationSerializer<RowMutationEntry>(t -> t);
 
