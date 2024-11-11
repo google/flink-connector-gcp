@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package com.google.flink.connector.gcp.bigtable.internal.utils;
+package com.google.flink.connector.gcp.bigtable.utils;
 
 import com.google.cloud.bigtable.data.v2.BigtableDataClient;
 import com.google.cloud.bigtable.data.v2.BigtableDataSettings;

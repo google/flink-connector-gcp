@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package com.google.flink.connector.gcp.bigtable.internal.writer;
+package com.google.flink.connector.gcp.bigtable.writer;
 
 import org.apache.flink.api.connector.sink2.Sink;
 

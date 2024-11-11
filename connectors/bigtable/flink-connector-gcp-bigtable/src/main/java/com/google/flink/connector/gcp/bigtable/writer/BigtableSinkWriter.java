@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
-package com.google.flink.connector.gcp.bigtable.internal.writer;
+package com.google.flink.connector.gcp.bigtable.writer;
 
 import org.apache.flink.api.connector.sink2.SinkWriter;
 
-import com.google.flink.connector.gcp.bigtable.internal.serializers.BaseRowMutationSerializer;
+import com.google.flink.connector.gcp.bigtable.serializers.BaseRowMutationSerializer;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
