@@ -10,6 +10,7 @@
     <version>0.1.0-SNAPSHOT</version>
     <modules>
         <module>flink-connector-gcp-bigtable</module>
+        <module>flink-examples-gcp-bigtable</module>
     </modules>
 
     <properties>

@@ -27,11 +27,12 @@ import java.nio.ByteBuffer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * A utility class providing constants and helper methods for testing Bigtable related functionalities.
+ * A utility class providing constants and helper methods for testing Bigtable related
+ * functionalities.
  *
  * <p>This class contains commonly used constant values for table, instance, and project identifiers
- * in tests, as well as a method to generate a sample {@link RowMutationEntry} and a method to assert
- * equality between two {@link RowMutationEntry} objects.
+ * in tests, as well as a method to generate a sample {@link RowMutationEntry} and a method to
+ * assert equality between two {@link RowMutationEntry} objects.
  */
 public class TestingUtils {
     public static final String TABLE = "table";

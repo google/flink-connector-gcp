@@ -24,8 +24,6 @@ import java.time.Instant;
 
 /** Collection of utilities for Bigtable Connector. */
 public class BigtableUtils {
-    public static final String DEFAULT_COLUMN_FAMILY = "flink";
-
     public static Long getTimestamp(SinkWriter.Context context) {
         if ((context != null) && (context.timestamp() != null) && (context.timestamp() > 0)) {
             return context.timestamp() * 1000;
