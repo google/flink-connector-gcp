@@ -109,6 +109,7 @@ public class GMKToBQWordCount {
         BigQuerySinkConfig sinkConfig =
                 BigQuerySinkConfig.newBuilder()
                         .connectOptions(sinkConnectOptions)
+                        .streamExecutionEnvironment(env)
                         .deliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
                         .schemaProvider(schemaProvider)
                         .serializer(new AvroToProtoSerializer())
@@ -130,7 +131,7 @@ public class GMKToBQWordCount {
                 .returns(
                         new GenericRecordAvroTypeInfo(
                                 sinkConfig.getSchemaProvider().getAvroSchema()))
-                .sinkTo(BigQuerySink.get(sinkConfig, env));
+                .sinkTo(BigQuerySink.get(sinkConfig));
 
         env.execute(jobName);
     }
