@@ -41,7 +41,7 @@ import com.google.flink.connector.gcp.bigtable.serializers.FunctionRowMutationSe
  * FunctionRowMutationSerializer} to convert each Long value into a {@link RowMutationEntry} that
  * can be written to Bigtable.
  *
- * <p>To run this example, you need to have the following dependencies in your project:
+ * <p>To run this example, your Bigtable table needs to have column families `div3` and `not-div3`.
  *
  * <p>You can run this example by passing the following command line arguments:
  *
@@ -78,6 +78,7 @@ public class WriteWithFunction {
 
         SerializableFunction<Long, RowMutationEntry> toMutationEntry =
                 (l -> {
+                    // Generate a non-lexicographically-sorted unique key
                     String key = String.format("%d#%d#%d#%d", l % 11, l % 101, l % 1013, l);
                     String family = l % 3 == 0 ? "div3" : "not-div3";
                     String qualifier = String.valueOf(l % 10);

@@ -46,7 +46,8 @@ import java.nio.ByteBuffer;
  * GenericRecordToRowMutationSerializer} to convert each Long value into a {@link RowMutationEntry}
  * that can be written to Bigtable.
  *
- * <p>To run this example, you need to have the following dependencies in your project:
+ * <p>To run this example, you need to pass argument `--columnFamily` or have an existing column
+ * family named `flink`.
  *
  * <p>You can run this example by passing the following command line arguments:
  *
@@ -54,6 +55,7 @@ import java.nio.ByteBuffer;
  *   --instance &lt;bigtable instance id&gt; \
  *   --project &lt;gcp project id&gt; \
  *   --table &lt;bigtable table id&gt; \
+ *   --columnFamily &lt;bigtable column family id&gt; \
  *   --rate &lt;number of rows to generate per second&gt; \
  *   --jobName &lt;job name&gt;
  * </pre>
@@ -65,6 +67,7 @@ public class WriteGenericRecord {
         String instance = parameterTool.get("instance");
         String project = parameterTool.get("project");
         String table = parameterTool.get("table");
+        String columnFamily = parameterTool.get("columnFamily", "flink");
         Integer rate = parameterTool.getInt("rate", 10000);
         String jobName = parameterTool.get("jobName", "Streaming Bigtable Write GenericRecord");
 
@@ -106,7 +109,7 @@ public class WriteGenericRecord {
                                 .setSerializer(
                                         GenericRecordToRowMutationSerializer.builder()
                                                 .withRowKeyField("namekey")
-                                                .withColumnFamily("flink")
+                                                .withColumnFamily(columnFamily)
                                                 .build())
                                 .build())
                 .name("BigtableSink");
