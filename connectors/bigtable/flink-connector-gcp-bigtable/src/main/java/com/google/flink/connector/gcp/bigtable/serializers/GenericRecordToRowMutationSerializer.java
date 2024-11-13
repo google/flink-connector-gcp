@@ -42,7 +42,7 @@ import java.nio.ByteBuffer;
  *
  * <ol>
  *   <li>**Column Family Mode:** All fields in the {@link GenericRecord} are written to a single
- *       specified column family.
+ *       specified column family. Nested fields are not supported.
  *   <li>**Nested Rows Mode:** Each field in the {@link GenericRecord} (except the row key field)
  *       represents a separate column family, and its value must be another {@link GenericRecord}
  *       containing the columns for that family. Only single nested rows are supported.
