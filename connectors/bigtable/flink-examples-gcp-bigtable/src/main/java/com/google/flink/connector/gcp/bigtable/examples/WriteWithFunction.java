@@ -41,7 +41,8 @@ import com.google.flink.connector.gcp.bigtable.serializers.FunctionRowMutationSe
  * FunctionRowMutationSerializer} to convert each Long value into a {@link RowMutationEntry} that
  * can be written to Bigtable.
  *
- * <p>To run this example, your Bigtable table needs to have column families `div3` and `not-div3`.
+ * <p>To run this example, your Bigtable table needs to have column families {@code div3} and {@code
+ * not-div3}.
  *
  * <p>You can run this example by passing the following command line arguments:
  *

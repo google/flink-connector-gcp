@@ -46,8 +46,8 @@ import java.nio.ByteBuffer;
  * GenericRecordToRowMutationSerializer} to convert each Long value into a {@link RowMutationEntry}
  * that can be written to Bigtable.
  *
- * <p>To run this example, you need to pass argument `--columnFamily` or have an existing column
- * family named `flink`.
+ * <p>To run this example, you need to pass the argument {@code --columnFamily} or have an existing
+ * column family named {@code flink}.
  *
  * <p>You can run this example by passing the following command line arguments:
  *
