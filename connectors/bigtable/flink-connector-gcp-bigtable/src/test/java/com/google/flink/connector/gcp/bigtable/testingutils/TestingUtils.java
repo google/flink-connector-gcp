@@ -43,24 +43,50 @@ public class TestingUtils {
     public static final String ROW_KEY_VALUE = "my-key";
     public static final String STRING_FIELD = "stringField";
     public static final String STRING_VALUE = "some-string";
+    public static final String STRING_FIELD_2 = "stringField2";
+    public static final String STRING_VALUE_2 = "some-string2";
     public static final String INTEGER_FIELD = "integerField";
     public static final Integer INTEGER_VALUE = 1729;
     public static final Long TIMESTAMP = 1704067200000L;
+    public static final String NESTED_COLUMN_FAMILY_1 = "nested1";
+    public static final String NESTED_COLUMN_FAMILY_2 = "nested2";
 
-    public static RowMutationEntry getTestRowMutationEntry() {
+    public static RowMutationEntry getTestRowMutationEntry(Boolean useNestedFields) {
         RowMutationEntry entry = RowMutationEntry.create(ROW_KEY_VALUE);
-
-        entry.setCell(
-                        COLUMN_FAMILY,
-                        ByteString.copyFromUtf8(STRING_FIELD),
-                        TIMESTAMP,
-                        ByteString.copyFrom(STRING_VALUE.getBytes()))
-                .setCell(
-                        COLUMN_FAMILY,
-                        ByteString.copyFromUtf8(INTEGER_FIELD),
-                        TIMESTAMP,
-                        ByteString.copyFrom(
-                                ByteBuffer.allocate(Integer.BYTES).putInt(INTEGER_VALUE).array()));
+        if (useNestedFields) {
+            entry.setCell(
+                            NESTED_COLUMN_FAMILY_1,
+                            ByteString.copyFromUtf8(STRING_FIELD),
+                            TIMESTAMP,
+                            ByteString.copyFrom(STRING_VALUE.getBytes()))
+                    .setCell(
+                            NESTED_COLUMN_FAMILY_1,
+                            ByteString.copyFromUtf8(INTEGER_FIELD),
+                            TIMESTAMP,
+                            ByteString.copyFrom(
+                                    ByteBuffer.allocate(Integer.BYTES)
+                                            .putInt(INTEGER_VALUE)
+                                            .array()))
+                    .setCell(
+                            NESTED_COLUMN_FAMILY_2,
+                            ByteString.copyFromUtf8(STRING_FIELD_2),
+                            TIMESTAMP,
+                            ByteString.copyFrom(STRING_VALUE_2.getBytes()));
+        } else {
+            entry.setCell(
+                            COLUMN_FAMILY,
+                            ByteString.copyFromUtf8(STRING_FIELD),
+                            TIMESTAMP,
+                            ByteString.copyFrom(STRING_VALUE.getBytes()))
+                    .setCell(
+                            COLUMN_FAMILY,
+                            ByteString.copyFromUtf8(INTEGER_FIELD),
+                            TIMESTAMP,
+                            ByteString.copyFrom(
+                                    ByteBuffer.allocate(Integer.BYTES)
+                                            .putInt(INTEGER_VALUE)
+                                            .array()));
+        }
         return entry;
     }
 

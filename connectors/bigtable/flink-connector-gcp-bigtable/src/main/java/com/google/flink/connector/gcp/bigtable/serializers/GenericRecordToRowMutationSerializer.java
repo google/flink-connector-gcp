@@ -23,7 +23,9 @@ import org.apache.flink.api.connector.sink2.SinkWriter;
 
 import com.google.cloud.bigtable.data.v2.models.RowMutationEntry;
 import com.google.flink.connector.gcp.bigtable.utils.BigtableUtils;
+import com.google.flink.connector.gcp.bigtable.utils.ErrorMessages;
 import com.google.protobuf.ByteString;
+import io.grpc.Internal;
 import org.apache.avro.Schema;
 import org.apache.avro.Schema.Type;
 import org.apache.avro.generic.GenericRecord;
@@ -53,28 +55,49 @@ public class GenericRecordToRowMutationSerializer
         implements BaseRowMutationSerializer<GenericRecord> {
     private final String rowKeyField;
     private final @Nullable String columnFamily;
+    private final Boolean useNestedRowsMode;
 
     /**
      * Constructs a {@code GenericRecordToRowMutationSerializer}.
      *
      * @param rowKeyField The name of the field in the {@link GenericRecord} that represents the
      *     Bigtable <a href="https://cloud.google.com/bigtable/docs/schema-design#row-keys">row
-     *     key</a>.
+     *     key</a>. It must be of type String.
+     * @param useNestedRowsMode Whether to use nested rows mode. If {@code true}, each field in the
+     *     {@link GenericRecord} (except the row key field) represents a separate column family.
+     *     Otherwise, all fields are written to a single column family specified by {@code
+     *     columnFamily}.
      * @param columnFamily The name of the <a
      *     href="https://cloud.google.com/bigtable/docs/schema-design#column-families">column
      *     family</a> to use (only in column family mode).
      */
     public GenericRecordToRowMutationSerializer(
-            String rowKeyField, Boolean useNestedRows, @Nullable String columnFamily) {
+            String rowKeyField, Boolean useNestedRowsMode, @Nullable String columnFamily) {
         this.rowKeyField = rowKeyField;
         this.columnFamily = columnFamily;
+        this.useNestedRowsMode = useNestedRowsMode;
     }
 
     @Override
     public RowMutationEntry serialize(GenericRecord record, SinkWriter.Context context) {
         RowMutationEntry entry = RowMutationEntry.create((String) record.get(rowKeyField));
 
-        return serializeWithColumnFamily(record, entry, this.columnFamily, context);
+        if (!useNestedRowsMode) {
+            return serializeWithColumnFamily(record, entry, this.columnFamily, context);
+        }
+
+        for (Schema.Field field : record.getSchema().getFields()) {
+            String columnFamily = field.name();
+            if (!columnFamily.equals(rowKeyField)) {
+                if (field.schema().getType() != Schema.Type.RECORD) {
+                    throw new RuntimeException(
+                            "Non key fields must be of type RECORD when using Nested Rows mode");
+                }
+                GenericRecord nestedRecord = (GenericRecord) record.get(columnFamily);
+                serializeWithColumnFamily(nestedRecord, entry, columnFamily, context);
+            }
+        }
+        return entry;
     }
 
     private RowMutationEntry serializeWithColumnFamily(
@@ -95,6 +118,21 @@ public class GenericRecordToRowMutationSerializer
             }
         }
         return entry;
+    }
+
+    @Internal
+    String getColumnFamily() {
+        return columnFamily;
+    }
+
+    @Internal
+    String getRowKeyField() {
+        return rowKeyField;
+    }
+
+    @Internal
+    Boolean getUseNestedRowsMode() {
+        return useNestedRowsMode;
     }
 
     /**
@@ -125,7 +163,7 @@ public class GenericRecordToRowMutationSerializer
                 return ByteBuffer.allocate(Byte.BYTES).put((byte) ((Boolean) obj ? 1 : 0)).array();
             default:
                 throw new IllegalArgumentException(
-                        "Unsupported Avro type, use Bytes for more complex types: " + type);
+                        ErrorMessages.UNSUPPORTED_SERIALIZATION_TYPE + type);
         }
     }
 
@@ -143,7 +181,7 @@ public class GenericRecordToRowMutationSerializer
     public static class Builder {
         private String rowKeyField;
         private String columnFamily;
-        private Boolean useNestedFields = false;
+        private Boolean useNestedRowsMode = false;
 
         public Builder withRowKeyField(String rowKeyField) {
             this.rowKeyField = rowKeyField;
@@ -155,9 +193,21 @@ public class GenericRecordToRowMutationSerializer
             return this;
         }
 
+        public Builder withNestedRowsMode() {
+            useNestedRowsMode = true;
+            return this;
+        }
+
         public GenericRecordToRowMutationSerializer build() {
+            if (columnFamily != null && useNestedRowsMode) {
+                throw new IllegalArgumentException(
+                        ErrorMessages.COLUMN_FAMILY_AND_NESTED_INCOMPATIBLE);
+            } else if (columnFamily == null && !useNestedRowsMode) {
+                throw new IllegalArgumentException(
+                        ErrorMessages.COLUMN_FAMILY_OR_NESTED_ROWS_REQUIRED);
+            }
             return new GenericRecordToRowMutationSerializer(
-                    rowKeyField, useNestedFields, columnFamily);
+                    rowKeyField, useNestedRowsMode, columnFamily);
         }
     }
 }
