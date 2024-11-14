@@ -18,6 +18,7 @@
 
 package com.google.flink.connector.gcp.bigtable.serializers;
 
+import org.apache.flink.annotation.Internal;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.connector.sink2.SinkWriter;
 
@@ -25,7 +26,6 @@ import com.google.cloud.bigtable.data.v2.models.RowMutationEntry;
 import com.google.flink.connector.gcp.bigtable.utils.BigtableUtils;
 import com.google.flink.connector.gcp.bigtable.utils.ErrorMessages;
 import com.google.protobuf.ByteString;
-import io.grpc.Internal;
 import org.apache.avro.Schema;
 import org.apache.avro.Schema.Type;
 import org.apache.avro.generic.GenericRecord;
