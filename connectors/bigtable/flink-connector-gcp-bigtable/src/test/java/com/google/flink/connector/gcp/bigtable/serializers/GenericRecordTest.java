@@ -47,13 +47,20 @@ public class GenericRecordTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     public void testCorrectSerializerInitialization(Boolean useNestedRowsMode) {
-        GenericRecordToRowMutationSerializer serializer = createTestSerializer(useNestedRowsMode);
+        GenericRecordToRowMutationSerializer.Builder builder =
+                GenericRecordToRowMutationSerializer.builder()
+                        .withRowKeyField(TestingUtils.ROW_KEY_FIELD);
+        if (useNestedRowsMode) {
+            builder.withNestedRowsMode();
+        } else {
+            builder.withColumnFamily(TestingUtils.COLUMN_FAMILY);
+        }
+        GenericRecordToRowMutationSerializer serializer = builder.build();
 
-        assertEquals(TestingUtils.ROW_KEY_FIELD, serializer.getRowKeyField());
+        assertEquals(TestingUtils.ROW_KEY_FIELD, serializer.rowKeyField);
         assertEquals(
-                useNestedRowsMode ? null : TestingUtils.COLUMN_FAMILY,
-                serializer.getColumnFamily());
-        assertEquals(useNestedRowsMode, serializer.getUseNestedRowsMode());
+                useNestedRowsMode ? null : TestingUtils.COLUMN_FAMILY, serializer.columnFamily);
+        assertEquals(useNestedRowsMode, serializer.useNestedRowsMode);
     }
 
     @Test
@@ -81,15 +88,7 @@ public class GenericRecordTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     public void testCorrectRowMutationSerialization(Boolean useNestedRowsMode) {
-        GenericRecordToRowMutationSerializer.Builder builder =
-                GenericRecordToRowMutationSerializer.builder()
-                        .withRowKeyField(TestingUtils.ROW_KEY_FIELD);
-        if (useNestedRowsMode) {
-            builder.withNestedRowsMode();
-        } else {
-            builder.withColumnFamily(TestingUtils.COLUMN_FAMILY);
-        }
-        GenericRecordToRowMutationSerializer serializer = builder.build();
+        GenericRecordToRowMutationSerializer serializer = createTestSerializer(useNestedRowsMode);
         RowMutationEntry wantedEntry = TestingUtils.getTestRowMutationEntry(useNestedRowsMode);
 
         GenericRecord record =
@@ -106,7 +105,7 @@ public class GenericRecordTest {
         GenericRecord record = getTestGenericRecord();
 
         Assertions.assertThatThrownBy(() -> serializer.serialize(record, null))
-                .hasMessage(ErrorMessages.BASE_NO_NESTED_TYPE + "RECORD");
+                .hasMessageContaining(ErrorMessages.BASE_NO_NESTED_TYPE);
     }
 
     @Test

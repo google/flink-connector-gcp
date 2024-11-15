@@ -18,7 +18,6 @@
 
 package com.google.flink.connector.gcp.bigtable.serializers;
 
-import org.apache.flink.annotation.Internal;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.connector.sink2.SinkWriter;
 
@@ -53,9 +52,9 @@ import java.nio.ByteBuffer;
  */
 public class GenericRecordToRowMutationSerializer
         implements BaseRowMutationSerializer<GenericRecord> {
-    private final String rowKeyField;
-    private final @Nullable String columnFamily;
-    private final Boolean useNestedRowsMode;
+    public final String rowKeyField;
+    public final @Nullable String columnFamily;
+    public final Boolean useNestedRowsMode;
 
     /**
      * Constructs a {@code GenericRecordToRowMutationSerializer}.
@@ -117,21 +116,6 @@ public class GenericRecordToRowMutationSerializer
             }
         }
         return entry;
-    }
-
-    @Internal
-    String getColumnFamily() {
-        return columnFamily;
-    }
-
-    @Internal
-    String getRowKeyField() {
-        return rowKeyField;
-    }
-
-    @Internal
-    Boolean getUseNestedRowsMode() {
-        return useNestedRowsMode;
     }
 
     /**
