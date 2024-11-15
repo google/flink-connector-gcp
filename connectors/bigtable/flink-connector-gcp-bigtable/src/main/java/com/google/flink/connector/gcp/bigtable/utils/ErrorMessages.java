@@ -27,4 +27,6 @@ public class ErrorMessages {
             "Either withNestedRowsMode and withColumnFamily needs to be set";
     public static final String UNSUPPORTED_SERIALIZATION_TYPE =
             "Unsupported type, use Bytes for more complex types: ";
+    public static final String BASE_NO_NESTED_TYPE =
+            "Nested Rows mode require all non-key fields to be of type ";
 }

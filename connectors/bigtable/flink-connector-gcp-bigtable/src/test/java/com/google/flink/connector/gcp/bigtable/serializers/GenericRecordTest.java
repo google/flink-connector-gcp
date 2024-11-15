@@ -81,7 +81,15 @@ public class GenericRecordTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     public void testCorrectRowMutationSerialization(Boolean useNestedRowsMode) {
-        GenericRecordToRowMutationSerializer serializer = createTestSerializer(useNestedRowsMode);
+        GenericRecordToRowMutationSerializer.Builder builder =
+                GenericRecordToRowMutationSerializer.builder()
+                        .withRowKeyField(TestingUtils.ROW_KEY_FIELD);
+        if (useNestedRowsMode) {
+            builder.withNestedRowsMode();
+        } else {
+            builder.withColumnFamily(TestingUtils.COLUMN_FAMILY);
+        }
+        GenericRecordToRowMutationSerializer serializer = builder.build();
         RowMutationEntry wantedEntry = TestingUtils.getTestRowMutationEntry(useNestedRowsMode);
 
         GenericRecord record =
@@ -98,7 +106,7 @@ public class GenericRecordTest {
         GenericRecord record = getTestGenericRecord();
 
         Assertions.assertThatThrownBy(() -> serializer.serialize(record, null))
-                .hasMessageContaining("Non key fields must be of type RECORD");
+                .hasMessage(ErrorMessages.BASE_NO_NESTED_TYPE + "RECORD");
     }
 
     @Test

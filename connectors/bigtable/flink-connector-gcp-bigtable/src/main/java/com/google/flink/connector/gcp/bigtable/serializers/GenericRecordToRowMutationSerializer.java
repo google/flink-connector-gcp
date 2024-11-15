@@ -42,7 +42,7 @@ import java.nio.ByteBuffer;
  *
  * <ol>
  *   <li>**Column Family Mode:** All fields in the {@link GenericRecord} are written to a single
- *       specified column family. Nested fields are not supported.
+ *       specified column family. Nested fields are not supported in this mode.
  *   <li>**Nested Rows Mode:** Each field in the {@link GenericRecord} (except the row key field)
  *       represents a separate column family, and its value must be another {@link GenericRecord}
  *       containing the columns for that family. Only single nested rows are supported.
@@ -90,8 +90,7 @@ public class GenericRecordToRowMutationSerializer
             String columnFamily = field.name();
             if (!columnFamily.equals(rowKeyField)) {
                 if (field.schema().getType() != Schema.Type.RECORD) {
-                    throw new RuntimeException(
-                            "Non key fields must be of type RECORD when using Nested Rows mode");
+                    throw new RuntimeException(ErrorMessages.BASE_NO_NESTED_TYPE + "RECORD");
                 }
                 GenericRecord nestedRecord = (GenericRecord) record.get(columnFamily);
                 serializeWithColumnFamily(nestedRecord, entry, columnFamily, context);
