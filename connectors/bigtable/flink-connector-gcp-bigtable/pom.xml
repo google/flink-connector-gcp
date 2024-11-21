@@ -163,7 +163,7 @@
       <artifactId>flink-test-utils</artifactId>
       <version>${flink.version}</version>
       <scope>test</scope>
-  </dependency>
+    </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
