@@ -63,7 +63,7 @@ import static org.mockito.Mockito.mock;
  * reporting in {@link BigtableFlushableWriter} by ensuring that metrics are accurately recorded and
  * that errors during write operations are handled correctly.
  */
-public class BigtableWritersTest {
+public class BigtableWriterTest {
     private static final int MAX_RANGE = 10;
     private BigtableDataClient client;
     private BigtableTableAdminClient tableAdminClient;
