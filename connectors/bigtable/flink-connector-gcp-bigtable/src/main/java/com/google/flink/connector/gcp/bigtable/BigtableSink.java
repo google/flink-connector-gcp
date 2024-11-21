@@ -20,6 +20,7 @@ package com.google.flink.connector.gcp.bigtable;
 
 import org.apache.flink.api.connector.sink2.Sink;
 import org.apache.flink.api.connector.sink2.SinkWriter;
+import org.apache.flink.api.connector.sink2.WriterInitContext;
 
 import com.google.auto.value.AutoValue;
 import com.google.cloud.bigtable.data.v2.BigtableDataClient;
@@ -58,12 +59,20 @@ public abstract class BigtableSink<T> implements Sink<T> {
 
     @Override
     public SinkWriter<T> createWriter(Sink.InitContext sinkInitContext) throws IOException {
+        // https://nightlies.apache.org/flink/flink-docs-release-1.19/api/java/org/apache/flink/api/connector/sink2/Sink.InitContext.html
+        // Discussion: https://lists.apache.org/thread/ydjypynwrh56s7x64lo5jt5wofl4jgk9
+        throw new UnsupportedOperationException("Not supported. InitContext is deprecated");
+    }
 
+    @Override
+    public SinkWriter<T> createWriter(WriterInitContext sinkInitContext) throws IOException {
         BigtableDataClient client =
                 CreateBigtableClients.createDataClient(projectId(), instanceId());
 
         return new BigtableSinkWriter<T>(
-                new BigtableFlushableWriter(client, sinkInitContext, table()), serializer());
+                new BigtableFlushableWriter(client, sinkInitContext, table()),
+                serializer(),
+                sinkInitContext);
     }
 
     /** Builder to create {@link BigtableSink}. */

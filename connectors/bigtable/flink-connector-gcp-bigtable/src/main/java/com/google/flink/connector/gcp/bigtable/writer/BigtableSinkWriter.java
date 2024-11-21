@@ -18,9 +18,14 @@
 
 package com.google.flink.connector.gcp.bigtable.writer;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.connector.sink2.SinkWriter;
+import org.apache.flink.api.connector.sink2.WriterInitContext;
+import org.apache.flink.metrics.Counter;
 
+import com.google.cloud.bigtable.data.v2.models.RowMutationEntry;
 import com.google.flink.connector.gcp.bigtable.serializers.BaseRowMutationSerializer;
+import com.google.flink.connector.gcp.bigtable.utils.ErrorMessages;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
@@ -36,18 +41,30 @@ import java.util.concurrent.ExecutionException;
 public class BigtableSinkWriter<T> implements SinkWriter<T> {
     private final BigtableFlushableWriter writer;
     private final BaseRowMutationSerializer<T> serializer;
+    private Counter numSerializationErrorsCounter;
 
     public BigtableSinkWriter(
-            BigtableFlushableWriter writer, BaseRowMutationSerializer<T> serializer)
+            BigtableFlushableWriter writer,
+            BaseRowMutationSerializer<T> serializer,
+            WriterInitContext context)
             throws IOException {
         this.writer = writer;
         this.serializer = serializer;
+        this.numSerializationErrorsCounter =
+                context.metricGroup().counter("numSerializationErrorsCounter");
     }
 
     /** Serializes and collects elements. */
     @Override
     public void write(T element, Context context) throws InterruptedException {
-        writer.collect(serializer.serialize(element, context));
+        RowMutationEntry entry;
+        try {
+            entry = serializer.serialize(element, context);
+        } catch (Exception e) {
+            this.numSerializationErrorsCounter.inc();
+            throw new RuntimeException(ErrorMessages.SERIALIZER_ERROR + e.getMessage());
+        }
+        writer.collect(entry);
     }
 
     /** Per checkpoint, write buffered elements to Bigtable. */
@@ -60,5 +77,10 @@ public class BigtableSinkWriter<T> implements SinkWriter<T> {
     @Override
     public void close() throws IOException, ExecutionException, InterruptedException {
         writer.close();
+    }
+
+    @VisibleForTesting
+    Counter getNumSerializationErrorsCounter() {
+        return numSerializationErrorsCounter;
     }
 }

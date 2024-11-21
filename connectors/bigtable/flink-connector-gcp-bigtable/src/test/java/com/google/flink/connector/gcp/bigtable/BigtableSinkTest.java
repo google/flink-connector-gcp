@@ -46,9 +46,9 @@ public class BigtableSinkTest {
                         .setTable(TestingUtils.TABLE)
                         .build();
 
-        assertEquals(sink.projectId(), TestingUtils.PROJECT);
-        assertEquals(sink.instanceId(), TestingUtils.INSTANCE);
-        assertEquals(sink.table(), TestingUtils.TABLE);
-        assertEquals(sink.serializer(), serializer);
+        assertEquals(TestingUtils.PROJECT, sink.projectId());
+        assertEquals(TestingUtils.INSTANCE, sink.instanceId());
+        assertEquals(TestingUtils.TABLE, sink.table());
+        assertEquals(serializer, sink.serializer());
     }
 }

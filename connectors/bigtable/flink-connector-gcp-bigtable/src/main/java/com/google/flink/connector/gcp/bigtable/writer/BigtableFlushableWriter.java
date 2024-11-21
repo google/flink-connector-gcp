@@ -18,12 +18,30 @@
 
 package com.google.flink.connector.gcp.bigtable.writer;
 
-import org.apache.flink.api.connector.sink2.Sink;
+import org.apache.flink.annotation.VisibleForTesting;
+import org.apache.flink.api.connector.sink2.WriterInitContext;
+import org.apache.flink.metrics.Counter;
+import org.apache.flink.metrics.Histogram;
+import org.apache.flink.runtime.metrics.DescriptiveStatisticsHistogram;
+import org.apache.flink.util.InstantiationUtil;
 
+import com.google.api.core.ApiFuture;
 import com.google.api.gax.batching.Batcher;
+import com.google.api.gax.batching.BatchingException;
 import com.google.cloud.bigtable.data.v2.BigtableDataClient;
 import com.google.cloud.bigtable.data.v2.models.RowMutationEntry;
 import com.google.cloud.bigtable.data.v2.models.TableId;
+import com.google.flink.connector.gcp.bigtable.utils.ErrorMessages;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Flushable writer that sends records to Bigtable during "flush"/
@@ -33,26 +51,82 @@ import com.google.cloud.bigtable.data.v2.models.TableId;
  * <p>At closing, all records are flushed and clients are closed.
  */
 public class BigtableFlushableWriter {
+    String table;
     BigtableDataClient client;
     Batcher<RowMutationEntry, Void> batcher;
 
-    Sink.InitContext context;
+    List<ApiFuture<Void>> batchFutures = new ArrayList<>();
+
+    private Long totalRecordsBuffer = 0L;
+    private Long totalBytesBuffer = 0L;
+    private Counter numRecordsOutCounter;
+    private Counter numBytesOutCounter;
+    private Counter numOutEntryFailuresCounter;
+    private Counter numBatchFailuresCounter;
+    private Histogram numEntriesPerFlush;
+
+    private static final Logger logger = LoggerFactory.getLogger(BigtableFlushableWriter.class);
+
+    private static final Integer BATCHER_CLOSE_TIMEOUT_SECONDS = 60;
 
     public BigtableFlushableWriter(
-            BigtableDataClient client, Sink.InitContext sinkInitContext, String table) {
+            BigtableDataClient client, WriterInitContext sinkInitContext, String table) {
         this.client = client;
+        this.table = table;
         this.batcher = client.newBulkMutationBatcher(TableId.of(table));
-        this.context = sinkInitContext;
+
+        // Instantiate Metrics
+        this.numRecordsOutCounter =
+                sinkInitContext.metricGroup().getIOMetricGroup().getNumRecordsOutCounter();
+        this.numBytesOutCounter =
+                sinkInitContext.metricGroup().getIOMetricGroup().getNumBytesOutCounter();
+        this.numOutEntryFailuresCounter =
+                sinkInitContext.metricGroup().counter("numOutEntryFailuresCounter");
+        this.numBatchFailuresCounter =
+                sinkInitContext.metricGroup().counter("numBatchFailuresCounter");
+        this.numEntriesPerFlush =
+                sinkInitContext
+                        .metricGroup()
+                        .histogram("numEntriesPerFlush", new DescriptiveStatisticsHistogram(100));
     }
 
     /** Adds RowMuationEntry to Batcher. */
     public void collect(RowMutationEntry entry) throws InterruptedException {
-        batcher.add(entry);
+        ApiFuture<Void> future = batcher.add(entry);
+        batchFutures.add(future);
+        totalRecordsBuffer++;
+        totalBytesBuffer += getEntryBytesSize(entry);
     }
 
     /** Sends mutations to Bigtable. */
     public void flush() throws InterruptedException {
-        batcher.flush();
+        try {
+            batcher.close(Duration.ofSeconds(BATCHER_CLOSE_TIMEOUT_SECONDS));
+            // Update metrics
+            this.numEntriesPerFlush.update(totalRecordsBuffer);
+            this.numRecordsOutCounter.inc(totalRecordsBuffer);
+            this.numBytesOutCounter.inc(totalBytesBuffer);
+            // Recreate client and clear metrics
+            batcher = client.newBulkMutationBatcher(TableId.of(this.table));
+            batchFutures.clear();
+            totalRecordsBuffer = 0L;
+            totalBytesBuffer = 0L;
+        } catch (BatchingException batchingException) {
+            this.numBatchFailuresCounter.inc();
+            for (ApiFuture<Void> future : batchFutures) {
+                try {
+                    future.get();
+                } catch (CancellationException
+                        | ExecutionException
+                        | InterruptedException entryException) {
+                    this.numOutEntryFailuresCounter.inc();
+                    logger.error(entryException.getMessage());
+                }
+            }
+            throw new RuntimeException(batchingException.getMessage());
+        } catch (TimeoutException timeoutException) {
+            throw new RuntimeException(timeoutException.getMessage());
+        }
     }
 
     /** Send outstanding mutations and closes clients. */
@@ -60,5 +134,41 @@ public class BigtableFlushableWriter {
         flush();
         batcher.close();
         client.close();
+    }
+
+    /** Calculate total bytes per entry. */
+    @VisibleForTesting
+    static int getEntryBytesSize(RowMutationEntry entry) {
+        try {
+            return InstantiationUtil.serializeObject(entry).length;
+        } catch (IOException e) {
+            logger.warn(ErrorMessages.METRICS_ENTRY_SERIALIZATION_WARNING + e.getMessage());
+            return 0;
+        }
+    }
+
+    @VisibleForTesting
+    Counter getNumRecordsOutCounter() {
+        return numRecordsOutCounter;
+    }
+
+    @VisibleForTesting
+    Counter getNumBytesOutCounter() {
+        return numBytesOutCounter;
+    }
+
+    @VisibleForTesting
+    Counter getNumOutEntryFailuresCounter() {
+        return numOutEntryFailuresCounter;
+    }
+
+    @VisibleForTesting
+    Counter getNumBatchFailuresCounter() {
+        return numBatchFailuresCounter;
+    }
+
+    @VisibleForTesting
+    Histogram getNumEntriesPerFlush() {
+        return numEntriesPerFlush;
     }
 }
