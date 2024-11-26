@@ -74,9 +74,9 @@ public class BigtableFlushableWriter {
 
     public BigtableFlushableWriter(
             BigtableDataClient client, WriterInitContext sinkInitContext, String table) {
-        checkNotNull(client, "client");
-        checkNotNull(sinkInitContext, "sinkInitContext");
-        checkNotNull(table, "table");
+        checkNotNull(client);
+        checkNotNull(sinkInitContext);
+        checkNotNull(table);
 
         this.client = client;
         this.table = table;
