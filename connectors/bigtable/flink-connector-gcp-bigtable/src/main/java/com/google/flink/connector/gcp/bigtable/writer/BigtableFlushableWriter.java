@@ -43,6 +43,8 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import static org.apache.flink.util.Preconditions.checkNotNull;
+
 /**
  * Flushable writer that sends records to Bigtable during "flush"/
  *
@@ -68,9 +70,14 @@ public class BigtableFlushableWriter {
     private static final Logger logger = LoggerFactory.getLogger(BigtableFlushableWriter.class);
 
     private static final Integer BATCHER_CLOSE_TIMEOUT_SECONDS = 60;
+    private static final Integer HISTOGRAM_WINDOW_SIZE = 100;
 
     public BigtableFlushableWriter(
             BigtableDataClient client, WriterInitContext sinkInitContext, String table) {
+        checkNotNull(client, "client");
+        checkNotNull(sinkInitContext, "sinkInitContext");
+        checkNotNull(table, "table");
+
         this.client = client;
         this.table = table;
         this.batcher = client.newBulkMutationBatcher(TableId.of(table));
@@ -87,7 +94,9 @@ public class BigtableFlushableWriter {
         this.numEntriesPerFlush =
                 sinkInitContext
                         .metricGroup()
-                        .histogram("numEntriesPerFlush", new DescriptiveStatisticsHistogram(100));
+                        .histogram(
+                                "numEntriesPerFlush",
+                                new DescriptiveStatisticsHistogram(HISTOGRAM_WINDOW_SIZE));
     }
 
     /** Adds RowMuationEntry to Batcher. */
@@ -120,7 +129,6 @@ public class BigtableFlushableWriter {
                         | ExecutionException
                         | InterruptedException entryException) {
                     this.numOutEntryFailuresCounter.inc();
-                    logger.error(entryException.getMessage());
                 }
             }
             throw new RuntimeException(batchingException.getMessage());

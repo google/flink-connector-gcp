@@ -239,7 +239,8 @@ public class BigtableWriterTest {
         assertEquals(0, flushableWriter.getNumEntriesPerFlush().getStatistics().getMax());
 
         Assertions.assertThatThrownBy(() -> flushableWriter.flush())
-                .hasMessageContaining("The 1 partial failures contained 2 entries that failed");
+                .hasMessageContaining("The 1 partial failures contained 2 entries that failed")
+                .hasMessageContaining("unknown family");
 
         assertEquals(0, flushableWriter.getNumBytesOutCounter().getCount());
         assertEquals(2, flushableWriter.getNumOutEntryFailuresCounter().getCount());

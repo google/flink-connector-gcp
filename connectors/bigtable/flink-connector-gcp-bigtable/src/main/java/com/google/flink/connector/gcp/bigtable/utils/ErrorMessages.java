@@ -30,7 +30,7 @@ public class ErrorMessages {
     public static final String BASE_NO_NESTED_TYPE =
             "Nested Rows mode require all non-key fields to be of type ";
     public static final String SERIALIZER_ERROR =
-            "Error while serializer element to RowMutationEntry: ";
+            "Error while serializing element to RowMutationEntry: ";
     public static final String METRICS_ENTRY_SERIALIZATION_WARNING =
             "Error while serializing RowMutationEntry for metrics, entry will be counted as 0 bytes. This error doesn't affect the job. Error: ";
 }
