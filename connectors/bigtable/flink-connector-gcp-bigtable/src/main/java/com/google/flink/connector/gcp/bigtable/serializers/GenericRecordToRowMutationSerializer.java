@@ -79,6 +79,12 @@ public class GenericRecordToRowMutationSerializer
 
     @Override
     public RowMutationEntry serialize(GenericRecord record, SinkWriter.Context context) {
+        if (record.getSchema().getField(rowKeyField).schema().getType() != Schema.Type.STRING) {
+            throw new RuntimeException(
+                    ErrorMessages.ROW_KEY_STRING_TYPE
+                            + record.getSchema().getField(rowKeyField).schema().getType());
+        }
+
         RowMutationEntry entry = RowMutationEntry.create((String) record.get(rowKeyField));
 
         if (!useNestedRowsMode) {
@@ -144,6 +150,8 @@ public class GenericRecordToRowMutationSerializer
                 return ByteBuffer.allocate(Double.BYTES).putDouble((Double) obj).array();
             case BOOLEAN:
                 return ByteBuffer.allocate(Byte.BYTES).put((byte) ((Boolean) obj ? 1 : 0)).array();
+            case RECORD:
+                throw new IllegalArgumentException(ErrorMessages.NESTED_TYPE_ERROR);
             default:
                 throw new IllegalArgumentException(
                         ErrorMessages.UNSUPPORTED_SERIALIZATION_TYPE + type);

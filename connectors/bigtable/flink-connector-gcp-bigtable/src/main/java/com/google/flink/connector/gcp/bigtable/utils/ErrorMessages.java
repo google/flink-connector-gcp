@@ -28,9 +28,15 @@ public class ErrorMessages {
     public static final String UNSUPPORTED_SERIALIZATION_TYPE =
             "Unsupported type, use Bytes for more complex types: ";
     public static final String BASE_NO_NESTED_TYPE =
-            "Nested Rows mode require all non-key fields to be of type ";
+            "Nested Rows mode require all non-key fields to be of type %.";
+    public static final String NESTED_TYPE_ERROR =
+            "Nested rows are only supported with withNestedRowsMode and not double nested. Use Bytes for more complex types";
+    public static final String ROW_KEY_STRING_TYPE = "Row Key has to be of type String, got ";
     public static final String SERIALIZER_ERROR =
             "Error while serializing element to RowMutationEntry: ";
     public static final String METRICS_ENTRY_SERIALIZATION_WARNING =
             "Error while serializing RowMutationEntry for metrics, entry will be counted as 0 bytes. This error doesn't affect the job. Error: ";
+    public static final String TIMESTAMP_OUTSIDE_PRECISION_TEMPLATE =
+            "Unsupported precision, needs to be between %s and %s, got %s";
+    public static final String MISSING_ROW_KEY = "Row key field %s not found in schema %s";
 }
