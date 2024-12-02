@@ -156,7 +156,8 @@ public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer
     }
 
     /**
-     * Generates maps from the schema for internal use.
+     * Generates maps from the schema to keep track of DataTypes and indexes. This is needed since
+     * the schema cannot be fetch from the {@link RowData}.
      *
      * @param schema The {@link DataType} of the {@link RowData}.
      * @param rowKeyField The name of the row key field.
@@ -180,6 +181,7 @@ public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer
                 int nestedIndex = 0;
                 HashMap<Integer, String> nestedIndexes = new HashMap<Integer, String>();
                 for (Field nestedField : DataType.getFields(field.getDataType())) {
+                    // Verify precision for DATETIME types
                     if (nestedField.getDataType().getLogicalType().is(LogicalTypeFamily.DATETIME)) {
                         getPrecisionOr(
                                 nestedField.getDataType().getLogicalType(),
