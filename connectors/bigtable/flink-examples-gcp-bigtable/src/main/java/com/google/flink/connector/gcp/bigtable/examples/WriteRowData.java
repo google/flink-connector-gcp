@@ -73,7 +73,7 @@ public class WriteRowData {
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
-        GeneratorFunction<Long, Long> generatorFunction = n -> n;
+        GeneratorFunction<Long, Long> generatorFunction = n -> ån;
         DataGeneratorSource<Long> generatorSource =
                 new DataGeneratorSource<>(
                         generatorFunction,
