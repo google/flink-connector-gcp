@@ -28,7 +28,7 @@ public class ErrorMessages {
     public static final String UNSUPPORTED_SERIALIZATION_TYPE =
             "Unsupported type, use Bytes for more complex types: ";
     public static final String BASE_NO_NESTED_TYPE =
-            "Nested Rows mode require all non-key fields to be of type %.";
+            "Nested Rows mode require all non-key fields to be of type ";
     public static final String NESTED_TYPE_ERROR =
             "Nested rows are only supported with withNestedRowsMode and not double nested. Use Bytes for more complex types";
     public static final String ROW_KEY_STRING_TYPE = "Row Key has to be of type String, got ";
