@@ -165,15 +165,16 @@ public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer
     private void generateMapsFromSchema(DataType schema, String rowKeyField) {
         int index = 0;
         for (Field field : DataType.getFields(schema)) {
-            if (field.getDataType().getLogicalType().is(LogicalTypeFamily.DATETIME)) {
-                getPrecisionOr(
-                        field.getDataType().getLogicalType(),
-                        MIN_DATETIME_PRECISION,
-                        MAX_DATETIME_PRECISION);
+            // Check if key
+            if (field.getName().equals(rowKeyField)) {
+                if (!field.getDataType().getLogicalType().is(LogicalTypeFamily.CHARACTER_STRING)) {
+                    throw new IllegalArgumentException(
+                            ErrorMessages.ROW_KEY_STRING_TYPE + field.getDataType());
+                }
+                this.rowKeyIndex = index;
             }
-            columnTypeMap.put(field.getName(), field.getDataType());
-            indexMap.put(index, field.getName());
 
+            // Populate maps for ROWs
             if (field.getDataType().getLogicalType().is(LogicalTypeRoot.ROW)) {
                 if (!useNestedRowsMode) {
                     throw new IllegalArgumentException(ErrorMessages.NESTED_TYPE_ERROR);
@@ -200,6 +201,7 @@ public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer
                 nestedIndexMap.put(field.getName(), nestedIndexes);
             }
 
+            // Verify only non-row type in `nestedRowsModed` is the key
             Boolean isNotRowAndNotKey =
                     this.useNestedRowsMode
                             && !field.getDataType().getLogicalType().is(LogicalTypeRoot.ROW)
@@ -208,14 +210,16 @@ public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer
                 throw new IllegalArgumentException(ErrorMessages.BASE_NO_NESTED_TYPE + "ROW");
             }
 
-            if (field.getName().equals(rowKeyField)) {
-                if (!field.getDataType().getLogicalType().is(LogicalTypeFamily.CHARACTER_STRING)) {
-                    throw new IllegalArgumentException(
-                            ErrorMessages.ROW_KEY_STRING_TYPE + field.getDataType());
-                }
-
-                this.rowKeyIndex = index;
+            // Verify precision for DATETIME types
+            if (field.getDataType().getLogicalType().is(LogicalTypeFamily.DATETIME)) {
+                getPrecisionOr(
+                        field.getDataType().getLogicalType(),
+                        MIN_DATETIME_PRECISION,
+                        MAX_DATETIME_PRECISION);
             }
+
+            columnTypeMap.put(field.getName(), field.getDataType());
+            indexMap.put(index, field.getName());
             index++;
         }
     }
