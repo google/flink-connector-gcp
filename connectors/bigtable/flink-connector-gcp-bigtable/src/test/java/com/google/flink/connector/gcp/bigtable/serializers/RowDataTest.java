@@ -402,11 +402,7 @@ public class RowDataTest {
             case TIMESTAMP_WITH_TIME_ZONE:
             case TIMESTAMP_WITHOUT_TIME_ZONE:
             case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
-                int tsPrecision =
-                        RowDataToRowMutationSerializer.getPrecisionOr(
-                                type,
-                                RowDataToRowMutationSerializer.MIN_DATETIME_PRECISION,
-                                RowDataToRowMutationSerializer.MAX_DATETIME_PRECISION);
+                int tsPrecision = RowDataToRowMutationSerializer.getPrecisionOr(type);
                 return row.getTimestamp(index, tsPrecision);
             case TIME_WITHOUT_TIME_ZONE:
                 int milliseconds = row.getInt(index);

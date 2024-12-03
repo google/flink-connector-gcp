@@ -184,10 +184,7 @@ public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer
                 for (Field nestedField : DataType.getFields(field.getDataType())) {
                     // Verify precision for DATETIME types
                     if (nestedField.getDataType().getLogicalType().is(LogicalTypeFamily.DATETIME)) {
-                        getPrecisionOr(
-                                nestedField.getDataType().getLogicalType(),
-                                MIN_DATETIME_PRECISION,
-                                MAX_DATETIME_PRECISION);
+                        getPrecisionOr(nestedField.getDataType().getLogicalType());
                     }
 
                     if (nestedField.getDataType().getLogicalType().is(LogicalTypeRoot.ROW)) {
@@ -212,10 +209,7 @@ public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer
 
             // Verify precision for DATETIME types
             if (field.getDataType().getLogicalType().is(LogicalTypeFamily.DATETIME)) {
-                getPrecisionOr(
-                        field.getDataType().getLogicalType(),
-                        MIN_DATETIME_PRECISION,
-                        MAX_DATETIME_PRECISION);
+                getPrecisionOr(field.getDataType().getLogicalType());
             }
 
             columnTypeMap.put(field.getName(), field.getDataType());
@@ -263,8 +257,7 @@ public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer
             case TIMESTAMP_WITH_TIME_ZONE:
             case TIMESTAMP_WITHOUT_TIME_ZONE:
             case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
-                int tsPrecision =
-                        getPrecisionOr(type, MIN_DATETIME_PRECISION, MAX_DATETIME_PRECISION);
+                int tsPrecision = getPrecisionOr(type);
                 TimestampData ts = row.getTimestamp(index, tsPrecision);
                 ByteBuffer buffer =
                         ByteBuffer.allocate(
@@ -273,7 +266,7 @@ public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer
                 buffer.putInt(ts.getNanoOfMillisecond());
                 return buffer.array();
             case TIME_WITHOUT_TIME_ZONE:
-                getPrecisionOr(type, MIN_DATETIME_PRECISION, MAX_DATETIME_PRECISION);
+                getPrecisionOr(type);
                 return ByteBuffer.allocate(Integer.BYTES).putInt(row.getInt(index)).array();
             case DECIMAL:
                 DecimalType decimalType = (DecimalType) type;
@@ -289,15 +282,15 @@ public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer
     }
 
     @VisibleForTesting
-    static int getPrecisionOr(LogicalType type, int lowerBound, int upperBound) {
+    static int getPrecisionOr(LogicalType type) {
         int precision = getPrecision(type);
-        if (precision < lowerBound || precision > upperBound) {
-            throw new UnsupportedOperationException(
+        if (precision < MIN_DATETIME_PRECISION || precision > MAX_DATETIME_PRECISION) {
+            throw new IllegalArgumentException(
                     String.format(
                             ErrorMessages.TIMESTAMP_OUTSIDE_PRECISION_TEMPLATE,
                             type,
-                            lowerBound,
-                            upperBound,
+                            MIN_DATETIME_PRECISION,
+                            MAX_DATETIME_PRECISION,
                             precision));
         }
         return precision;
