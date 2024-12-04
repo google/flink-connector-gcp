@@ -13,6 +13,9 @@ DataStream API:
 - Apache Kafka for BigQuery to Apache Kafka for BigQuery WordCount
 - PubSub Load Generator
 - PubSub to BigQuery WordCount
+- BigQuery Load Generator
+- HBase Load Generator
+- HBase with BigTable Load Generator
 
 Table API:
 - Google Cloud Storage to Google Cloud Storage
