@@ -37,6 +37,8 @@ under the License.
     <flink.version>1.19.0</flink.version>
     <kafka.connector.version>3.1.0-1.17</kafka.connector.version>
     <flink-connector-bigquery.version>0.3.0</flink-connector-bigquery.version>
+    <hbase.connector.version>4.0.0-1.19</hbase.connector.version>
+    <hadoop.version>3.4.1</hadoop.version>
   </properties>
 
       <repositories>
@@ -173,38 +175,42 @@ under the License.
       <artifactId>guava</artifactId>
       <version>32.1.3-jre</version>
     </dependency>
+
+    <!-- HBase connector dependencies -->
+
     <!-- https://mvnrepository.com/artifact/org.apache.flink/flink-connector-hbase-2.2 -->
     <dependency>
         <groupId>org.apache.flink</groupId>
         <artifactId>flink-connector-hbase-2.2</artifactId>
-        <version>4.0.0-1.19</version>
-        <scope>compile</scope>
+        <version>${hbase.connector.version}</version>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.apache.flink/flink-connector-hbase-base -->
     <dependency>
         <groupId>org.apache.flink</groupId>
         <artifactId>flink-connector-hbase-base</artifactId>
-        <version>4.0.0-1.19</version>
-        <scope>compile</scope>
+        <version>${hbase.connector.version}</version>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.apache.hadoop/hadoop-common -->
     <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-common</artifactId>
-        <version>3.4.1</version>
-        <scope>compile</scope>
+        <version>${hadoop.version}</version>
     </dependency>
     <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-client-runtime</artifactId>
-        <version>3.4.1</version>
+        <version>${hadoop.version}</version>
     </dependency>
     <!-- https://mvnrepository.com/artifact/org.apache.hbase/hbase-common -->
     <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-common</artifactId>
         <version>2.6.1</version>
-        <scope>compile</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.hbase.thirdparty</groupId>
+        <artifactId>hbase-shaded-miscellaneous</artifactId>
+        <version>4.1.9</version>
     </dependency>
     <dependency>
         <groupId>com.fasterxml.woodstox</groupId>
@@ -216,13 +222,6 @@ under the License.
         <artifactId>stax2-api</artifactId>
         <version>4.2.1</version>
     </dependency>
-    <!-- https://mvnrepository.com/artifact/org.apache.hadoop/hadoop-client
-    <dependency>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-client</artifactId>
-        <version>3.4.1</version>
-        <scope>compile</scope>
-    </dependency>  -->
  </dependencies>
 
 
@@ -286,9 +285,9 @@ under the License.
                                 <include>org.apache.flink:flink-connector-hbase-base:*</include>
                                 <include>com.fasterxml.woodstox:*</include>
                                 <include>org.codehaus.woodstox:*</include>
-                                <!-- <include>org.apache.hadoop:hadoop-client*</include> -->
                                 <include>org.apache.hadoop:hadoop-common:*</include>
                                 <include>org.apache.hadoop:hadoop-client-runtime:*</include>
+                                <include>org.apache.hbase.thirdparty:*</include>
                                 <include>org.apache.hbase:*</include>
                                 <include>org.apache.flink:flink-avro:*</include>
                                 <include>com.google.*:*</include>
@@ -305,7 +304,6 @@ under the License.
                                     <include>org/apache/kafka/kafka-clients/**</include>
                                     <include>org/apache/flink/flink-connector-hbase-2.2/**</include>
                                     <include>org/apache/flink/flink-connector-hbase-base/**</include>
-                                    <!-- <include>org/apache/hadoop/hadoop-client/**</include> -->
                                     <include>org/apache/hadoop/hadoop-client-runtime/**</include>
                                     <include>org/apache/hadoop/hadoop-common/**</include>
                                     <include>org/apache/hbase/**</include>

@@ -1,5 +1,3 @@
-ADD JAR './target/flink-examples-gcp-0.0.0-shaded.jar';
-
 CREATE TABLE Words (
   word VARCHAR(32),
   ts AS PROCTIME()
@@ -12,15 +10,16 @@ CREATE TABLE Words (
 -- register the HBase table 'mytable' in Flink SQL
 CREATE TABLE hTable (
  total BIGINT,
+ family1 ROW<window_start TIMESTAMP(3), window_end TIMESTAMP(3)>,
  PRIMARY KEY (total) NOT ENFORCED
 ) WITH (
  'connector' = 'hbase-2.2',
  'table-name' = 'mytable',
- 'zookeeper.quorum' = 'cmcbox.c.googlers.com:60000'
+ 'zookeeper.quorum' = 'localhost:2181'
 );
 
 INSERT INTO hTable
-SELECT COUNT(*) AS total 
+SELECT COUNT(*) AS total, ROW(window_start, window_end)
 FROM TABLE(
   TUMBLE(TABLE Words, DESCRIPTOR(ts), INTERVAL '2' MINUTE)
 ) GROUP BY window_start, window_end;
