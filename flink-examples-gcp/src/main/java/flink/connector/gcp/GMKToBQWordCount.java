@@ -41,26 +41,31 @@ import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericRecordBuilder;
 
-/** Pipeline code for running word count reading from GMK and writing to BQ. */
+/** Pipeline code for running word count reading from Kafka and writing to BQ. */
 public class GMKToBQWordCount {
     static Schema schema;
 
     public static void main(String[] args) throws Exception {
         final MultipleParameterTool parameters = MultipleParameterTool.fromArgs(args);
         String brokers = parameters.get("brokers", "localhost:9092");
-        String gmkUsername = parameters.get("gmk-username");
+        String kafkaUsername = parameters.get("kafka-username");
         String kafkaTopic = parameters.get("kafka-topic", "my-topic");
         String projectId = parameters.get("project-id");
         String datasetName = parameters.get("dataset-name");
         String tableName = parameters.get("table-name");
-        boolean oauth = parameters.getBoolean("oauth", false);
+        boolean oauth = parameters.getBoolean("oauth", true); // Only oauth is supported for Kafka for Big Query authentication
         String bqWordFieldName = parameters.get("bq-word-field-name", "word");
         String bqCountFieldName = parameters.get("bq-count-field-name", "countStr");
         String kafkaGroupId = parameters.get("kafka-group-id", "kafka-source-of-".concat(tableName));
-        String jobName = parameters.get("job-name", "GMK-BQ-word-count");
+        String jobName = parameters.get("job-name", "Kafka-BQ-word-count");
+        String project = parameters.get("project", "");
+        String secretID = parameters.get("secret-id", "");
+        String secretVersion = parameters.get("secret-version", "1");
         System.out.println("Starting job ".concat(jobName).concat(" with Kafka group id: ".concat(kafkaGroupId)));
         System.out.println("Using SASL_SSL " + (oauth ? "OAUTHBEARER" : "PLAIN") + " to authenticate");
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        // BQ sink requires checkpointing, which is enabled by default on Big Query Engine for Apache Flink
+        // Enable checkpointing if trying to run with OSS Flink
         env.getConfig().setGlobalJobParameters(parameters);
         // BQ sink can only support up to 100 parallelism.
         env.getConfig().setMaxParallelism(100);
@@ -80,13 +85,14 @@ public class GMKToBQWordCount {
                                         "sasl.jaas.config",
                                         "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required;");
         } else {
+                String password = GetSecretVersion.getSecretVersionPayload(project, secretID, secretVersion);
+                System.out.println("Got secret password for " + project + "/" + secretID + "/" + secretVersion);
                 String config = "org.apache.kafka.common.security.plain.PlainLoginModule required"
-                + " username=\'"
-                + gmkUsername
-                + "\'"
-                + " password=\'"
-                + System.getenv("GMK_PASSWORD")
-                                                + "\';";
+                        + " username=\'"
+                        + kafkaUsername
+                        + "\'"
+                        + " password=\'"
+                        + password + "\';";
                 sourceBuilder.setProperty("sasl.mechanism", "PLAIN")
                                 .setProperty(
                                         "sasl.jaas.config", config);
@@ -103,6 +109,7 @@ public class GMKToBQWordCount {
         BigQuerySinkConfig sinkConfig =
                 BigQuerySinkConfig.newBuilder()
                         .connectOptions(sinkConnectOptions)
+                        .streamExecutionEnvironment(env)
                         .deliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
                         .schemaProvider(schemaProvider)
                         .serializer(new AvroToProtoSerializer())
@@ -124,7 +131,7 @@ public class GMKToBQWordCount {
                 .returns(
                         new GenericRecordAvroTypeInfo(
                                 sinkConfig.getSchemaProvider().getAvroSchema()))
-                .sinkTo(BigQuerySink.get(sinkConfig, env));
+                .sinkTo(BigQuerySink.get(sinkConfig));
 
         env.execute(jobName);
     }

@@ -18,3 +18,13 @@ Authenticating with Oauth for Apache Kafka for BigQuery just requires adding a f
         "sasl.jaas.config",
         "org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required;");
 ```
+
+For oauth to work in a custom jar, make sure to include the GMK auth dependency.
+
+```
+<dependency>
+        <groupId>com.google.cloud</groupId>
+        <artifactId>google-managed-kafka-auth-login-handler</artifactId>
+        <version>1.0.0</version>
+</dependency>
+```

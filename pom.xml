@@ -55,6 +55,7 @@ under the License.
   
     <modules>
         <module>flink-examples-gcp</module>
+        <module>beam-examples</module>
     </modules>
 
     <properties>
@@ -893,6 +894,45 @@ under the License.
                     </plugin>
                 </plugins>
             </build>
+        </profile>
+        <profile>
+            <id>pubsub</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+                <property>
+                    <name>pubsub</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <configuration>
+                            <source>11</source>
+                            <target>11</target>
+                            <compilerArgs combine.children="append">
+                                <arg>--add-exports=java.base/sun.net.util=ALL-UNNAMED</arg>
+                                <arg>--add-exports=java.management/sun.management=ALL-UNNAMED</arg>
+                                <arg>--add-exports=java.rmi/sun.rmi.registry=ALL-UNNAMED</arg>
+                                <arg>--add-exports=java.security.jgss/sun.security.krb5=ALL-UNNAMED</arg>
+                            </compilerArgs>
+                            <includes>
+                                <include>flink/connector/gcp/PubSubLoadGenerator.java</include>
+                                <include>flink/connector/gcp/PubSubToBQWordCount.java</include>
+                            </includes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+            <dependencies>
+                <!-- Must be built from source: https://github.com/GoogleCloudPlatform/pubsub/tree/master/flink-connector -->
+                <dependency>
+                    <groupId>com.google.pubsub.flink</groupId>
+                    <artifactId>flink-connector-gcp-pubsub</artifactId>
+                    <version>1.0.0-SNAPSHOT</version>
+                </dependency>
+            </dependencies>
         </profile>
     </profiles>
 

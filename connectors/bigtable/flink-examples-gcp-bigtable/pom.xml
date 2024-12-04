@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.google.flink.connector.gcp.bigtable</groupId>
+        <artifactId>flink-connector-bigtable-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <name>Bigtable Flink Connector Examples</name>
+    <artifactId>flink-examples-gcp-bigtable</artifactId>
+
+    <packaging>jar</packaging>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.google.flink.connector.gcp.bigtable</groupId>
+            <artifactId>flink-connector-gcp-bigtable</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>bigtableExamples</finalName>
+        <extensions>
+            <extension>
+                <groupId>kr.motd.maven</groupId>
+                <artifactId>os-maven-plugin</artifactId>
+                <version>1.7.1</version>
+            </extension>
+        </extensions>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.1</version>
+                <executions>
+                    <execution>
+                        <id>shade-flink</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <shadedArtifactAttached>false</shadedArtifactAttached>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <transformers>
+                                <transformer
+                                    implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>com.google.flink.connector.gcp.bigtable.examples.WriteGenericRecord</mainClass>
+                                </transformer>
+                                <transformer
+                                    implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
+                                    <resource>META-INF/services</resource>
+                                    <file>io.grpc.LoadBalancerProvider</file>
+                                </transformer>
+                                <transformer
+                                    implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
+                                    <resource>META-INF/services</resource>
+                                    <file>io.grpc.NameResolverProvider</file>
+                                </transformer>
+                                <transformer
+                                    implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+                            </transformers>
+                            <artifactSet>
+                                <excludes>
+                                    <exclude>com.google.code.findbugs:jsr305</exclude>
+                                </excludes>
+                            </artifactSet>
+                            <relocations>
+                                <relocation>
+                                    <pattern>com</pattern>
+                                    <shadedPattern>
+                                        com.google.flink.connector.gcp.bigtable.shaded.com
+                                    </shadedPattern>
+                                    <includes>
+                                        <include>com.google.cloud.bigtable**</include>
+                                        <include>com.google.flink.connector.gcp.bigtable**</include>
+                                        <include>com.google.protobuf.**</include>
+                                        <include>com.google.common.**</include>
+                                        <include>com.google.guava.**</include>
+                                        <include>com.fasterxml.jackson.*:*</include>
+                                    </includes>
+                                </relocation>
+                                <relocation>
+                                    <pattern>META-INF/native/io_grpc_netty_shaded_</pattern>
+                                    <shadedPattern>
+                                        META-INF/native/com_google_flink_connector_gcp_bigtable_shaded_io_grpc_netty_shaded_
+                                    </shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>META-INF/native/libio_grpc_netty_shaded_</pattern>
+                                    <shadedPattern>
+                                        META-INF/native/libcom_google_flink_connector_gcp_bigtable_shaded_io_grpc_netty_shaded_
+                                    </shadedPattern>
+                                </relocation>
+                            </relocations>
+
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <!-- Excludes to avoid triggering invalid file signature
+                                    security error. -->
+                                    <excludes>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.MF</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                        <exclude>META-INF/*.SF</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
