@@ -158,7 +158,7 @@ public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer
 
     /**
      * Generates maps from the schema to keep track of DataTypes and indexes. This is needed since
-     * the schema cannot be fetch from the {@link RowData}.
+     * the schema cannot be fetched from the {@link RowData}.
      *
      * @param schema The {@link DataType} of the {@link RowData}.
      * @param rowKeyField The name of the row key field.
