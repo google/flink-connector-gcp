@@ -102,7 +102,8 @@ public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer
 
         checkNotNull(
                 this.rowKeyIndex,
-                String.format(ErrorMessages.MISSING_ROW_KEY, rowKeyField, schema.toString()));
+                String.format(
+                        ErrorMessages.MISSING_ROW_KEY_TEMPLATE, rowKeyField, schema.toString()));
     }
 
     @Override
@@ -169,7 +170,9 @@ public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer
             if (field.getName().equals(rowKeyField)) {
                 if (!field.getDataType().getLogicalType().is(LogicalTypeFamily.CHARACTER_STRING)) {
                     throw new IllegalArgumentException(
-                            ErrorMessages.ROW_KEY_STRING_TYPE + field.getDataType());
+                            String.format(
+                                    ErrorMessages.ROW_KEY_STRING_TYPE_TEMPLATE,
+                                    field.getDataType()));
                 }
                 this.rowKeyIndex = index;
             }

@@ -132,7 +132,8 @@ public class GenericRecordTest {
         testRecord.put(TestingUtils.ROW_KEY_FIELD, 1234);
 
         Assertions.assertThatThrownBy(() -> serializer.serialize(testRecord, null))
-                .hasMessageContaining(ErrorMessages.ROW_KEY_STRING_TYPE);
+                .hasMessage(
+                        String.format(ErrorMessages.ROW_KEY_STRING_TYPE_TEMPLATE, Schema.Type.INT));
     }
 
     @Test

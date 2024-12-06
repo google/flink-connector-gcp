@@ -194,7 +194,8 @@ public class RowDataTest {
                                         .withRowKeyField(TestingUtils.ROW_KEY_FIELD)
                                         .withColumnFamily(TestingUtils.COLUMN_FAMILY)
                                         .build())
-                .hasMessageContaining(ErrorMessages.ROW_KEY_STRING_TYPE);
+                .hasMessage(
+                        String.format(ErrorMessages.ROW_KEY_STRING_TYPE_TEMPLATE, DataTypes.INT()));
     }
 
     @Test
@@ -211,7 +212,7 @@ public class RowDataTest {
                                         .build())
                 .hasMessageContaining(
                         String.format(
-                                ErrorMessages.MISSING_ROW_KEY,
+                                ErrorMessages.MISSING_ROW_KEY_TEMPLATE,
                                 TestingUtils.ROW_KEY_FIELD,
                                 dtIntegerKeySchema));
     }

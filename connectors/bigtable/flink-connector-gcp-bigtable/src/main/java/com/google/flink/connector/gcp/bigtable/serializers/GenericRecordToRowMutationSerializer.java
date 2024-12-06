@@ -81,8 +81,9 @@ public class GenericRecordToRowMutationSerializer
     public RowMutationEntry serialize(GenericRecord record, SinkWriter.Context context) {
         if (record.getSchema().getField(rowKeyField).schema().getType() != Schema.Type.STRING) {
             throw new RuntimeException(
-                    ErrorMessages.ROW_KEY_STRING_TYPE
-                            + record.getSchema().getField(rowKeyField).schema().getType());
+                    String.format(
+                            ErrorMessages.ROW_KEY_STRING_TYPE_TEMPLATE,
+                            record.getSchema().getField(rowKeyField).schema().getType()));
         }
 
         RowMutationEntry entry = RowMutationEntry.create((String) record.get(rowKeyField));
