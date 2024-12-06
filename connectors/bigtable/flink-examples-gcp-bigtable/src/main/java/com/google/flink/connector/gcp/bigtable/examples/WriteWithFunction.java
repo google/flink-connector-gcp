@@ -61,7 +61,7 @@ public class WriteWithFunction {
         String instance = parameterTool.get("instance");
         String project = parameterTool.get("project");
         String table = parameterTool.get("table");
-        Integer rate = parameterTool.getInt("rate", 10000);
+        Integer rate = parameterTool.getInt("rate", 100);
         String jobName = parameterTool.get("jobName", "Streaming Bigtable Write With Function");
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();

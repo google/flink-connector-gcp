@@ -115,7 +115,25 @@ public class GenericRecordTest {
         GenericRecord testRecord = getTestGenericRecordDoubleNested();
 
         Assertions.assertThatThrownBy(() -> serializer.serialize(testRecord, null))
-                .hasMessageContaining(ErrorMessages.UNSUPPORTED_SERIALIZATION_TYPE);
+                .hasMessageContaining(ErrorMessages.NESTED_TYPE_ERROR);
+    }
+
+    @Test
+    public void testRowKeyNoStringError() {
+        GenericRecordToRowMutationSerializer serializer = createTestSerializer(false);
+
+        Schema schema =
+                SchemaBuilder.record("TestBytes")
+                        .fields()
+                        .requiredInt(TestingUtils.ROW_KEY_FIELD)
+                        .endRecord();
+
+        GenericRecord testRecord = new GenericData.Record(schema);
+        testRecord.put(TestingUtils.ROW_KEY_FIELD, 1234);
+
+        Assertions.assertThatThrownBy(() -> serializer.serialize(testRecord, null))
+                .hasMessage(
+                        String.format(ErrorMessages.ROW_KEY_STRING_TYPE_TEMPLATE, Schema.Type.INT));
     }
 
     @Test
