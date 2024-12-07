@@ -17,9 +17,14 @@ DataStream API:
 Table API:
 - Google Cloud Storage to Google Cloud Storage
 - Apache Kafka for BigQuery to Apache Kafka for BigQuery
+- BigQuery WordCount
 
 Python:
 -  Google Cloud Storage to Google Cloud Storage WordCount
+
+SQL:
+- HBase WordCount
+- HBase with BigTable WordCount
 
 ## Building the Project
 
