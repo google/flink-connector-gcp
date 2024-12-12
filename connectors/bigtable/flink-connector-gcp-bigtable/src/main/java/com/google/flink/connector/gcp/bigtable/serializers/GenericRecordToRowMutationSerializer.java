@@ -33,6 +33,8 @@ import javax.annotation.Nullable;
 
 import java.nio.ByteBuffer;
 
+import static org.apache.flink.util.Preconditions.checkNotNull;
+
 /**
  * A serializer that converts {@link GenericRecord} objects into Bigtable {@link RowMutationEntry}
  * objects.
@@ -79,6 +81,13 @@ public class GenericRecordToRowMutationSerializer
 
     @Override
     public RowMutationEntry serialize(GenericRecord record, SinkWriter.Context context) {
+        if (record.getSchema().getField(rowKeyField).schema().getType() != Schema.Type.STRING) {
+            throw new RuntimeException(
+                    String.format(
+                            ErrorMessages.ROW_KEY_STRING_TYPE_TEMPLATE,
+                            record.getSchema().getField(rowKeyField).schema().getType()));
+        }
+
         RowMutationEntry entry = RowMutationEntry.create((String) record.get(rowKeyField));
 
         if (!useNestedRowsMode) {
@@ -144,6 +153,8 @@ public class GenericRecordToRowMutationSerializer
                 return ByteBuffer.allocate(Double.BYTES).putDouble((Double) obj).array();
             case BOOLEAN:
                 return ByteBuffer.allocate(Byte.BYTES).put((byte) ((Boolean) obj ? 1 : 0)).array();
+            case RECORD:
+                throw new IllegalArgumentException(ErrorMessages.NESTED_TYPE_ERROR);
             default:
                 throw new IllegalArgumentException(
                         ErrorMessages.UNSUPPORTED_SERIALIZATION_TYPE + type);
@@ -182,6 +193,7 @@ public class GenericRecordToRowMutationSerializer
         }
 
         public GenericRecordToRowMutationSerializer build() {
+            checkNotNull(this.rowKeyField, ErrorMessages.ROW_KEY_FIELD_NULL);
             if (columnFamily != null && useNestedRowsMode) {
                 throw new IllegalArgumentException(
                         ErrorMessages.COLUMN_FAMILY_AND_NESTED_INCOMPATIBLE);
