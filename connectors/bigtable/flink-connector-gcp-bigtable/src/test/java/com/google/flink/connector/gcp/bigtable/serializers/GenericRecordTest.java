@@ -64,6 +64,17 @@ public class GenericRecordTest {
     }
 
     @Test
+    public void testNullKeySerializerInitialization() {
+        Assertions.assertThatThrownBy(
+                        () ->
+                                GenericRecordToRowMutationSerializer.builder()
+                                        .withRowKeyField(null)
+                                        .withColumnFamily(TestingUtils.COLUMN_FAMILY)
+                                        .build())
+                .hasMessage(ErrorMessages.ROW_KEY_FIELD_NULL);
+    }
+
+    @Test
     public void testColumnFamilyAndNestedIncompability() {
         Assertions.assertThatThrownBy(
                         () ->

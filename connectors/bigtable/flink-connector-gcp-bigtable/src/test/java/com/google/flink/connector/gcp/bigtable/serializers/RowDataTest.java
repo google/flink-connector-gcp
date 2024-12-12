@@ -96,6 +96,30 @@ public class RowDataTest {
     }
 
     @Test
+    public void testNullKeySerializerInitialization() {
+        Assertions.assertThatThrownBy(
+                        () ->
+                                RowDataToRowMutationSerializer.builder()
+                                        .withRowKeyField(null)
+                                        .withColumnFamily(TestingUtils.COLUMN_FAMILY)
+                                        .withSchema(dtSchema)
+                                        .build())
+                .hasMessage(ErrorMessages.ROW_KEY_FIELD_NULL);
+    }
+
+    @Test
+    public void testNullSchemaSerializerInitialization() {
+        Assertions.assertThatThrownBy(
+                        () ->
+                                RowDataToRowMutationSerializer.builder()
+                                        .withSchema(null)
+                                        .withRowKeyField(TestingUtils.ROW_KEY_FIELD)
+                                        .withColumnFamily(TestingUtils.COLUMN_FAMILY)
+                                        .build())
+                .hasMessage(ErrorMessages.ROW_KEY_FIELD_NULL);
+    }
+
+    @Test
     public void testColumnFamilyAndNestedIncompability() {
         Assertions.assertThatThrownBy(
                         () ->
@@ -183,7 +207,7 @@ public class RowDataTest {
     }
 
     @Test
-    public void testRowKeyNoStringerror() {
+    public void testRowKeyNoStringError() {
         DataType dtIntegerKeySchema =
                 DataTypes.ROW(DataTypes.FIELD(TestingUtils.ROW_KEY_FIELD, DataTypes.INT()));
 

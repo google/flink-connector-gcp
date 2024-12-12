@@ -336,6 +336,8 @@ public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer
         }
 
         public RowDataToRowMutationSerializer build() {
+            checkNotNull(this.rowKeyField, ErrorMessages.ROW_KEY_FIELD_NULL);
+            checkNotNull(this.schema, ErrorMessages.SCHEMA_NULL);
             if (columnFamily != null && useNestedRowsMode) {
                 throw new IllegalArgumentException(
                         ErrorMessages.COLUMN_FAMILY_AND_NESTED_INCOMPATIBLE);

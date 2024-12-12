@@ -33,6 +33,8 @@ import javax.annotation.Nullable;
 
 import java.nio.ByteBuffer;
 
+import static org.apache.flink.util.Preconditions.checkNotNull;
+
 /**
  * A serializer that converts {@link GenericRecord} objects into Bigtable {@link RowMutationEntry}
  * objects.
@@ -191,6 +193,7 @@ public class GenericRecordToRowMutationSerializer
         }
 
         public GenericRecordToRowMutationSerializer build() {
+            checkNotNull(this.rowKeyField, ErrorMessages.ROW_KEY_FIELD_NULL);
             if (columnFamily != null && useNestedRowsMode) {
                 throw new IllegalArgumentException(
                         ErrorMessages.COLUMN_FAMILY_AND_NESTED_INCOMPATIBLE);

@@ -40,4 +40,6 @@ public class ErrorMessages {
     public static final String TIMESTAMP_OUTSIDE_PRECISION_TEMPLATE =
             "Unsupported precision, needs to be between %s and %s, got %s";
     public static final String MISSING_ROW_KEY_TEMPLATE = "Row key field %s not found in schema %s";
+    public static final String ROW_KEY_FIELD_NULL = "Row key field must be set";
+    public static final String SCHEMA_NULL = "Row key field must be set";
 }
