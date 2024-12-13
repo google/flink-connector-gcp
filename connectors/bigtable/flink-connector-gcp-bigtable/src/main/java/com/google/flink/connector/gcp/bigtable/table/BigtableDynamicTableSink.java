@@ -30,6 +30,7 @@ import org.apache.flink.table.types.DataType;
 import com.google.flink.connector.gcp.bigtable.BigtableSink;
 import com.google.flink.connector.gcp.bigtable.serializers.RowDataToRowMutationSerializer;
 import com.google.flink.connector.gcp.bigtable.table.config.BigtableConnectorOptions;
+import com.google.flink.connector.gcp.bigtable.utils.ErrorMessages;
 
 import java.util.Objects;
 
@@ -50,7 +51,7 @@ public class BigtableDynamicTableSink implements DynamicTableSink {
         checkArgument(
                 resolvedSchema.getPrimaryKeyIndexes().length == 1,
                 String.format(
-                        "There must be exactly one primary key, found %d.",
+                        ErrorMessages.MULTIPLE_PRIMARY_KEYS,
                         resolvedSchema.getPrimaryKeyIndexes().length));
         int rowKeyIndex = resolvedSchema.getPrimaryKeyIndexes()[0];
         checkArgument(
@@ -60,8 +61,7 @@ public class BigtableDynamicTableSink implements DynamicTableSink {
                         .getDataType()
                         .equals(DataTypes.STRING().notNull()),
                 String.format(
-                        "Row Key needs to be type %s, found %s.",
-                        DataTypes.STRING().notNull(),
+                        ErrorMessages.ROW_KEY_STRING_TYPE_TEMPLATE,
                         resolvedSchema.getColumn(rowKeyIndex).get().getDataType()));
 
         this.connectorOptions = connectorOptions;

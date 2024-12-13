@@ -28,6 +28,7 @@ import org.apache.flink.table.factories.utils.FactoryMocks;
 
 import com.google.flink.connector.gcp.bigtable.table.config.BigtableConnectorOptions;
 import com.google.flink.connector.gcp.bigtable.testingutils.TestingUtils;
+import com.google.flink.connector.gcp.bigtable.utils.ErrorMessages;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -231,17 +232,18 @@ public class BigtableTableTest {
 
     private static Stream<Arguments> rowKeyCases() {
         return Stream.of(
-                Arguments.of(null, "There must be exactly one primary key"),
+                Arguments.of(null, String.format(ErrorMessages.MULTIPLE_PRIMARY_KEYS, 0)),
                 Arguments.of(
                         UniqueConstraint.primaryKey(
                                 "many-keys",
                                 Arrays.asList(
                                         TestingUtils.ROW_KEY_FIELD, TestingUtils.STRING_FIELD)),
-                        "There must be exactly one primary key"),
+                        String.format(ErrorMessages.MULTIPLE_PRIMARY_KEYS, 2)),
                 Arguments.of(
                         UniqueConstraint.primaryKey(
                                 "integer-key", Arrays.asList(TestingUtils.INTEGER_FIELD)),
-                        "Row Key needs to be type STRING"));
+                        String.format(
+                                ErrorMessages.ROW_KEY_STRING_TYPE_TEMPLATE, DataTypes.INT())));
     }
 
     private static ResolvedSchema getResolvedSchema(Boolean useNestedRowsMode) {
