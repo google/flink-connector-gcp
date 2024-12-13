@@ -96,12 +96,7 @@ public class BigtableTableTest {
                 connectorOptions.get(BigtableConnectorOptions.INSTANCE), TestingUtils.INSTANCE);
         assertEquals(connectorOptions.get(BigtableConnectorOptions.PROJECT), TestingUtils.PROJECT);
 
-        String rowKeyField =
-                sink.resolvedSchema
-                        .getColumn(sink.resolvedSchema.getPrimaryKeyIndexes()[0])
-                        .get()
-                        .getName();
-        assertEquals(rowKeyField, TestingUtils.ROW_KEY_FIELD);
+        assertEquals(sink.rowKeyField, TestingUtils.ROW_KEY_FIELD);
         assertEquals(sink.resolvedSchema, schema);
         assertNull(sink.parallelism);
     }
@@ -127,12 +122,7 @@ public class BigtableTableTest {
                 connectorOptions.get(BigtableConnectorOptions.INSTANCE), TestingUtils.INSTANCE);
         assertEquals(connectorOptions.get(BigtableConnectorOptions.PROJECT), TestingUtils.PROJECT);
 
-        String rowKeyField =
-                sink.resolvedSchema
-                        .getColumn(sink.resolvedSchema.getPrimaryKeyIndexes()[0])
-                        .get()
-                        .getName();
-        assertEquals(rowKeyField, TestingUtils.ROW_KEY_FIELD);
+        assertEquals(sink.rowKeyField, TestingUtils.ROW_KEY_FIELD);
         assertEquals((Integer) sink.parallelism, (Integer) 2);
         assertEquals(sink.resolvedSchema, schema);
     }
@@ -155,12 +145,7 @@ public class BigtableTableTest {
                 connectorOptions.get(BigtableConnectorOptions.INSTANCE), TestingUtils.INSTANCE);
         assertEquals(connectorOptions.get(BigtableConnectorOptions.PROJECT), TestingUtils.PROJECT);
 
-        String rowKeyField =
-                sink.resolvedSchema
-                        .getColumn(sink.resolvedSchema.getPrimaryKeyIndexes()[0])
-                        .get()
-                        .getName();
-        assertEquals(rowKeyField, TestingUtils.ROW_KEY_FIELD);
+        assertEquals(sink.rowKeyField, TestingUtils.ROW_KEY_FIELD);
         assertEquals(sink.resolvedSchema, schema);
         assertNull(sink.parallelism);
     }
