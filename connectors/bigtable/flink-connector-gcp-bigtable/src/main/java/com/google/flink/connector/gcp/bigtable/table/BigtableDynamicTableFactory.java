@@ -68,14 +68,7 @@ public class BigtableDynamicTableFactory implements DynamicTableSinkFactory {
 
         helper.validate();
 
-        if (helper.getOptions().get(BigtableConnectorOptions.SINK_PARALLELISM) == null) {
-            return new BigtableDynamicTableSink(
-                    context.getCatalogTable().getResolvedSchema(), helper.getOptions());
-        }
-
         return new BigtableDynamicTableSink(
-                context.getCatalogTable().getResolvedSchema(),
-                helper.getOptions(),
-                helper.getOptions().get(BigtableConnectorOptions.SINK_PARALLELISM));
+                context.getCatalogTable().getResolvedSchema(), helper.getOptions());
     }
 }

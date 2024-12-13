@@ -47,11 +47,6 @@ public class BigtableDynamicTableSink implements DynamicTableSink {
 
     public BigtableDynamicTableSink(
             ResolvedSchema resolvedSchema, ReadableConfig connectorOptions) {
-        this(resolvedSchema, connectorOptions, null);
-    }
-
-    public BigtableDynamicTableSink(
-            ResolvedSchema resolvedSchema, ReadableConfig connectorOptions, Integer parallelism) {
         checkArgument(
                 resolvedSchema.getPrimaryKeyIndexes().length == 1,
                 String.format(
@@ -71,7 +66,7 @@ public class BigtableDynamicTableSink implements DynamicTableSink {
 
         this.connectorOptions = connectorOptions;
         this.resolvedSchema = resolvedSchema;
-        this.parallelism = parallelism;
+        this.parallelism = connectorOptions.get(BigtableConnectorOptions.SINK_PARALLELISM);
         this.rowKeyField = resolvedSchema.getColumn(rowKeyIndex).get().getName();
     }
 
@@ -92,8 +87,7 @@ public class BigtableDynamicTableSink implements DynamicTableSink {
             return false;
         }
         BigtableDynamicTableSink other = (BigtableDynamicTableSink) obj;
-        return parallelism == other.parallelism
-                && Objects.equals(resolvedSchema, other.resolvedSchema)
+        return Objects.equals(resolvedSchema, other.resolvedSchema)
                 && Objects.equals(connectorOptions, other.connectorOptions);
     }
 
@@ -145,9 +139,6 @@ public class BigtableDynamicTableSink implements DynamicTableSink {
 
     @Override
     public DynamicTableSink copy() {
-        if (this.parallelism == null) {
-            return new BigtableDynamicTableSink(resolvedSchema, connectorOptions);
-        }
-        return new BigtableDynamicTableSink(resolvedSchema, connectorOptions, parallelism);
+        return new BigtableDynamicTableSink(resolvedSchema, connectorOptions);
     }
 }
