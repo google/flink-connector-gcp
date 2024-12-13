@@ -72,7 +72,7 @@ public class BigtableDynamicTableSink implements DynamicTableSink {
 
     @Override
     public int hashCode() {
-        return Objects.hash(this.resolvedSchema, this.connectorOptions, this.parallelism);
+        return Objects.hash(this.resolvedSchema, this.connectorOptions);
     }
 
     @Override

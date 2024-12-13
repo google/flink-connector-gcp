@@ -49,13 +49,15 @@ public class BigtableConnectorOptions {
             ConfigOptions.key("column-family")
                     .stringType()
                     .noDefaultValue()
-                    .withDescription("Specifies the Bigtable column family name.");
+                    .withDescription(
+                            "Specifies the Bigtable column family name. Incompatible with `use-nested-rows-mode`.");
 
     public static final ConfigOption<Boolean> USE_NESTED_ROWS_MODE =
-            ConfigOptions.key("use-nested-rows")
+            ConfigOptions.key("use-nested-rows-mode")
                     .booleanType()
                     .defaultValue(false)
-                    .withDescription("Specifies the use of nested rows are column families.");
+                    .withDescription(
+                            "Specifies the use of nested rows as column families. Incompatible with `column-family`.");
 
     public static final ConfigOption<Integer> SINK_PARALLELISM =
             ConfigOptions.key("parallelism")
