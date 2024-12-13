@@ -21,4 +21,5 @@ under the License.
 		"http://www.puppycrawl.com/dtds/suppressions_1_1.dtd">
  
 <suppressions>
+  <suppress files="connectors/bigtable/flink-connector-gcp-bigtable/src/main/resources/connector.properties" checks="RegexpHeader"/>
 </suppressions>
