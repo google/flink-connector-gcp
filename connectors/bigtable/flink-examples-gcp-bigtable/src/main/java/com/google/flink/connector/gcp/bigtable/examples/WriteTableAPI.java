@@ -100,7 +100,7 @@ public class WriteTableAPI {
                         .option(BigtableConnectorOptions.PROJECT, project)
                         .option(BigtableConnectorOptions.INSTANCE, instance)
                         .option(BigtableConnectorOptions.TABLE, table)
-                        .option("column-family", columnFamily)
+                        .option(BigtableConnectorOptions.COLUMN_FAMILY, columnFamily)
                         .build());
 
         Table source = tableEnv.from("RandomGenerator");

@@ -104,7 +104,7 @@ public class WriteTableAPINested {
                         .build());
 
         tableEnv.createTemporaryTable(
-                "SinkBigtable",
+                "SinkBigtableNested",
                 TableDescriptor.forConnector("bigtable")
                         .schema(schemaBigtable)
                         .option(BigtableConnectorOptions.PROJECT, project)
@@ -115,6 +115,6 @@ public class WriteTableAPINested {
 
         Table source = tableEnv.from("RandomGenerator");
 
-        source.executeInsert("SinkBigtable");
+        source.executeInsert("SinkBigtableNested");
     }
 }

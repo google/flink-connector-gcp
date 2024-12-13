@@ -80,12 +80,7 @@ public class BigtableTableTest {
         Map<String, String> options = getRequiredOptions();
         options.put(BigtableConnectorOptions.COLUMN_FAMILY.key(), TestingUtils.COLUMN_FAMILY);
 
-        ResolvedSchema schema =
-                new ResolvedSchema(
-                        SCHEMA_LIST,
-                        Collections.emptyList(),
-                        UniqueConstraint.primaryKey(
-                                "primaryKey", Arrays.asList(TestingUtils.ROW_KEY_FIELD)));
+        ResolvedSchema schema = getResolvedSchema(false);
 
         BigtableDynamicTableSink sink =
                 (BigtableDynamicTableSink) FactoryMocks.createTableSink(schema, options);
@@ -107,6 +102,38 @@ public class BigtableTableTest {
                         .getName();
         assertEquals(rowKeyField, TestingUtils.ROW_KEY_FIELD);
         assertEquals(sink.resolvedSchema, schema);
+        assertNull(sink.parallelism);
+    }
+
+    @Test
+    public void testDynamicTableBigtableSinkParallelism() throws IOException {
+        Map<String, String> options = getRequiredOptions();
+        options.put(BigtableConnectorOptions.COLUMN_FAMILY.key(), TestingUtils.COLUMN_FAMILY);
+        options.put(BigtableConnectorOptions.SINK_PARALLELISM.key(), "2");
+
+        ResolvedSchema schema = getResolvedSchema(false);
+
+        BigtableDynamicTableSink sink =
+                (BigtableDynamicTableSink) FactoryMocks.createTableSink(schema, options);
+
+        ReadableConfig connectorOptions = sink.connectorOptions;
+        assertEquals(
+                connectorOptions.get(BigtableConnectorOptions.COLUMN_FAMILY),
+                TestingUtils.COLUMN_FAMILY);
+        assertFalse(connectorOptions.get(BigtableConnectorOptions.USE_NESTED_ROWS_MODE));
+        assertEquals(connectorOptions.get(BigtableConnectorOptions.TABLE), TestingUtils.TABLE);
+        assertEquals(
+                connectorOptions.get(BigtableConnectorOptions.INSTANCE), TestingUtils.INSTANCE);
+        assertEquals(connectorOptions.get(BigtableConnectorOptions.PROJECT), TestingUtils.PROJECT);
+
+        String rowKeyField =
+                sink.resolvedSchema
+                        .getColumn(sink.resolvedSchema.getPrimaryKeyIndexes()[0])
+                        .get()
+                        .getName();
+        assertEquals(rowKeyField, TestingUtils.ROW_KEY_FIELD);
+        assertEquals((Integer) sink.parallelism, (Integer) 2);
+        assertEquals(sink.resolvedSchema, schema);
     }
 
     @Test
@@ -114,12 +141,7 @@ public class BigtableTableTest {
         Map<String, String> options = getRequiredOptions();
         options.put(BigtableConnectorOptions.USE_NESTED_ROWS_MODE.key(), "true");
 
-        ResolvedSchema schema =
-                new ResolvedSchema(
-                        NESTED_SCHEMA_LIST,
-                        Collections.emptyList(),
-                        UniqueConstraint.primaryKey(
-                                "primaryKey", Arrays.asList(TestingUtils.ROW_KEY_FIELD)));
+        ResolvedSchema schema = getResolvedSchema(true);
 
         BigtableDynamicTableSink sink =
                 (BigtableDynamicTableSink) FactoryMocks.createTableSink(schema, options);
@@ -139,6 +161,64 @@ public class BigtableTableTest {
                         .getName();
         assertEquals(rowKeyField, TestingUtils.ROW_KEY_FIELD);
         assertEquals(sink.resolvedSchema, schema);
+        assertNull(sink.parallelism);
+    }
+
+    @Test
+    public void testCopy() {
+        ResolvedSchema schema = getResolvedSchema(true);
+
+        Map<String, String> options = getRequiredOptions();
+        options.put(BigtableConnectorOptions.USE_NESTED_ROWS_MODE.key(), "true");
+
+        BigtableDynamicTableSink sink =
+                (BigtableDynamicTableSink) FactoryMocks.createTableSink(schema, options);
+        BigtableDynamicTableSink sink2 =
+                (BigtableDynamicTableSink) FactoryMocks.createTableSink(schema, options);
+
+        assertEquals(sink2, sink.copy());
+        assertTrue(sink2.equals(sink.copy()));
+    }
+
+    @Test
+    public void testCopyParallelism() {
+        ResolvedSchema schema = getResolvedSchema(false);
+
+        Map<String, String> options = getRequiredOptions();
+        options.put(BigtableConnectorOptions.COLUMN_FAMILY.key(), TestingUtils.COLUMN_FAMILY);
+        options.put(BigtableConnectorOptions.SINK_PARALLELISM.key(), "2");
+
+        BigtableDynamicTableSink sink =
+                (BigtableDynamicTableSink) FactoryMocks.createTableSink(schema, options);
+        BigtableDynamicTableSink sink2 =
+                (BigtableDynamicTableSink) FactoryMocks.createTableSink(schema, options);
+
+        assertEquals(sink2, sink.copy());
+        assertTrue(sink2.equals(sink.copy()));
+    }
+
+    @Test
+    public void testSummaryString() {
+        ResolvedSchema schema = getResolvedSchema(false);
+
+        String parallelism = "2";
+        Map<String, String> options = getRequiredOptions();
+        options.put(BigtableConnectorOptions.USE_NESTED_ROWS_MODE.key(), "true");
+        options.put(BigtableConnectorOptions.SINK_PARALLELISM.key(), parallelism);
+
+        BigtableDynamicTableSink sink =
+                (BigtableDynamicTableSink) FactoryMocks.createTableSink(schema, options);
+
+        String summaryString =
+                String.format(
+                        "BigtableSink("
+                                + "parallelism=%s, "
+                                + "connectorOptions=%s, "
+                                + "resolvedSchema=%s, "
+                                + "rowKeyField=%s)",
+                        parallelism, options, schema, TestingUtils.ROW_KEY_FIELD);
+
+        assertEquals(sink.asSummaryString(), summaryString);
     }
 
     @ParameterizedTest
@@ -162,6 +242,16 @@ public class BigtableTableTest {
                         UniqueConstraint.primaryKey(
                                 "integer-key", Arrays.asList(TestingUtils.INTEGER_FIELD)),
                         "Row Key needs to be type STRING"));
+    }
+
+    private static ResolvedSchema getResolvedSchema(Boolean useNestedRowsMode) {
+        List<Column> schemaList = useNestedRowsMode ? NESTED_SCHEMA_LIST : SCHEMA_LIST;
+
+        return new ResolvedSchema(
+                schemaList,
+                Collections.emptyList(),
+                UniqueConstraint.primaryKey(
+                        "primaryKey", Arrays.asList(TestingUtils.ROW_KEY_FIELD)));
     }
 
     private static Map<String, String> getRequiredOptions() {
