@@ -42,4 +42,6 @@ public class ErrorMessages {
     public static final String MISSING_ROW_KEY_TEMPLATE = "Row key field %s not found in schema %s";
     public static final String ROW_KEY_FIELD_NULL = "Row key field must be set";
     public static final String SCHEMA_NULL = "Row key field must be set";
+    public static final String MULTIPLE_PRIMARY_KEYS_TEMPLATE =
+            "There must be exactly one primary key, found %d.";
 }
