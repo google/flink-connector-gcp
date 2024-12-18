@@ -23,6 +23,7 @@ import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.catalog.Column;
 import org.apache.flink.table.catalog.ResolvedSchema;
 import org.apache.flink.table.catalog.UniqueConstraint;
+import org.apache.flink.table.factories.DynamicTableFactory;
 import org.apache.flink.table.factories.FactoryUtil;
 import org.apache.flink.table.factories.utils.FactoryMocks;
 
@@ -151,6 +152,38 @@ public class BigtableTableTest {
     }
 
     @Test
+    public void testRequiredConnectorOptions() throws IOException {
+        Map<String, String> options = getRequiredOptions();
+        ResolvedSchema schema = getResolvedSchema(false);
+
+        DynamicTableFactory.Context context = FactoryMocks.createTableContext(schema, options);
+        BigtableDynamicTableFactory factory = new BigtableDynamicTableFactory();
+
+        FactoryUtil.TableFactoryHelper helper =
+                FactoryUtil.createTableFactoryHelper(factory, context);
+
+        helper.validate();
+    }
+
+    @Test
+    public void testIncorrectConnectorOptions() throws IOException {
+        Map<String, String> options = new HashMap<>();
+        ResolvedSchema schema = getResolvedSchema(false);
+
+        DynamicTableFactory.Context context = FactoryMocks.createTableContext(schema, options);
+        BigtableDynamicTableFactory factory = new BigtableDynamicTableFactory();
+
+        FactoryUtil.TableFactoryHelper helper =
+                FactoryUtil.createTableFactoryHelper(factory, context);
+
+        Assertions.assertThatThrownBy(() -> helper.validate())
+                .hasMessageContaining("Missing required options are")
+                .hasMessageContaining(BigtableConnectorOptions.PROJECT.key())
+                .hasMessageContaining(BigtableConnectorOptions.INSTANCE.key())
+                .hasMessageContaining(BigtableConnectorOptions.TABLE.key());
+    }
+
+    @Test
     public void testCopy() {
         ResolvedSchema schema = getResolvedSchema(true);
 
@@ -207,6 +240,28 @@ public class BigtableTableTest {
         assertEquals(sink.asSummaryString(), summaryString);
     }
 
+    @Test
+    public void testSummaryStringNull() {
+        ResolvedSchema schema = getResolvedSchema(false);
+
+        Map<String, String> options = getRequiredOptions();
+        options.put(BigtableConnectorOptions.USE_NESTED_ROWS_MODE.key(), "true");
+
+        BigtableDynamicTableSink sink =
+                (BigtableDynamicTableSink) FactoryMocks.createTableSink(schema, options);
+
+        String summaryString =
+                String.format(
+                        "BigtableSink("
+                                + "parallelism=%s, "
+                                + "connectorOptions=%s, "
+                                + "resolvedSchema=%s, "
+                                + "rowKeyField=%s)",
+                        null, options, schema, TestingUtils.ROW_KEY_FIELD);
+
+        assertEquals(sink.asSummaryString(), summaryString);
+    }
+
     @ParameterizedTest
     @MethodSource("rowKeyCases")
     public void testRowKeyValidation(UniqueConstraint rowKey, String expectedError) {
@@ -217,13 +272,13 @@ public class BigtableTableTest {
 
     private static Stream<Arguments> rowKeyCases() {
         return Stream.of(
-                Arguments.of(null, String.format(ErrorMessages.MULTIPLE_PRIMARY_KEYS, 0)),
+                Arguments.of(null, String.format(ErrorMessages.MULTIPLE_PRIMARY_KEYS_TEMPLATE, 0)),
                 Arguments.of(
                         UniqueConstraint.primaryKey(
                                 "many-keys",
                                 Arrays.asList(
                                         TestingUtils.ROW_KEY_FIELD, TestingUtils.STRING_FIELD)),
-                        String.format(ErrorMessages.MULTIPLE_PRIMARY_KEYS, 2)),
+                        String.format(ErrorMessages.MULTIPLE_PRIMARY_KEYS_TEMPLATE, 2)),
                 Arguments.of(
                         UniqueConstraint.primaryKey(
                                 "integer-key", Arrays.asList(TestingUtils.INTEGER_FIELD)),

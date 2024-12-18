@@ -63,5 +63,5 @@ public class BigtableConnectorOptions {
             ConfigOptions.key("parallelism")
                     .intType()
                     .noDefaultValue()
-                    .withDescription("Sink Parallelism");
+                    .withDescription("Sink parallelism");
 }

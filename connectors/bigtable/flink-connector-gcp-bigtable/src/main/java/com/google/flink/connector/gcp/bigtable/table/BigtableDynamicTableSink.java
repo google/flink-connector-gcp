@@ -51,7 +51,7 @@ public class BigtableDynamicTableSink implements DynamicTableSink {
         checkArgument(
                 resolvedSchema.getPrimaryKeyIndexes().length == 1,
                 String.format(
-                        ErrorMessages.MULTIPLE_PRIMARY_KEYS,
+                        ErrorMessages.MULTIPLE_PRIMARY_KEYS_TEMPLATE,
                         resolvedSchema.getPrimaryKeyIndexes().length));
         int rowKeyIndex = resolvedSchema.getPrimaryKeyIndexes()[0];
         checkArgument(
@@ -120,10 +120,10 @@ public class BigtableDynamicTableSink implements DynamicTableSink {
                         .setSerializer(serializerBuilder.build())
                         .build();
 
-        if (this.parallelism == null) {
+        if (parallelism == null) {
             return SinkV2Provider.of(bigtableSink);
         }
-        return SinkV2Provider.of(bigtableSink, this.parallelism);
+        return SinkV2Provider.of(bigtableSink, parallelism);
     }
 
     @Override
