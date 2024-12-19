@@ -89,7 +89,7 @@ Column Family `family1` would have columns `name, age` and Column Family `family
 
 ### Supported Types
 
-Both `RECORD` and `ROW` are not supported unless it's to define a Column Family in `Nested Rows Mode`. Doble nested are not supported. For those and other unsupported types, you can use `BYTES`.
+Both `RECORD` and `ROW` are not supported unless it's to define a Column Family in `Nested Rows Mode`. Double nested are not supported. For those and other unsupported types, you can use `BYTES`.
 
 #### `GenericRecordToRowMutationSerializer`
 
@@ -128,7 +128,7 @@ The [DataTypes](https://nightlies.apache.org/flink/flink-docs-release-1.19/api/j
 * `DATE`
 * `DECIMAL` 
 
-For time-based types, the max precision is 6.
+The maximum precision for time-based types is 6.
 
 ## Table API
 
@@ -165,7 +165,7 @@ The following connector options are available:
 
 ## Exactly Once
 
-Due to Bigtable's nature, the Sink offers Exactly Once out of the box. In order to get Exactly Once, every element needs to have a timestamp which will be use in the `RowMutationEntry`.
+Due to Bigtable's nature, the Sink offers Exactly Once out of the box. In order to get Exactly Once, every element needs to have a timestamp which will be used in the `RowMutationEntry`.
 
 Bigtable storage format is a tuple of `(Key, CFamily, Column, Timestamp)` and `Value`. Bigtable is idempotent through timestamp. This means that if you write the same value multiple times with the same timestamp, the database doesn't change. If you write different values for the same rowkey, Bigtable will update its state with the value that has the latest timestamp (when querying at now).
 
@@ -176,5 +176,5 @@ Bigtable storage format is a tuple of `(Key, CFamily, Column, Timestamp)` and `V
 | RowKey, CF, C, timestamp1, my-value                           | my-value2                                  |
 | RowKey, CF, C, timestamp3, my-value                           | my-value                                   |
 
-This means that, as long as the timestamp doesn't change with retries (i.e., it is idempotent with retries), Exactly Once would have the same shape as At Least Once.
+This means that, as long as the timestamp doesn't change with retries (i.e., it is idempotent with retries), Exactly Once works the same as At Least Once.
 
