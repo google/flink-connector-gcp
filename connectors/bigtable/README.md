@@ -40,7 +40,7 @@ After the connector is installed, you should be able to import it from your **lo
 
 ## Serializers
 
-This connector comes with three built-in serializers to convert Flink data types into Bigtable `RowMutationEntry` objects:
+This connector comes with three built-in serializers to convert data types into Bigtable `RowMutationEntry` objects:
 
 *   **`GenericRecordToRowMutationSerializer`**: For AVRO `GenericRecord` objects.
 *   **`RowDataToRowMutationSerializer`**: For Flink `RowData` objects.
@@ -93,6 +93,8 @@ Both `RECORD` and `ROW` are not supported unless it's to define a Column Family 
 
 #### `GenericRecordToRowMutationSerializer`
 
+The [Avro Types](https://avro.apache.org/docs/1.12.0/api/java/org/apache/avro/Schema.Type.html) supported are:
+
 * `STRING` 
 * `BYTES`  
 * `INT`  
@@ -102,6 +104,8 @@ Both `RECORD` and `ROW` are not supported unless it's to define a Column Family 
 * `BOOLEAN`
 
 #### `RowDataToRowMutationSerializer`
+
+The [DataTypes](https://nightlies.apache.org/flink/flink-docs-release-1.19/api/java/index.html?org/apache/flink/table/api/DataTypes.html) supported are:
 
 * `STRING`
 * `CHAR`
