@@ -180,5 +180,5 @@ Bigtable storage format is a tuple of `(Key, CFamily, Column, Timestamp)` and `V
 | RowKey, CF, C, timestamp1, my-value                           | my-value2                                  |
 | RowKey, CF, C, timestamp3, my-value                           | my-value                                   |
 
-This means that, as long as the timestamp doesn't change with retries (i.e., it is idempotent with retries), Exactly Once works the same as At Least Once.
+This means that, as long as the timestamp doesn't change with retries (i.e., it is idempotent with retries), Exactly Once works the same as At Least Once as long as the rest of the pipeline is Exactly Once.
 
