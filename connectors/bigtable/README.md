@@ -4,7 +4,7 @@ This is a connector for Bigtable Sink for Apache Flink.
 
 ## Features
 
-*   **Table API and DataStream Sink:** Write data to Bigtable using the Flink Table API or Datastream API.
+*   **Table API and DataStream API Sink:** Write data to Bigtable using the Flink Table API or Datastream API.
 *   **Custom Serializers:** Use built-in or custom serializers to convert your data into Bigtable mutations.
 
 ## Usage
@@ -48,7 +48,7 @@ This connector comes with three built-in serializers to convert data types into 
 
 You can create your own custom serializer inheriting from `BaseRowMutationSerializer`.
 
-See [supported types](#supported-types) for serializers `GenericRecordToRowMutationSerializer` and `RowDataToRowMutationSerializer`
+See [supported types](#supported-types) for serializers `GenericRecordToRowMutationSerializer` and `RowDataToRowMutationSerializer`.
 
 ### Column Family and Nested Rows Modes
 
@@ -56,6 +56,8 @@ See [supported types](#supported-types) for serializers `GenericRecordToRowMutat
 
 *   **Column Family Mode**: All fields are written to a single specified column family. Nested fields are not supported.
 *   **Nested Rows Mode**: Each top-level field represents a separate column family, with its value being another `GenericRecord` or `RowData` containing the columns for that family. Only single nested rows are supported.
+
+These two mode are incompatible with each other and you must choose one of them.
 
 **Column Family Mode:**
 
@@ -79,7 +81,7 @@ GenericRecordToRowMutationSerializer.builder()
     .build();
 ```
 
-In this mode, all fields except `RowKeyField` must be Rows. The Row name represent the Column Family. For example:
+In this mode, all fields except `RowKeyField` must be Rows. The Row name represents the Column Family. For example:
 
 *   `key` (String)
 *   `family1` (contains fields like `name` (String), `age` (Integer))
@@ -87,9 +89,11 @@ In this mode, all fields except `RowKeyField` must be Rows. The Row name represe
 
 Column Family `family1` would have columns `name, age` and Column Family `family2` would have columns `city, zipCode`.
 
+You can find more information about Column Families in the [official Bigtable documentation](https://cloud.google.com/bigtable/docs/schema-design#column-families).
+
 ### Supported Types
 
-Both `RECORD` and `ROW` are not supported unless it's to define a Column Family in `Nested Rows Mode`. Double nested are not supported. For those and other unsupported types, you can use `BYTES`.
+Both `RECORD` and `ROW` are not supported unless it's to define a Column Family in `Nested Rows Mode`. Double nested rows are not supported. For those and other unsupported types, you can use `BYTES`.
 
 #### `GenericRecordToRowMutationSerializer`
 
