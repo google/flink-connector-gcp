@@ -86,7 +86,7 @@ public class WriteExactlyOnce {
                         RateLimiterStrategy.perSecond(rate),
                         Types.LONG);
 
-        long now = System.currentTimeMillis() / 1000 * 1000;
+        long now = System.currentTimeMillis();
 
         // For exactly once, every element needs a timestamp that doesn't change with retries
         WatermarkStrategy<Long> timestampAssigner =
