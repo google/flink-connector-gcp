@@ -195,7 +195,7 @@ public class BigtableWriterTest {
         Row row = client.readRow(TableId.of(TestingUtils.TABLE), "key");
 
         // Each row has a cell per qualifier, we expect two (STRING_FIELD, INTEGER_FIELD)
-        assertEquals(row.getCells().size(), 2);
+        assertEquals(2, row.getCells().size());
 
         assertEquals(
                 "string",
@@ -223,7 +223,7 @@ public class BigtableWriterTest {
         writer.flush(false);
 
         row = client.readRow(TableId.of(TestingUtils.TABLE), "key");
-        assertEquals(row.getCells().size(), 4);
+        assertEquals(4, row.getCells().size());
         assertEquals(
                 "newstring",
                 row.getCells(TestingUtils.COLUMN_FAMILY, TestingUtils.STRING_FIELD)
