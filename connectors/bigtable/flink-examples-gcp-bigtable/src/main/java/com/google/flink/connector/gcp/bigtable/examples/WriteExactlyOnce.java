@@ -43,9 +43,8 @@ import java.util.Date;
 import java.util.TimeZone;
 
 /**
- * This is an example pipeline for Apache Flink that demonstrates writing data to Google Cloud
- * Bigtable using the Bigtable connector and a {@link GenericRecordToRowMutationSerializer} to
- * transform data into {@link RowMutationEntry} objects.
+ * This is an example pipeline for Apache Flink that demonstrates how write with idempotent timestamps
+ * for Exactly Once.
  *
  * <p>The pipeline generates a stream of Long values and uses a {@link
  * GenericRecordToRowMutationSerializer} to convert each Long value into a {@link RowMutationEntry}

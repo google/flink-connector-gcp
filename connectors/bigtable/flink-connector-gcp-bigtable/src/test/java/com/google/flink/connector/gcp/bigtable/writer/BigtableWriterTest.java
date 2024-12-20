@@ -196,7 +196,6 @@ public class BigtableWriterTest {
 
         // Each row has a cell per qualifier, we expect two (STRING_FIELD, INTEGER_FIELD)
         assertEquals(2, row.getCells().size());
-
         assertEquals(
                 "string",
                 row.getCells(TestingUtils.COLUMN_FAMILY, TestingUtils.STRING_FIELD)
