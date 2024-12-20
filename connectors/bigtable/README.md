@@ -182,3 +182,4 @@ Bigtable storage format is a tuple of `(Key, CFamily, Column, Timestamp)` and `V
 
 This means that, as long as the timestamp doesn't change with retries (i.e., it is idempotent with retries) and the rest of the pipeline satisfies Exactly Once, the Bigtable Sink would work as Exactly once.
 
+You can see an example of idempotent timestamps in the `flink-examples-gcp-bigtable` module.

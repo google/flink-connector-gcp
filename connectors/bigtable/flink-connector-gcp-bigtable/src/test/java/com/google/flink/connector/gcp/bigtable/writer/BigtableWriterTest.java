@@ -18,6 +18,7 @@
 
 package com.google.flink.connector.gcp.bigtable.writer;
 
+import org.apache.flink.api.connector.sink2.SinkWriter;
 import org.apache.flink.api.connector.sink2.WriterInitContext;
 import org.apache.flink.metrics.groups.UnregisteredMetricsGroup;
 
@@ -70,6 +71,7 @@ public class BigtableWriterTest {
     private BigtableFlushableWriter flushableWriter;
 
     WriterInitContext mockContext = mock(WriterInitContext.class);
+    SinkWriter.Context mockSinkWriterContext = mock(SinkWriter.Context.class);
 
     @Rule public final BigtableEmulatorRule bigtableEmulator = BigtableEmulatorRule.create();
 
@@ -150,6 +152,90 @@ public class BigtableWriterTest {
                             .getValue();
             assertEquals(i, bytesToInteger(readInt));
         }
+
+        writer.close();
+    }
+
+    @Test
+    public void testExactlyOnceWrite()
+            throws IOException, InterruptedException, ExecutionException {
+        Schema schema =
+                SchemaBuilder.builder()
+                        .record("WriterTest")
+                        .fields()
+                        .requiredString(TestingUtils.ROW_KEY_FIELD)
+                        .requiredString(TestingUtils.STRING_FIELD)
+                        .requiredInt(TestingUtils.INTEGER_FIELD)
+                        .endRecord();
+
+        GenericRecordToRowMutationSerializer serializer =
+                GenericRecordToRowMutationSerializer.builder()
+                        .withRowKeyField(TestingUtils.ROW_KEY_FIELD)
+                        .withColumnFamily(TestingUtils.COLUMN_FAMILY)
+                        .build();
+
+        BigtableSinkWriter<GenericRecord> writer =
+                new BigtableSinkWriter<GenericRecord>(flushableWriter, serializer, mockContext);
+
+        Long fixedTime = 1734722223L;
+        Mockito.when(mockSinkWriterContext.timestamp()).thenReturn(fixedTime);
+
+        GenericRecord testRecord = new GenericData.Record(schema);
+        testRecord.put(TestingUtils.ROW_KEY_FIELD, "key");
+        testRecord.put(TestingUtils.STRING_FIELD, "string");
+        testRecord.put(TestingUtils.INTEGER_FIELD, 1729);
+
+        // Write same row multiple times with same timestamp
+        for (int i = 0; i < MAX_RANGE; i++) {
+            writer.write(testRecord, mockSinkWriterContext);
+        }
+        writer.flush(false);
+
+        // Verify only one row was written
+        Row row = client.readRow(TableId.of(TestingUtils.TABLE), "key");
+
+        // Each row has a cell per qualifier, we expect two (STRING_FIELD, INTEGER_FIELD)
+        assertEquals(row.getCells().size(), 2);
+
+        assertEquals(
+                "string",
+                row.getCells(TestingUtils.COLUMN_FAMILY, TestingUtils.STRING_FIELD)
+                        .get(0)
+                        .getValue()
+                        .toStringUtf8());
+        ByteString readInt =
+                row.getCells(TestingUtils.COLUMN_FAMILY, TestingUtils.INTEGER_FIELD)
+                        .get(0)
+                        .getValue();
+        assertEquals(1729, bytesToInteger(readInt));
+        assertEquals((long) fixedTime * 1000, row.getCells().get(0).getTimestamp());
+
+        // Write again with new timestamp
+        Long newTime = fixedTime + 10;
+        Mockito.when(mockSinkWriterContext.timestamp()).thenReturn(newTime);
+        GenericRecord newRecord = new GenericData.Record(schema);
+        // Use same key
+        newRecord.put(TestingUtils.ROW_KEY_FIELD, "key");
+        newRecord.put(TestingUtils.STRING_FIELD, "newstring");
+        newRecord.put(TestingUtils.INTEGER_FIELD, 92711729);
+
+        writer.write(newRecord, mockSinkWriterContext);
+        writer.flush(false);
+
+        row = client.readRow(TableId.of(TestingUtils.TABLE), "key");
+        assertEquals(row.getCells().size(), 4);
+        assertEquals(
+                "newstring",
+                row.getCells(TestingUtils.COLUMN_FAMILY, TestingUtils.STRING_FIELD)
+                        .get(0)
+                        .getValue()
+                        .toStringUtf8());
+        readInt =
+                row.getCells(TestingUtils.COLUMN_FAMILY, TestingUtils.INTEGER_FIELD)
+                        .get(0)
+                        .getValue();
+        assertEquals(92711729, bytesToInteger(readInt));
+        assertEquals((long) newTime * 1000, row.getCells().get(0).getTimestamp());
 
         writer.close();
     }
