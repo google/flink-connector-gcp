@@ -43,12 +43,12 @@ import java.util.Date;
 import java.util.TimeZone;
 
 /**
- * This is an example pipeline for Apache Flink that demonstrates how write with idempotent timestamps
- * for Exactly Once.
+ * This is an example pipeline for Apache Flink that demonstrates how write with idempotent
+ * timestamps for Exactly Once.
  *
  * <p>The pipeline generates a stream of Long values and uses a {@link
  * GenericRecordToRowMutationSerializer} to convert each Long value into a {@link RowMutationEntry}
- * that can be written to Bigtable.
+ * that can be written to Bigtable. A timestamps gets assigned to each generated element.
  *
  * <p>To run this example, you need to pass the argument {@code --columnFamily} or have an existing
  * column family named {@code flink}.
