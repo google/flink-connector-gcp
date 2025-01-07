@@ -38,9 +38,15 @@ import com.google.cloud.bigquery.BigQueryException;
 import com.google.cloud.bigquery.Dataset;
 import com.google.cloud.bigquery.DatasetId;
 import com.google.cloud.bigquery.DatasetInfo;
+import com.google.cloud.bigquery.Field;
+import com.google.cloud.bigquery.Schema;
+import com.google.cloud.bigquery.StandardSQLTypeName;
+import com.google.cloud.bigquery.StandardTableDefinition;
 import com.google.cloud.bigquery.Table;
+import com.google.cloud.bigquery.TableDefinition;
+import com.google.cloud.bigquery.TableId;
+import com.google.cloud.bigquery.TableInfo;
 import com.google.flink.connector.gcp.bigquery.client.BigQueryClient;
-
 
 /** Catalog for BigQuery. */
 public class BigQueryCatalog extends AbstractCatalog {
@@ -151,11 +157,53 @@ public class BigQueryCatalog extends AbstractCatalog {
         }
     }
 
-    // --------- Unsupported Operations ----------
+    // Flag cascade not tested yet.
     @Override
-    public void dropDatabase(String name, boolean ignoreIfNotExists, boolean cascade) throws DatabaseNotExistException, DatabaseNotEmptyException, CatalogException {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
+    public void dropDatabase(String databaseName, boolean ignoreIfNotExists, boolean cascade) throws DatabaseNotExistException, DatabaseNotEmptyException, CatalogException {
+        try {
+            if (!databaseExists(databaseName)) {
+                if (ignoreIfNotExists) {
+                        LOG.info("Trying to drop non-existent database {} but ignore flag is set.", databaseName);
+                        return;
+                    } else {
+                        throw new DatabaseNotExistException(getName(), databaseName);
+                    }
+                }
+    
+                if (cascade) {
+                    List<String> tables = listTables(databaseName);
+                    if (!tables.isEmpty()) {
+                        LOG.info("Dropping all tables in database {} due to cascade option.", databaseName);
+                        for (String tableName : tables) {
+                            try {
+                                dropTable(new ObjectPath(databaseName, tableName), false);
+                            } catch (TableNotExistException e) {
+                                // Should not happen given listTables, but handle defensively
+                                LOG.warn("Table {} not found during cascade drop of database {}.", tableName, databaseName, e);
+                            }
+                        }
+                    }
+                } else {
+                    // Throw an exception based on the casca
+                    List<String> tables = listTables(databaseName);
+                    if (!tables.isEmpty()) {
+                        throw new DatabaseNotEmptyException(getName(), databaseName);
+                    }
+                }
+    
+                DatasetId datasetId = DatasetId.of(this.projectId, databaseName);
+                boolean deleted = bigqueryclient.client.delete(datasetId);
+                if (!deleted && !ignoreIfNotExists) {
+                    // This case is unlikely if databaseExists check passed, but for robustness
+                    throw new DatabaseNotExistException(getName(), databaseName);
+                }
+    
+            } catch (DatabaseNotExistException | DatabaseNotEmptyException e) {
+                throw e;
+            } catch (CatalogException e) {
+                throw new CatalogException("Failed to drop database " + databaseName, e);
+            }
+        }    
 
     @Override
     public void alterDatabase(String name, CatalogDatabase newDatabase, boolean ignoreIfNotExists) throws DatabaseNotExistException, CatalogException {
@@ -168,7 +216,7 @@ public class BigQueryCatalog extends AbstractCatalog {
         try {
             DatasetId datasetId = DatasetId.of(this.projectId, databaseName);
             Page<Table> tables = bigqueryclient.client.listTables(datasetId, TableListOption.pageSize(100));
-            tables.iterateAll().forEach(table -> targetReturnList.add(String.format("Success! Dataset ID: %s ", table.getTableId().getTable())));
+            tables.iterateAll().forEach(table -> targetReturnList.add(String.format("Success! Table ID: %s ", table.getTableId().getTable())));
             return targetReturnList;
           } catch (BigQueryException e) {
             return List.of();
@@ -187,7 +235,17 @@ public class BigQueryCatalog extends AbstractCatalog {
 
     @Override
     public boolean tableExists(ObjectPath tablePath) throws CatalogException {
-        throw new UnsupportedOperationException("Not supported yet.");
+        try {
+            DatasetId datasetId = DatasetId.of(this.projectId, tablePath.getDatabaseName());
+            TableId tableId = TableId.of(datasetId.getDataset(), tablePath.getObjectName());
+            Table table = bigqueryclient.client.getTable(tableId);
+            return table != null;
+        } catch (BigQueryException e) {
+            if (e.getCode() == 404) { // NOT_FOUND
+                return false;
+            }
+            throw new CatalogException("Failed to check if table exists: " + tablePath, e);
+        }
     }
 
     @Override
@@ -197,12 +255,72 @@ public class BigQueryCatalog extends AbstractCatalog {
 
     @Override
     public void renameTable(ObjectPath tablePath, String newTableName, boolean ignoreIfNotExists) throws TableNotExistException, TableAlreadyExistException, CatalogException {
-        throw new UnsupportedOperationException("Not supported yet.");
+        try {
+            DatasetId datasetId = DatasetId.of(this.projectId, tablePath.getDatabaseName());
+            TableId oldTableId = TableId.of(datasetId.getDataset(), tablePath.getObjectName());
+            TableId newTableId = TableId.of(datasetId.getDataset(), newTableName);
+
+            // Handling ignoreIfNotExists flag
+            if (!tableExists(tablePath)) {
+                if (ignoreIfNotExists) {
+                    LOG.info("Trying to rename non-existent table {} but ignore flag is set.", tablePath);
+                    return;
+                } else {
+                    throw new TableNotExistException(getName(), tablePath);
+                }
+            }
+
+            // Check if the new table name already exists in the dataset
+            ObjectPath newTablePath = new ObjectPath(tablePath.getDatabaseName(), newTableName);
+            if (tableExists(newTablePath)) {
+                throw new TableAlreadyExistException(getName(), newTablePath);
+            }
+
+            Table currentTable = bigqueryclient.client.getTable(oldTableId);
+            if (currentTable != null) {
+                Table renamedTable = currentTable.toBuilder().setTableId(newTableId).build();
+                boolean success = bigqueryclient.client.update(renamedTable) != null;
+                if (!success) {
+                    throw new CatalogException("Failed to rename table " + tablePath + " to " + newTableName);
+                }
+            } else if (!ignoreIfNotExists) {
+                throw new TableNotExistException(getName(), tablePath);
+            }
+
+        } catch (TableNotExistException | TableAlreadyExistException e) {
+            throw e;
+        } catch (BigQueryException e) {
+            throw new CatalogException("Failed to rename table " + tablePath + " to " + newTableName, e);
+        }
     }
 
     @Override
     public void createTable(ObjectPath tablePath, CatalogBaseTable table, boolean ignoreIfExists) throws TableAlreadyExistException, DatabaseNotExistException, CatalogException {
-        throw new UnsupportedOperationException("Not supported yet.");
+        try {   
+            DatasetId datasetId = DatasetId.of(this.projectId, tablePath.getDatabaseName());
+            TableId tableId = TableId.of(datasetId.getDataset(), tablePath.getObjectName());
+            // Handling ignoreIfNotExists flag
+            if (tableExists(tablePath)) {
+                if (ignoreIfExists) {
+                    LOG.info("Table {} already exists but ignore flag is set.", tablePath);
+                    return;
+                } else {
+                    throw new TableAlreadyExistException(getName(), tablePath);
+                }
+            }
+
+            // TODO: Implement support for CatalogBaseTable properties.
+            Schema default_schema =
+                Schema.of(
+                    Field.of("stringField", StandardSQLTypeName.STRING),
+                    Field.of("booleanField", StandardSQLTypeName.BOOL));
+            TableDefinition tableDefinition = StandardTableDefinition.of(default_schema);
+            TableInfo tableInfo = TableInfo.newBuilder(tableId, tableDefinition).build();
+            bigqueryclient.client.create(tableInfo);
+            LOG.info("Table {} created successfully.", tablePath);
+        } catch (BigQueryException e) {
+            LOG.info("Table was not created. \n" + e.toString());
+        }
     }
 
     @Override
