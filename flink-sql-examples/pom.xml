@@ -39,13 +39,8 @@
     <dependency>
         <groupId>com.google.cloud.flink</groupId>
         <artifactId>flink-1.17-connector-bigquery</artifactId>
-        <version>0.2.0</version>
+	<version>${flink-connector-bigquery.version}</version>
     </dependency>
-      <dependency>
-          <groupId>com.google.cloud.flink</groupId>
-          <artifactId>flink-1.17-connector-bigquery</artifactId>
-          <version>${flink-connector-bigquery.version}</version>
-      </dependency>
   </dependencies>
   <build>
     <plugins>

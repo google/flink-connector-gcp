@@ -8,7 +8,7 @@ CREATE TABLE kafka_source (
     'connector' = 'kafka',
     'topic' = '<TOPIC>',
     'scan.startup.mode' = 'earliest-offset',  -- Read from the beginning.
-    'properties.bootstrap.servers' = 'bootstrap.<CLUSTER>.us-central1.managedkafka.<PROJECT>.cloud.goog:9092',
+    'properties.bootstrap.servers' = 'bootstrap.<CLUSTER>.<REGION>.managedkafka.<PROJECT>.cloud.goog:9092',
     'format' = 'json',
     'properties.security.protocol' = 'SASL_SSL',
     'properties.partition.discovery.interval.ms' = '10000',

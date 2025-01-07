@@ -14,7 +14,7 @@ CREATE TABLE write_to_kafka (
 ) WITH (
     'connector' = 'kafka',
     'topic' = '<TOPIC>',
-    'properties.bootstrap.servers' = 'bootstrap.<CLUSTER>.us-central1.managedkafka.<PROJECT>.cloud.goog:9092',
+    'properties.bootstrap.servers' = 'bootstrap.<CLUSTER>.<REGION>.managedkafka.<PROJECT>.cloud.goog:9092',
     'format' = 'json',
     'properties.security.protocol' = 'SASL_SSL',
     'properties.partition.discovery.interval.ms' = '10000',
