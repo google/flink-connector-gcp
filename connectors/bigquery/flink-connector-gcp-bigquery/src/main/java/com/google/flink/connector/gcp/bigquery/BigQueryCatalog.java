@@ -3,7 +3,11 @@ package com.google.flink.connector.gcp.bigquery;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.flink.table.catalog.AbstractCatalog;
 import org.apache.flink.table.catalog.CatalogBaseTable;
@@ -11,6 +15,7 @@ import org.apache.flink.table.catalog.CatalogDatabase;
 import org.apache.flink.table.catalog.CatalogFunction;
 import org.apache.flink.table.catalog.CatalogPartition;
 import org.apache.flink.table.catalog.CatalogPartitionSpec;
+import org.apache.flink.table.catalog.CatalogTable;
 import org.apache.flink.table.catalog.ObjectPath;
 import org.apache.flink.table.catalog.exceptions.CatalogException;
 import org.apache.flink.table.catalog.exceptions.DatabaseAlreadyExistException;
@@ -28,6 +33,7 @@ import org.apache.flink.table.catalog.exceptions.TablePartitionedException;
 import org.apache.flink.table.catalog.stats.CatalogColumnStatistics;
 import org.apache.flink.table.catalog.stats.CatalogTableStatistics;
 import org.apache.flink.table.expressions.Expression;
+import org.apache.flink.table.types.DataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,9 +67,15 @@ public class BigQueryCatalog extends AbstractCatalog {
 
     private final String projectId;
 
+    private final Map<ObjectPath, CatalogTableStatistics> tableStats;
+    
+    private final Map<ObjectPath, CatalogColumnStatistics> tableColumnStats;
+
     public BigQueryCatalog(String catalogName, String defaultDataset, String project, String credentialFile) throws IOException, GeneralSecurityException {
         super(catalogName, defaultDataset);
         this.projectId = project;
+        this.tableStats = new LinkedHashMap<>();
+        this.tableColumnStats = new LinkedHashMap<>();
 
         try {
             this.bigqueryclient = new BigQueryClient();
@@ -103,11 +115,17 @@ public class BigQueryCatalog extends AbstractCatalog {
 
     }
 
-    // get functions not supported yet.
+    // TODO: getDatabase functions not tested yet.
     @Override
     public CatalogDatabase getDatabase(String databaseName) throws DatabaseNotExistException, CatalogException {
-        throw new UnsupportedOperationException("Function getDatabase not supported yet.");
 
+        DatasetId datasetId = DatasetId.of(this.projectId, databaseName);
+        Dataset dataset = bigqueryclient.client.getDataset(datasetId);
+        if (dataset == null) {
+            throw new DatabaseNotExistException(getName(), databaseName);
+        }
+
+        return new BigQueryCatalogDatabase(this.projectId, dataset);
     }
 
     @Override
@@ -127,7 +145,7 @@ public class BigQueryCatalog extends AbstractCatalog {
         }
     }
 
-    // REVIEW: ignoreIfExists? 
+    // TODO: review ignoreIfExists? 
     @Override
     public void createDatabase(String databaseName, CatalogDatabase database, boolean ignoreIfExists) throws DatabaseAlreadyExistException, CatalogException {
         try {
@@ -274,9 +292,53 @@ public class BigQueryCatalog extends AbstractCatalog {
             TableId tableId = TableId.of(datasetId.getDataset(), tablePath.getObjectName());
             Table table = bigqueryclient.client.getTable(tableId);
 
+            if (table == null) {
+                throw new TableNotExistException(getName(), tablePath);
+            }
+
             // TODO: Need to map BigQuery schema to Flink schema
             // Also, partitioning and clustering keys are not supported yet.
-            throw new UnsupportedOperationException("Function getTable not supported yet.");
+            org.apache.flink.table.api.Schema.Builder schemaBuilder = org.apache.flink.table.api.Schema.newBuilder();
+            if (table.getDefinition().getSchema() != null) {
+                table.getDefinition().getSchema().getFields().forEach(field -> {
+                    // Map BigQuery field types to Flink types using your utility
+                    DataType flinkType = BigQueryTypeUtils.toFlinkType(field);
+                    schemaBuilder.column(field.getName(), flinkType);
+
+                });
+                
+            }
+
+            // TODO: Remove output_test after fully testing the schema mapping
+            org.apache.flink.table.api.Schema translatedSchema = schemaBuilder.build();
+            // translatedSchema.getColumns().forEach(column -> System.out.println(column));
+
+            Map<String, String> options = new HashMap<>();
+            options.put("connector", "bigquery"); 
+            options.put("project", this.projectId);
+            options.put("dataset", tablePath.getDatabaseName());
+            options.put("table", tablePath.getObjectName());
+            
+            CatalogTable.TableKind tableKind = table.getDefinition().getType()
+                    == com.google.cloud.bigquery.TableDefinition.Type.VIEW
+                            ? CatalogTable.TableKind.VIEW
+                            : CatalogTable.TableKind.TABLE;
+
+            // TODO: Add supports for tablecolumnstats
+            tableColumnStats.put(tablePath, new CatalogColumnStatistics(
+                Collections.emptyMap(),
+                Collections.emptyMap()
+               // translatedSchema.getColumns().forEach(column -> column.getName()),
+               // translatedSchema.getColumns().forEach(column -> column.getType().toString()),
+            ));
+            CatalogTable translated_table = org.apache.flink.table.catalog.CatalogTable.of(
+                    translatedSchema, 
+                    "", 
+                    Collections.emptyList(),
+                    options);
+            //System.out.println(translated_table);
+            return translated_table;
+
         } catch (BigQueryException e) {
             throw new CatalogException("Failed to get table " + tablePath, e);
         }
@@ -475,12 +537,51 @@ public class BigQueryCatalog extends AbstractCatalog {
 
     @Override
     public CatalogTableStatistics getTableStatistics(ObjectPath tablePath) throws TableNotExistException, CatalogException {
-        throw new UnsupportedOperationException("Function getTableStatistics not supported yet.");
+        try {
+            DatasetId datasetId = DatasetId.of(this.projectId, tablePath.getDatabaseName());
+            TableId tableId = TableId.of(datasetId.getDataset(), tablePath.getObjectName());
+            Table table = bigqueryclient.client.getTable(tableId);
+            
+            if (table != null) {
+                Long numRows = table.getNumRows() != null ? table.getNumRows().longValue() : null;
+
+                int fileCount = -1; // Indicate unknown
+                long totalSize = -1;  // Indicate unknown
+                long rawDataSize = -1; // Indicate unknown
+                
+                // You can add more specific properties if needed
+                java.util.Map<String, String> properties = new java.util.HashMap<>();
+                if (table.getDescription() != null) {
+                    properties.put("description", table.getDescription());
+                }
+                if (table.getCreationTime() != null) {
+                    properties.put("creationTime", String.valueOf(table.getCreationTime()));
+                }
+                if (table.getLastModifiedTime() != null) {
+                    properties.put("lastModifiedTime", String.valueOf(table.getLastModifiedTime()));
+                }
+                return new CatalogTableStatistics(numRows != null ? numRows : 0,
+                        fileCount,
+                        totalSize,
+                        rawDataSize,
+                        properties
+                        );
+
+            } else {
+                throw new TableNotExistException(getName(), tablePath);
+            }
+        } catch (BigQueryException e) {
+            if (e.getCode() == 404) {
+                throw new TableNotExistException(getName(), tablePath);
+            }
+            throw new CatalogException("Failed to get table statistics for " + tablePath, e);
+        }
     }
 
+    // TODO: getTableColumnStatistics not supported yet.
     @Override
     public CatalogColumnStatistics getTableColumnStatistics(ObjectPath tablePath) throws TableNotExistException, CatalogException {
-        throw new UnsupportedOperationException("Function getTableColumnStatistics not supported yet.");
+        return tableColumnStats.get(tablePath);
     }
 
     @Override

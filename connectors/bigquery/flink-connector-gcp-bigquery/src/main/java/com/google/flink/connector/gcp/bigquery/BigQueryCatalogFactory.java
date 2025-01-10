@@ -22,7 +22,7 @@ public class BigQueryCatalogFactory implements CatalogFactory {
 
     @Override
     public String factoryIdentifier() {
-        return "bigquery";
+        return BigQueryCatalogFactoryOptions.IDENTIFIER;
     }
 
     @Override
@@ -44,8 +44,7 @@ public class BigQueryCatalogFactory implements CatalogFactory {
     @Override
     public Catalog createCatalog(Context context) {
         LOG.info("BigQueryCatalogFactory.createCatalog() called with context: {}", context.getName());
-        System.out.printf("BigQueryCatalogFactory.createCatalog() called with context: %s%n", context.getName());
-        
+
         final FactoryUtil.CatalogFactoryHelper helper =
                 FactoryUtil.createCatalogFactoryHelper(this, context);
         helper.validate();
