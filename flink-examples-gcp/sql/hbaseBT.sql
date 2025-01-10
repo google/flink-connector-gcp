@@ -7,7 +7,7 @@ CREATE TABLE Words (
   'rows-per-second' = '10'
 );
 
-CREATE TABLE BigtableSink (
+CREATE TABLE BigtableHBaseSink (
   total BIGINT,
   cf1 ROW<window_start TIMESTAMP(3), window_end TIMESTAMP(3)>,
   PRIMARY KEY (total) NOT ENFORCED
@@ -20,7 +20,7 @@ CREATE TABLE BigtableSink (
   'properties.google.bigtable.instance.id' = '<bt-instance-id>'
 );
 
-INSERT INTO BigtableSink
+INSERT INTO BigtableHBaseSink
 SELECT COUNT(*) AS total, ROW(window_start, window_end)
 FROM TABLE(
   TUMBLE(TABLE Words, DESCRIPTOR(ts), INTERVAL '2' MINUTE)
