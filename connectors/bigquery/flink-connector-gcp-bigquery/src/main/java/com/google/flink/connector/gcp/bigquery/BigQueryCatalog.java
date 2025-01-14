@@ -101,13 +101,13 @@ public class BigQueryCatalog extends AbstractCatalog {
         try {
             Page<Dataset> datasets = bigqueryclient.client.listDatasets(this.projectId, DatasetListOption.pageSize(100));
             if (datasets == null) {
-                System.out.println("Project does not contain any datasets.");
+                LOG.info("Project does not contain any datasets.");
                 return List.of();
             }
             datasets
                     .iterateAll()
                     .forEach(
-                            dataset -> targetReturnList.add(String.format("%s", dataset.toString())));
+                            dataset -> targetReturnList.add(String.format("%s", dataset.getDatasetId().getDataset())));
             return targetReturnList;
         } catch (Exception e) {
             throw new CatalogException("Failed to list databases", e);
