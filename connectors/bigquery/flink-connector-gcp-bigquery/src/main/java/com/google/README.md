@@ -11,10 +11,27 @@ mvn clean package -DskipTests
 ./bin/sql-client.sh 
 
 ### ADD JAR
-ADD JAR '/Users/boqianshi/workspace/flink-connector-gcp/connectors/bigquery/flink-connector-gcp-bigquery/target/flink-connector-gcp-bigquery-0.1.0-SNAPSHOT.jar';
-
+```ADD JAR '/Users/boqianshi/workspace/binary-flink/flink-1.20.0/lib/flink-connector-bigquery-common-0.4-SNAPSHOT.jar'; ADD JAR '/Users/boqianshi/workspace/flink-connector-gcp/connectors/bigquery/flink-connector-gcp-bigquery/target/flink-connector-gcp-bigquery-0.1.0-SNAPSHOT.jar'; ADD JAR '/Users/boqianshi/workspace/binary-flink/flink-1.20.0/lib/flink-1.17-connector-bigquery-0.4-SNAPSHOT.jar';
+```
 ### SQL run catalog command
+```
 CREATE CATALOG bq_test WITH ('type' = 'bigquery','bigquery-project' = 'gmf-eng-internal-06a','credential-file' = '~/.config/gcloud/application_default_credentials.json', 'default-dataset' = 'boqian1');
+```
+
+Then, use the Catalog and dataset:
+
+```
+USE CATALOG bq_test;
+USE boqian1;
+```
+
+Select test:
+
+```
+SELECT * FROM country_codes LIMIT 100;
+```
+
+
 
 ### Table create test command:
 CREATE TABLE createtable_test (
@@ -69,3 +86,7 @@ CREATE TABLE test_bq_connector (
     'dataset' = 'boqian1',
     'table' = 'country_codes'
 );
+
+#### ADD connector JAR:
+ADD JAR '/Users/boqianshi/workspace/binary-flink/flink-1.20.0/lib/flink-1.17-connector-bigquery-0.4-SNAPSHOT.jar';
+ADD JAR '/Users/boqianshi/workspace/binary-flink/flink-1.20.0/lib/flink-connector-bigquery-common-0.4-SNAPSHOT.jar';

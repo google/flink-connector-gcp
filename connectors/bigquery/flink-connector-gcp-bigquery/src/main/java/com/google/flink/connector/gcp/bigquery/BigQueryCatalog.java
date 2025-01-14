@@ -107,7 +107,7 @@ public class BigQueryCatalog extends AbstractCatalog {
             datasets
                     .iterateAll()
                     .forEach(
-                            dataset -> targetReturnList.add(String.format("%s", dataset.getDatasetId().getDataset())));
+                            dataset -> targetReturnList.add(String.format("%s", dataset.toString())));
             return targetReturnList;
         } catch (Exception e) {
             throw new CatalogException("Failed to list databases", e);
@@ -258,7 +258,8 @@ public class BigQueryCatalog extends AbstractCatalog {
         try {
             DatasetId datasetId = DatasetId.of(this.projectId, databaseName);
             Page<Table> tables = bigqueryclient.client.listTables(datasetId, TableListOption.pageSize(100));
-            tables.iterateAll().forEach(table -> targetReturnList.add(String.format("Success! Table ID: %s ", table.getTableId().getTable())));
+            tables.iterateAll().forEach(table -> targetReturnList.add(String.format("Success! Table ID: %s , Table Type: %s", 
+                    table.getTableId().getTable(), table.getDefinition().getType().name())));
             return targetReturnList;
         } catch (BigQueryException e) {
             return List.of();

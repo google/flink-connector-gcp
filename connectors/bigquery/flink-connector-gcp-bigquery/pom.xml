@@ -45,11 +45,6 @@
     </dependencyManagement>
 
     <dependencies>
-    <dependency>
-        <groupId>org.apache.flink</groupId>
-        <artifactId>flink-metrics-dropwizard</artifactId>
-        <version>${flink.version}</version>
-    </dependency>
         <dependency>
             <groupId>org.apache.avro</groupId>
             <artifactId>avro</artifactId>
@@ -76,64 +71,66 @@
         <dependency>
             <groupId>com.google.cloud.flink</groupId>
             <artifactId>flink-1.17-connector-bigquery</artifactId>
-            <version>0.4.0</version>
+            <version>0.4.0</version> 
+            <!-- <scope>provided</scope> -->
         </dependency>
-         <dependency>
-        <groupId>org.apache.flink</groupId>
-        <artifactId>flink-java</artifactId>
-        <version>${flink.version}</version> <scope>provided</scope>
-    </dependency>
-
-     <dependency>
-        <groupId>org.apache.flink</groupId>
-        <artifactId>flink-java</artifactId>
-        <version>${flink.version}</version> <scope>provided</scope>
-    </dependency>
-    <dependency>
-        <groupId>org.apache.flink</groupId>
-        <artifactId>flink-streaming-java</artifactId>
-        <version>${flink.version}</version>
-        <scope>provided</scope>
-    </dependency>
-    <dependency>
-        <groupId>org.apache.flink</groupId>
-        <artifactId>flink-table-api-java-bridge</artifactId>
-        <version>${flink.version}</version>
-        <scope>provided</scope>
-    </dependency>
-     <dependency>
-        <groupId>org.apache.flink</groupId>
-        <artifactId>flink-connector-base</artifactId>
-        <version>${flink.version}</version>
-    </dependency>
-    <dependency>
-        <groupId>org.apache.flink</groupId>
-        <artifactId>flink-table-common</artifactId>
-        <version>${flink.version}</version>
-    </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-java</artifactId>
+            <version>${flink.version}</version> 
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-java</artifactId>
+            <version>${flink.version}</version> 
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-streaming-java</artifactId>
+            <version>${flink.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-table-api-java-bridge</artifactId>
+            <version>${flink.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-connector-base</artifactId>
+            <version>${flink.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-table-common</artifactId>
+            <version>${flink.version}</version>
+        </dependency>
     
-    <dependency>
-        <groupId>org.apache.flink</groupId>
-        <artifactId>flink-streaming-java</artifactId>
-        <version>${flink.version}</version>
-        <scope>provided</scope>
-    </dependency>
-    <dependency>
-        <groupId>org.apache.flink</groupId>
-        <artifactId>flink-table-api-java-bridge</artifactId>
-        <version>${flink.version}</version>
-        <scope>provided</scope>
-    </dependency>
-     <dependency>
-        <groupId>org.apache.flink</groupId>
-        <artifactId>flink-connector-base</artifactId>
-        <version>${flink.version}</version>
-    </dependency>
-    <dependency>
-        <groupId>org.apache.flink</groupId>
-        <artifactId>flink-table-common</artifactId>
-        <version>${flink.version}</version>
-    </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-streaming-java</artifactId>
+            <version>${flink.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-table-api-java-bridge</artifactId>
+            <version>${flink.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-connector-base</artifactId>
+            <version>${flink.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.flink</groupId>
+            <artifactId>flink-table-common</artifactId>
+            <version>${flink.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-streaming-java</artifactId>
