@@ -51,8 +51,10 @@ public abstract class BigtableSink<T> implements Sink<T> {
 
     public abstract BaseRowMutationSerializer<T> serializer();
 
+    public abstract Boolean flowControl();
+
     public static <T> Builder<T> builder() {
-        return new AutoValue_BigtableSink.Builder<T>();
+        return new AutoValue_BigtableSink.Builder<T>().setFlowControl(false);
     }
 
     private static final Logger logger = LoggerFactory.getLogger(BigtableSink.class);
@@ -67,7 +69,7 @@ public abstract class BigtableSink<T> implements Sink<T> {
     @Override
     public SinkWriter<T> createWriter(WriterInitContext sinkInitContext) throws IOException {
         BigtableDataClient client =
-                CreateBigtableClients.createDataClient(projectId(), instanceId());
+                CreateBigtableClients.createDataClient(projectId(), instanceId(), flowControl());
 
         return new BigtableSinkWriter<T>(
                 new BigtableFlushableWriter(client, sinkInitContext, table()),
@@ -78,13 +80,26 @@ public abstract class BigtableSink<T> implements Sink<T> {
     /** Builder to create {@link BigtableSink}. */
     @AutoValue.Builder
     public abstract static class Builder<T> {
+        /** The project id of the Google Cloud Bigtable instance. */
         public abstract Builder<T> setProjectId(String projectId);
 
+        /** The instance id of the Google Cloud Bigtable. */
         public abstract Builder<T> setInstanceId(String instanceId);
 
+        /** The table id of the Google Cloud Bigtable instance. */
         public abstract Builder<T> setTable(String table);
 
+        /**
+         * The serializer to serialize the incoming records into {@link
+         * com.google.cloud.bigtable.data.v2.models.RowMutation}.
+         */
         public abstract Builder<T> setSerializer(BaseRowMutationSerializer<T> serializer);
+
+        /**
+         * Sets the <a href="https://cloud.google.com/bigtable/docs/writes#flow-control">batch flow
+         * control</a> parameter for writing. Optional, defaults to `False`.
+         */
+        public abstract Builder<T> setFlowControl(Boolean flowControl);
 
         public abstract BigtableSink<T> build();
     }
