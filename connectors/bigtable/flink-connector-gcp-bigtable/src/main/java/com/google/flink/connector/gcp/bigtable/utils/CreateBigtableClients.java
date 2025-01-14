@@ -27,11 +27,12 @@ import java.io.IOException;
 public class CreateBigtableClients {
 
     /** Creates Data client used for writing. */
-    public static BigtableDataClient createDataClient(String project, String instance)
-            throws IOException {
+    public static BigtableDataClient createDataClient(
+            String project, String instance, Boolean flowControl) throws IOException {
         BigtableDataSettings.Builder bigtableBuilder = BigtableDataSettings.newBuilder();
         bigtableBuilder.setProjectId(project).setInstanceId(instance);
         bigtableBuilder.stubSettings().setQuotaProjectId(project);
+        bigtableBuilder.setBulkMutationFlowControl(flowControl);
 
         return BigtableDataClient.create(bigtableBuilder.build());
     }
