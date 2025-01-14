@@ -13,9 +13,9 @@ CREATE TABLE BigtableHBaseSink (
   PRIMARY KEY (total) NOT ENFORCED
 ) WITH (
   'connector' = 'hbase-2.2',
-  'table-name' = 'test-table', -- BigTable Table Name
-  'zookeeper.quorum' = 'localhost:2181', -- Zookeeper Quarom is required but not used by connector this is dummy string
-  'properties.hbase.client.connection.impl' = 'com.google.cloud.bigtable.hbase1_x.BigtableConnection', -- Connection class to make connections
+  'table-name' = '<bt-table-name>', -- BigTable Table Name
+  'zookeeper.quorum' = 'localhost:2181', -- Zookeeper Quarom is required but not used by the connector. This is dummy string and does not need to be changed.
+  'properties.hbase.client.connection.impl' = 'com.google.cloud.bigtable.hbase1_x.BigtableConnection', -- Connection class to make connections. Do not change.
   'properties.google.bigtable.project.id' = '<project-id>',
   'properties.google.bigtable.instance.id' = '<bt-instance-id>'
 );
