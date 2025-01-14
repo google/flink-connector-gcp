@@ -68,7 +68,7 @@ public class WriteGenericRecord {
         String project = parameterTool.get("project");
         String table = parameterTool.get("table");
         String columnFamily = parameterTool.get("columnFamily", "flink");
-        Integer rate = parameterTool.getInt("rate", 10000);
+        Integer rate = parameterTool.getInt("rate", 100);
         String jobName = parameterTool.get("jobName", "Streaming Bigtable Write GenericRecord");
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();

@@ -18,6 +18,7 @@
 
 package com.google.flink.connector.gcp.bigtable.examples;
 
+import org.apache.flink.api.common.eventtime.TimestampAssignerSupplier;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.typeinfo.Types;
@@ -29,6 +30,7 @@ import org.apache.flink.formats.avro.typeutils.GenericRecordAvroTypeInfo;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
+import com.google.cloud.bigtable.data.v2.models.RowMutationEntry;
 import com.google.flink.connector.gcp.bigtable.BigtableSink;
 import com.google.flink.connector.gcp.bigtable.serializers.GenericRecordToRowMutationSerializer;
 import org.apache.avro.Schema;
@@ -36,16 +38,20 @@ import org.apache.avro.SchemaBuilder;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
 
-import java.nio.ByteBuffer;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.TimeZone;
 
 /**
- * This is an example pipeline for Apache Flink that demonstrates writing data to Google Cloud
- * Bigtable using the Bigtable connector and a {@link GenericRecordToRowMutationSerializer} with
- * Nested Rows to transform data into {@link RowMutationEntry} objects.
+ * This is an example pipeline for Apache Flink that demonstrates how write with idempotent
+ * timestamps for Exactly Once.
  *
  * <p>The pipeline generates a stream of Long values and uses a {@link
  * GenericRecordToRowMutationSerializer} to convert each Long value into a {@link RowMutationEntry}
- * that can be written to Bigtable.
+ * that can be written to Bigtable. A timestamps gets assigned to each generated element.
+ *
+ * <p>To run this example, you need to pass the argument {@code --columnFamily} or have an existing
+ * column family named {@code flink}.
  *
  * <p>You can run this example by passing the following command line arguments:
  *
@@ -53,20 +59,21 @@ import java.nio.ByteBuffer;
  *   --instance &lt;bigtable instance id&gt; \
  *   --project &lt;gcp project id&gt; \
  *   --table &lt;bigtable table id&gt; \
+ *   --columnFamily &lt;bigtable column family id&gt; \
  *   --rate &lt;number of rows to generate per second&gt; \
  *   --jobName &lt;job name&gt;
  * </pre>
  */
-public class WriteGenericRecordNested {
+public class WriteExactlyOnce {
 
     public static void main(String[] args) throws Exception {
         final ParameterTool parameterTool = ParameterTool.fromArgs(args);
         String instance = parameterTool.get("instance");
         String project = parameterTool.get("project");
         String table = parameterTool.get("table");
+        String columnFamily = parameterTool.get("columnFamily", "flink");
         Integer rate = parameterTool.getInt("rate", 100);
-        String jobName =
-                parameterTool.get("jobName", "Streaming Bigtable Write GenericRecord Nested");
+        String jobName = parameterTool.get("jobName", "Streaming Bigtable Exactly Once example");
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
@@ -78,34 +85,27 @@ public class WriteGenericRecordNested {
                         RateLimiterStrategy.perSecond(rate),
                         Types.LONG);
 
+        long now = System.currentTimeMillis();
+
+        // For exactly once, every element needs a timestamp that doesn't change with retries
+        WatermarkStrategy<Long> timestampAssigner =
+                WatermarkStrategy.<Long>noWatermarks()
+                        .withTimestampAssigner(
+                                TimestampAssignerSupplier.of((element, ts) -> now + element));
+
         DataStreamSource<Long> generator =
-                env.fromSource(generatorSource, WatermarkStrategy.noWatermarks(), "Data Generator");
+                env.fromSource(generatorSource, timestampAssigner, "Data Generator");
 
         Schema schema =
-                SchemaBuilder.record("User")
+                SchemaBuilder.record("ExactlyOnce")
                         .fields()
                         .requiredString("key")
-                        .name("family1")
-                        .type(
-                                SchemaBuilder.record("Family1")
-                                        .fields()
-                                        .requiredLong("ageLong")
-                                        .requiredDouble("ageDouble")
-                                        .requiredFloat("ageFloat")
-                                        .endRecord())
-                        .noDefault()
-                        .name("family2")
-                        .type(
-                                SchemaBuilder.record("Family2")
-                                        .fields()
-                                        .requiredBytes("textBytes")
-                                        .requiredBoolean("isActive")
-                                        .endRecord())
-                        .noDefault()
+                        .requiredString("idempotentTimestamp")
+                        .requiredString("now")
                         .endRecord();
 
         generator
-                .map(new ToNestedGenericRecord(schema))
+                .map(new ToRecordWithTS(schema, now))
                 .returns(new GenericRecordAvroTypeInfo(schema))
                 .sinkTo(
                         BigtableSink.<GenericRecord>builder()
@@ -115,7 +115,7 @@ public class WriteGenericRecordNested {
                                 .setSerializer(
                                         GenericRecordToRowMutationSerializer.builder()
                                                 .withRowKeyField("key")
-                                                .withNestedRowsMode()
+                                                .withColumnFamily(columnFamily)
                                                 .build())
                                 .build())
                 .name("BigtableSink");
@@ -124,34 +124,36 @@ public class WriteGenericRecordNested {
     }
 
     /** Convert to GenericRecord. */
-    public static final class ToNestedGenericRecord implements MapFunction<Long, GenericRecord> {
+    public static final class ToRecordWithTS implements MapFunction<Long, GenericRecord> {
         Schema schema;
+        Long baseTimestamp;
 
-        public ToNestedGenericRecord(Schema schema) {
+        public ToRecordWithTS(Schema schema, Long baseTimestamp) {
             this.schema = schema;
+            this.baseTimestamp = baseTimestamp;
+        }
+
+        public static String convertTimestamp(long timestamp) {
+            Date date = new Date(timestamp);
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd-HH:mm:ss.SSSSSS");
+            dateFormat.setTimeZone(TimeZone.getTimeZone("PST"));
+            return dateFormat.format(date);
         }
 
         @Override
         public GenericRecord map(Long l) throws Exception {
-            GenericRecord user = new GenericData.Record(schema);
-            GenericRecord family1 = new GenericData.Record(schema.getField("family1").schema());
-            GenericRecord family2 = new GenericData.Record(schema.getField("family2").schema());
+            GenericRecord record = new GenericData.Record(schema);
 
             // Generate a non-lexicographically-sorted unique key
             String key = String.format("%d#%d#%d#%d", l % 11, l % 101, l % 1013, l);
 
-            family1.put("ageLong", l);
-            family1.put("ageDouble", l.doubleValue());
-            family1.put("ageFloat", l.floatValue() / 3.3f);
+            record.put("key", key);
+            // this shows the idempotent timestamp
+            record.put("idempotentTimestamp", convertTimestamp(l + baseTimestamp));
+            // this is not idempotent
+            record.put("now", convertTimestamp(System.currentTimeMillis()));
 
-            family2.put("textBytes", ByteBuffer.wrap(key.getBytes()));
-            family2.put("isActive", l % 2 == 0);
-
-            user.put("key", key);
-            user.put("family1", family1);
-            user.put("family2", family2);
-
-            return user;
+            return record;
         }
     }
 }
