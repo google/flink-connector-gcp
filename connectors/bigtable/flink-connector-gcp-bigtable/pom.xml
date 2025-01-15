@@ -5,12 +5,12 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>com.google.flink.connector.gcp.bigtable</groupId>
+    <groupId>com.google.flink.connector.gcp</groupId>
     <artifactId>flink-connector-bigtable-parent</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.1.0</version>
   </parent>
 
-  <groupId>com.google.flink.connector.gcp.bigtable</groupId>
+  <groupId>com.google.flink.connector.gcp</groupId>
   <packaging>jar</packaging>
   <name>BigTable Flink Connector</name>
   <artifactId>flink-connector-gcp-bigtable</artifactId>
