@@ -5,9 +5,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.google.flink.connector.gcp.bigtable</groupId>
+        <groupId>com.google.flink.connector.gcp</groupId>
         <artifactId>flink-connector-bigtable-parent</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>0.1.0</version>
     </parent>
 
     <name>Bigtable Flink Connector Examples</name>
@@ -17,7 +17,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.google.flink.connector.gcp.bigtable</groupId>
+            <groupId>com.google.flink.connector.gcp</groupId>
             <artifactId>flink-connector-gcp-bigtable</artifactId>
             <version>${project.version}</version>
         </dependency>
