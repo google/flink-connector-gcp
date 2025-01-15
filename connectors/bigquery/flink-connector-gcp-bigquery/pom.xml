@@ -72,7 +72,6 @@
             <groupId>com.google.cloud.flink</groupId>
             <artifactId>flink-1.17-connector-bigquery</artifactId>
             <version>0.4.0</version> 
-            <!-- <scope>provided</scope> -->
         </dependency>
         <dependency>
             <groupId>org.apache.flink</groupId>

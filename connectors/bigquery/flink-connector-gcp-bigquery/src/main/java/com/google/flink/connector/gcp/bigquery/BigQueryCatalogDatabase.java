@@ -1,14 +1,13 @@
 package com.google.flink.connector.gcp.bigquery;
 
-import org.apache.flink.table.catalog.CatalogDatabase;
-import com.google.cloud.bigquery.Dataset;
-import com.google.cloud.bigquery.DatasetId;
-import com.google.cloud.bigquery.DatasetInfo;
-
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+
+import org.apache.flink.table.catalog.CatalogDatabase;
+
+import com.google.cloud.bigquery.Dataset;
 
 /**
  * A lightweight CatalogDatabase implementation for BigQuery, primarily used for mapping purposes.

@@ -15,34 +15,30 @@
  */
 package com.google.flink.connector.gcp.bigquery;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.apache.avro.Schema;
+import org.apache.flink.table.api.DataTypes;
+import org.apache.flink.table.types.DataType;
+
 import com.google.api.services.bigquery.model.TableFieldSchema;
 import com.google.api.services.bigquery.model.TableSchema;
 import com.google.cloud.bigquery.Field;
 import com.google.cloud.bigquery.FieldList;
 import com.google.cloud.bigquery.StandardSQLTypeName;
-import org.apache.flink.table.types.DataType;
-
-import org.apache.flink.table.api.DataTypes;
-import org.apache.avro.Schema;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import org.apache.flink.table.types.DataType;
 
 /**
  * Utility class for BigQuery types.
  */
 public class BigQueryTypeUtils {
 
+    //TODO: Review this method
     public static DataType toFlinkType(Field bigQueryField) {
         StandardSQLTypeName typeName = bigQueryField.getType().getStandardType();
         switch (typeName) {
@@ -65,19 +61,18 @@ public class BigQueryTypeUtils {
             case TIMESTAMP:
                 return DataTypes.TIMESTAMP_LTZ();
             case NUMERIC:
-                return DataTypes.DECIMAL(38, 9); // Adjust precision and scale as needed
+                return DataTypes.DECIMAL(38, 9); 
             case BIGNUMERIC:
-                return DataTypes.DECIMAL(77, 16); // Adjust precision and scale as needed
+                return DataTypes.DECIMAL(77, 16);
             case ARRAY:
-                // TODO: Handle array mapping
-                break;
+                DataType subTypes = toFlinkType(bigQueryField.getSubFields().get(0));
+                return DataTypes.ARRAY(subTypes);
             case STRUCT:
-                // TODO: Handle struct mapping
-                break;
+                // TODO: Handle Struct mapping
+
             case GEOGRAPHY:
-                return DataTypes.STRING(); // Or a more specific geospatial type if available
+                return DataTypes.STRING(); 
             default:
-            // Consider logging or throwing an exception for unsupported types
         }
         throw new IllegalArgumentException("Unsupported BigQuery type: " + typeName);
     }
