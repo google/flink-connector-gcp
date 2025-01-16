@@ -16,29 +16,36 @@
 package com.google.flink.connector.gcp.bigquery;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
-import org.apache.avro.Schema;
 import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.types.DataType;
 
-import com.google.api.services.bigquery.model.TableFieldSchema;
-import com.google.api.services.bigquery.model.TableSchema;
 import com.google.cloud.bigquery.Field;
+import com.google.cloud.bigquery.FieldElementType;
 import com.google.cloud.bigquery.FieldList;
+import com.google.cloud.bigquery.Schema;
 import com.google.cloud.bigquery.StandardSQLTypeName;
+
+
 
 /**
  * Utility class for BigQuery types.
  */
 public class BigQueryTypeUtils {
 
-    //TODO: Review this method
+    public static org.apache.flink.table.api.Schema toFlinkSchema(Schema bigQuerySchema) {    
+        FieldList bigQueryFields = bigQuerySchema.getFields();        
+        org.apache.flink.table.api.Schema.Builder schemaBuilder = 
+                                            org.apache.flink.table.api.Schema.newBuilder();
+        for (Field bigQueryField : bigQueryFields) {
+            schemaBuilder.column(bigQueryField.getName(), toFlinkType(bigQueryField));
+        }
+        return schemaBuilder.build();
+    }
+
+
+    //TODO: Test this method
     public static DataType toFlinkType(Field bigQueryField) {
         StandardSQLTypeName typeName = bigQueryField.getType().getStandardType();
         switch (typeName) {
@@ -63,126 +70,30 @@ public class BigQueryTypeUtils {
             case NUMERIC:
                 return DataTypes.DECIMAL(38, 9); 
             case BIGNUMERIC:
-                return DataTypes.DECIMAL(77, 16);
-            case ARRAY:
-                DataType subTypes = toFlinkType(bigQueryField.getSubFields().get(0));
-                return DataTypes.ARRAY(subTypes);
-            case STRUCT:
-                // TODO: Handle Struct mapping
-
+                return DataTypes.BYTES();
+            case STRUCT:             
+                FieldList subFields = bigQueryField.getSubFields();
+                List<DataTypes.Field> flinkFields = new ArrayList<>();
+                for (Field subField : subFields) {
+                    flinkFields.add(DataTypes.FIELD(subField.getName(), toFlinkType(subField)));
+                }
+                return DataTypes.ROW(flinkFields);
+            case RANGE:
+                FieldElementType rangeElementType = bigQueryField.getRangeElementType();
+                String subTypeName = rangeElementType.getType();
+                Field subField = Field.newBuilder("range_element", StandardSQLTypeName.valueOf(subTypeName)).build();
+                DataType elementFlinkType = toFlinkType(subField);
+                return DataTypes.ROW(
+                        DataTypes.FIELD("lower", elementFlinkType),
+                        DataTypes.FIELD("upper", elementFlinkType)
+                );
             case GEOGRAPHY:
                 return DataTypes.STRING(); 
+            case JSON:
+                return DataTypes.STRING();
             default:
         }
         throw new IllegalArgumentException("Unsupported BigQuery type: " + typeName);
     }
 
-    /**
-     * Defines the valid mapping between BigQuery types and native Avro types.
-     *
-     * <p>
-     * Some BigQuery types are duplicated here since slightly different Avro
-     * records are produced when exporting data in Avro format and when reading
-     * data directly using the read API.
-     */
-    static final Map<String, List<Schema.Type>> BIG_QUERY_TO_AVRO_TYPES
-            = initializeBigQueryToAvroTypesMapping();
-
-    private static Map<String, List<Schema.Type>> initializeBigQueryToAvroTypesMapping() {
-        Map<String, List<Schema.Type>> mapping = new HashMap<>();
-
-        mapping.put("STRING", Arrays.asList(Schema.Type.STRING));
-        mapping.put("GEOGRAPHY", Arrays.asList(Schema.Type.STRING));
-        mapping.put("BYTES", Arrays.asList(Schema.Type.BYTES));
-        mapping.put("INTEGER", Arrays.asList(Schema.Type.LONG));
-        mapping.put("INT64", Arrays.asList(Schema.Type.LONG));
-        mapping.put("FLOAT", Arrays.asList(Schema.Type.DOUBLE));
-        mapping.put("FLOAT64", Arrays.asList(Schema.Type.DOUBLE));
-        mapping.put("NUMERIC", Arrays.asList(Schema.Type.BYTES));
-        mapping.put("BIGNUMERIC", Arrays.asList(Schema.Type.BYTES));
-        mapping.put("BOOLEAN", Arrays.asList(Schema.Type.BOOLEAN));
-        mapping.put("BOOL", Arrays.asList(Schema.Type.BOOLEAN));
-        mapping.put("TIMESTAMP", Arrays.asList(Schema.Type.LONG));
-        mapping.put("RECORD", Arrays.asList(Schema.Type.RECORD));
-        mapping.put("STRUCT", Arrays.asList(Schema.Type.RECORD));
-        mapping.put("DATE", Arrays.asList(Schema.Type.STRING, Schema.Type.INT));
-        mapping.put("DATETIME", Arrays.asList(Schema.Type.STRING));
-        mapping.put("TIME", Arrays.asList(Schema.Type.STRING, Schema.Type.LONG));
-        mapping.put("JSON", Arrays.asList(Schema.Type.STRING));
-        return mapping;
-    }
-
-    /**
-     * Defines the valid mapping between BigQuery types and standard SQL types.
-     */
-    static final Map<String, StandardSQLTypeName> BIG_QUERY_TO_SQL_TYPES
-            = initializeBigQueryToSQLTypesMapping();
-
-    /*
-      STRING, BYTES, INTEGER, INT64 (same as
-     * INTEGER), FLOAT, FLOAT64 (same as FLOAT), NUMERIC, BIGNUMERIC, BOOLEAN, BOOL (same as BOOLEAN),
-     * TIMESTAMP, DATE, TIME, DATETIME, INTERVAL, RECORD (where RECORD indicates that the field
-     * contains a nested schema) or STRUCT (same as RECORD).
-     */
-    private static Map<String, StandardSQLTypeName> initializeBigQueryToSQLTypesMapping() {
-        Map<String, StandardSQLTypeName> mapping = new HashMap<>();
-
-        mapping.put("STRING", StandardSQLTypeName.STRING);
-        mapping.put("BYTES", StandardSQLTypeName.BYTES);
-        mapping.put("INTEGER", StandardSQLTypeName.INT64);
-        mapping.put("INT64", StandardSQLTypeName.INT64);
-        mapping.put("FLOAT", StandardSQLTypeName.FLOAT64);
-        mapping.put("FLOAT64", StandardSQLTypeName.FLOAT64);
-        mapping.put("NUMERIC", StandardSQLTypeName.NUMERIC);
-        mapping.put("BIGNUMERIC", StandardSQLTypeName.BIGNUMERIC);
-        mapping.put("BOOLEAN", StandardSQLTypeName.BOOL);
-        mapping.put("BOOL", StandardSQLTypeName.BOOL);
-        mapping.put("TIMESTAMP", StandardSQLTypeName.TIMESTAMP);
-        mapping.put("DATE", StandardSQLTypeName.DATE);
-        mapping.put("TIME", StandardSQLTypeName.TIME);
-        mapping.put("DATETIME", StandardSQLTypeName.DATETIME);
-        mapping.put("INTERVAL", StandardSQLTypeName.INTERVAL);
-        mapping.put("RECORD", StandardSQLTypeName.STRUCT);
-        mapping.put("STRUCT", StandardSQLTypeName.STRUCT);
-
-        return mapping;
-    }
-
-    static List<TableFieldSchema> fieldListToListOfTableFieldSchema(FieldList fieldList) {
-        return Optional.ofNullable(fieldList)
-                .map(
-                        fList
-                        -> fList.stream()
-                                .map(field -> fieldToTableFieldSchema(field))
-                                .collect(Collectors.toList()))
-                .orElse(new ArrayList<>());
-    }
-
-    static TableFieldSchema fieldToTableFieldSchema(Field field) {
-
-        return new TableFieldSchema()
-                .setName(field.getName())
-                .setDescription(field.getDescription())
-                .setDefaultValueExpression(field.getDefaultValueExpression())
-                .setCollation(field.getCollation())
-                .setMode(Optional.ofNullable(field.getMode()).map(m -> m.name()).orElse(null))
-                .setType(field.getType().name())
-                .setFields(fieldListToListOfTableFieldSchema(field.getSubFields()));
-    }
-
-    /**
-     * Transforms a BigQuery {@link com.google.cloud.bigquery.Schema} into a
-     * {@link TableSchema}.
-     *
-     * @param schema the schema from the API.
-     * @return a TableSchema instance.
-     */
-    public static TableSchema bigQuerySchemaToTableSchema(com.google.cloud.bigquery.Schema schema) {
-        return new TableSchema().setFields(fieldListToListOfTableFieldSchema(schema.getFields()));
-    }
-
-    public static StandardSQLTypeName bigQueryTableFieldSchemaTypeToSQLType(
-            String tableFieldSchemaType) {
-        return BIG_QUERY_TO_SQL_TYPES.getOrDefault(tableFieldSchemaType, null);
-    }
 }

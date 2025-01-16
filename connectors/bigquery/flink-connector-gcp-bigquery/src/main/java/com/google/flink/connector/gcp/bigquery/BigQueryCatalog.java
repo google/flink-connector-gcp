@@ -33,7 +33,6 @@ import org.apache.flink.table.catalog.exceptions.TablePartitionedException;
 import org.apache.flink.table.catalog.stats.CatalogColumnStatistics;
 import org.apache.flink.table.catalog.stats.CatalogTableStatistics;
 import org.apache.flink.table.expressions.Expression;
-import org.apache.flink.table.types.DataType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,7 +54,7 @@ import com.google.cloud.bigquery.TableInfo;
 import com.google.flink.connector.gcp.bigquery.client.BigQueryClient;
 
 /**
- * Catalog for BigQuery.
+ * Flink Catalog Support for BigQuery.
  */
 public class BigQueryCatalog extends AbstractCatalog {
 
@@ -68,7 +67,7 @@ public class BigQueryCatalog extends AbstractCatalog {
     private final String projectId;
 
     private final Map<ObjectPath, CatalogTableStatistics> tableStats;
-    
+
     private final Map<ObjectPath, CatalogColumnStatistics> tableColumnStats;
 
     public BigQueryCatalog(String catalogName, String defaultDataset, String project, String credentialFile) throws IOException, GeneralSecurityException {
@@ -87,7 +86,7 @@ public class BigQueryCatalog extends AbstractCatalog {
 
     @Override
     public void open() throws CatalogException {
-        LOG.info("Connected to BigQuery metastore with project ID: {}", this.projectId);
+        LOG.info("Connected to BigQuery with project ID: {}", this.projectId);
     }
 
     @Override
@@ -115,10 +114,9 @@ public class BigQueryCatalog extends AbstractCatalog {
 
     }
 
-    // TODO: getDatabase functions not tested yet.
+    // TODO: Add support for BigQuery tables for Apache Iceberg
     @Override
     public CatalogDatabase getDatabase(String databaseName) throws DatabaseNotExistException, CatalogException {
-
         DatasetId datasetId = DatasetId.of(this.projectId, databaseName);
         Dataset dataset = bigqueryclient.client.getDataset(datasetId);
         if (dataset == null) {
@@ -167,7 +165,6 @@ public class BigQueryCatalog extends AbstractCatalog {
         }
     }
 
-    // Flag cascade not tested yet.
     @Override
     public void dropDatabase(String databaseName, boolean ignoreIfNotExists, boolean cascade) throws DatabaseNotExistException, DatabaseNotEmptyException, CatalogException {
         try {
@@ -179,7 +176,7 @@ public class BigQueryCatalog extends AbstractCatalog {
                     throw new DatabaseNotExistException(getName(), databaseName);
                 }
             }
-            // Drop all tables in the database if cascade is set.
+
             if (cascade) {
                 List<String> tables = listTables(databaseName);
                 if (!tables.isEmpty()) {
@@ -194,7 +191,6 @@ public class BigQueryCatalog extends AbstractCatalog {
                     }
                 }
             } else {
-                // Throw an exception based on the cascade flag
                 List<String> tables = listTables(databaseName);
                 if (!tables.isEmpty()) {
                     throw new DatabaseNotEmptyException(getName(), databaseName);
@@ -204,7 +200,6 @@ public class BigQueryCatalog extends AbstractCatalog {
             DatasetId datasetId = DatasetId.of(this.projectId, databaseName);
             boolean deleted = bigqueryclient.client.delete(datasetId);
             if (!deleted && !ignoreIfNotExists) {
-                // This case is unlikely if databaseExists check passed, but for robustness
                 throw new DatabaseNotExistException(getName(), databaseName);
             }
 
@@ -231,8 +226,6 @@ public class BigQueryCatalog extends AbstractCatalog {
             }
 
             Dataset.Builder datasetBuilder = existingDataset.toBuilder();
-
-            // Update description if it's present in the new database metadata
             if (newDatabase.getDescription() != null) {
                 String description = newDatabase.getProperties().get("description");
                 datasetBuilder.setDescription(description);
@@ -241,7 +234,6 @@ public class BigQueryCatalog extends AbstractCatalog {
             // TODO: Handle other properties from newDatabase.getProperties()
             Dataset updatedDataset = datasetBuilder.build();
 
-            // Update the dataset in BigQuery
             bigqueryclient.client.update(updatedDataset);
 
         } catch (DatabaseNotExistException e) {
@@ -258,9 +250,12 @@ public class BigQueryCatalog extends AbstractCatalog {
         try {
             DatasetId datasetId = DatasetId.of(this.projectId, databaseName);
             Page<Table> tables = bigqueryclient.client.listTables(datasetId, TableListOption.pageSize(100));
-            tables.iterateAll().forEach(table -> targetReturnList.add(String.format("Success! Table ID: %s , Table Type: %s", 
+
+            tables.iterateAll().forEach(table -> targetReturnList.add(String.format("Success! Table ID: %s , Table Type: %s",
                     table.getTableId().getTable(), table.getDefinition().getType().name())));
+
             return targetReturnList;
+
         } catch (BigQueryException e) {
             return List.of();
         }
@@ -272,6 +267,7 @@ public class BigQueryCatalog extends AbstractCatalog {
         try {
             DatasetId datasetId = DatasetId.of(this.projectId, databaseName);
             Page<Table> tables = bigqueryclient.client.listTables(datasetId, TableListOption.pageSize(100));
+
             if (tables != null) {
                 tables.iterateAll().forEach(table -> {
                     if (table.getDefinition().getType() == TableDefinition.Type.VIEW) {
@@ -279,6 +275,7 @@ public class BigQueryCatalog extends AbstractCatalog {
                     }
                 });
             }
+
             return targetReturnList;
         } catch (BigQueryException e) {
             return List.of();
@@ -297,29 +294,16 @@ public class BigQueryCatalog extends AbstractCatalog {
                 throw new TableNotExistException(getName(), tablePath);
             }
 
-            // TODO: Need to map BigQuery schema to Flink schema
-            // Also, partitioning and clustering keys are not supported yet.
-            org.apache.flink.table.api.Schema.Builder schemaBuilder = org.apache.flink.table.api.Schema.newBuilder();
-            if (table.getDefinition().getSchema() != null) {
-                table.getDefinition().getSchema().getFields().forEach(field -> {
-                    // Map BigQuery field types to Flink types using your utility
-                    DataType flinkType = BigQueryTypeUtils.toFlinkType(field);
-                    schemaBuilder.column(field.getName(), flinkType);
-
-                });
-                
-            }
-
-            // TODO: Remove output_test after fully testing the schema mapping
-            org.apache.flink.table.api.Schema translatedSchema = schemaBuilder.build();
-            // translatedSchema.getColumns().forEach(column -> System.out.println(column));
+            // TODO: Schema mapping testing
+            org.apache.flink.table.api.Schema translatedSchema = 
+                                BigQueryTypeUtils.toFlinkSchema(table.getDefinition().getSchema());
 
             Map<String, String> options = new HashMap<>();
-            options.put("connector", "bigquery"); 
+            options.put("connector", "bigquery");
             options.put("project", this.projectId);
             options.put("dataset", tablePath.getDatabaseName());
             options.put("table", tablePath.getObjectName());
-            
+
             CatalogTable.TableKind tableKind = table.getDefinition().getType()
                     == com.google.cloud.bigquery.TableDefinition.Type.VIEW
                             ? CatalogTable.TableKind.VIEW
@@ -327,14 +311,14 @@ public class BigQueryCatalog extends AbstractCatalog {
 
             // TODO: Add supports for tablecolumnstats
             tableColumnStats.put(tablePath, new CatalogColumnStatistics(
-                Collections.emptyMap(),
-                Collections.emptyMap()
-               // translatedSchema.getColumns().forEach(column -> column.getName()),
-               // translatedSchema.getColumns().forEach(column -> column.getType().toString()),
+                    Collections.emptyMap(),
+                    Collections.emptyMap()
+            // translatedSchema.getColumns().forEach(column -> column.getName()),
+            // translatedSchema.getColumns().forEach(column -> column.getType().toString()),
             ));
             CatalogTable translated_table = org.apache.flink.table.catalog.CatalogTable.of(
-                    translatedSchema, 
-                    "", 
+                    translatedSchema,
+                    "",
                     Collections.emptyList(),
                     options);
             //System.out.println(translated_table);
@@ -350,6 +334,7 @@ public class BigQueryCatalog extends AbstractCatalog {
         try {
             DatasetId datasetId = DatasetId.of(this.projectId, tablePath.getDatabaseName());
             TableId tableId = TableId.of(datasetId.getDataset(), tablePath.getObjectName());
+            
             Table table = bigqueryclient.client.getTable(tableId);
             return table != null;
         } catch (BigQueryException e) {
@@ -395,7 +380,6 @@ public class BigQueryCatalog extends AbstractCatalog {
             TableId oldTableId = TableId.of(datasetId.getDataset(), tablePath.getObjectName());
             TableId newTableId = TableId.of(datasetId.getDataset(), newTableName);
 
-            // Handling ignoreIfNotExists flag
             if (!tableExists(tablePath)) {
                 if (ignoreIfNotExists) {
                     LOG.info("Trying to rename non-existent table {} but ignore flag is set.", tablePath);
@@ -405,7 +389,6 @@ public class BigQueryCatalog extends AbstractCatalog {
                 }
             }
 
-            // Check if the new table name already exists in the dataset
             ObjectPath newTablePath = new ObjectPath(tablePath.getDatabaseName(), newTableName);
             if (tableExists(newTablePath)) {
                 throw new TableAlreadyExistException(getName(), newTablePath);
@@ -435,7 +418,6 @@ public class BigQueryCatalog extends AbstractCatalog {
             DatasetId datasetId = DatasetId.of(this.projectId, tablePath.getDatabaseName());
             TableId tableId = TableId.of(datasetId.getDataset(), tablePath.getObjectName());
 
-            // Handling ignoreIfNotExists flag
             if (tableExists(tablePath)) {
                 if (ignoreIfExists) {
                     LOG.info("Table {} already exists but ignore flag is set.", tablePath);
@@ -542,14 +524,14 @@ public class BigQueryCatalog extends AbstractCatalog {
             DatasetId datasetId = DatasetId.of(this.projectId, tablePath.getDatabaseName());
             TableId tableId = TableId.of(datasetId.getDataset(), tablePath.getObjectName());
             Table table = bigqueryclient.client.getTable(tableId);
-            
+
             if (table != null) {
                 Long numRows = table.getNumRows() != null ? table.getNumRows().longValue() : null;
 
                 int fileCount = -1; // Indicate unknown
                 long totalSize = -1;  // Indicate unknown
                 long rawDataSize = -1; // Indicate unknown
-                
+
                 // You can add more specific properties if needed
                 java.util.Map<String, String> properties = new java.util.HashMap<>();
                 if (table.getDescription() != null) {
@@ -566,7 +548,7 @@ public class BigQueryCatalog extends AbstractCatalog {
                         totalSize,
                         rawDataSize,
                         properties
-                        );
+                );
 
             } else {
                 throw new TableNotExistException(getName(), tablePath);
