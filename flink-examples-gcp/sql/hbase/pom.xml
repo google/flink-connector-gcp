@@ -21,9 +21,9 @@ under the License.
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.google.flink.examples</groupId>
-    <artifactId>flink-sql-example</artifactId>
+    <artifactId>flink-sql-example-hbase</artifactId>
     <version>0.0.0</version>
-    <name>Flink SQL Example</name>
+    <name>Flink SQL Example HBase</name>
     <properties>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
