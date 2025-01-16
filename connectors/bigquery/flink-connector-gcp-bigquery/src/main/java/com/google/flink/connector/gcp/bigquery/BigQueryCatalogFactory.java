@@ -16,8 +16,11 @@ import static com.google.flink.connector.gcp.bigquery.BigQueryCatalogFactoryOpti
 import static com.google.flink.connector.gcp.bigquery.BigQueryCatalogFactoryOptions.CREDENTIAL_FILE;
 import static com.google.flink.connector.gcp.bigquery.BigQueryCatalogFactoryOptions.DEFAULT_DATASET;
 
-/** Catalog factory for BigQuery Catalog. */
+/**
+ * Flink Catalog factory for BigQueryCatalog.
+ */
 public class BigQueryCatalogFactory implements CatalogFactory {
+
     private static final Logger LOG = LoggerFactory.getLogger(BigQueryCatalogFactory.class);
 
     @Override
@@ -45,10 +48,9 @@ public class BigQueryCatalogFactory implements CatalogFactory {
     public Catalog createCatalog(Context context) {
         LOG.info("BigQueryCatalogFactory.createCatalog() called with context: {}", context.getName());
 
-        final FactoryUtil.CatalogFactoryHelper helper =
-                FactoryUtil.createCatalogFactoryHelper(this, context);
+        final FactoryUtil.CatalogFactoryHelper helper
+                = FactoryUtil.createCatalogFactoryHelper(this, context);
         helper.validate();
-        LOG.info("Configuration options validated.");
 
         try {
             String defaultDataset = helper.getOptions().get(DEFAULT_DATASET);

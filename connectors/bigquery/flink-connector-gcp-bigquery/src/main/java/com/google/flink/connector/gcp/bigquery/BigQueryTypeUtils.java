@@ -27,25 +27,21 @@ import com.google.cloud.bigquery.FieldList;
 import com.google.cloud.bigquery.Schema;
 import com.google.cloud.bigquery.StandardSQLTypeName;
 
-
-
 /**
- * Utility class for BigQuery types.
+ * Schema conversion between BigQuery and Flink.
  */
 public class BigQueryTypeUtils {
 
-    public static org.apache.flink.table.api.Schema toFlinkSchema(Schema bigQuerySchema) {    
-        FieldList bigQueryFields = bigQuerySchema.getFields();        
-        org.apache.flink.table.api.Schema.Builder schemaBuilder = 
-                                            org.apache.flink.table.api.Schema.newBuilder();
+    public static org.apache.flink.table.api.Schema toFlinkSchema(Schema bigQuerySchema) {
+        FieldList bigQueryFields = bigQuerySchema.getFields();
+        org.apache.flink.table.api.Schema.Builder schemaBuilder
+                = org.apache.flink.table.api.Schema.newBuilder();
         for (Field bigQueryField : bigQueryFields) {
             schemaBuilder.column(bigQueryField.getName(), toFlinkType(bigQueryField));
         }
         return schemaBuilder.build();
     }
 
-
-    //TODO: Test this method
     public static DataType toFlinkType(Field bigQueryField) {
         StandardSQLTypeName typeName = bigQueryField.getType().getStandardType();
         switch (typeName) {
@@ -68,10 +64,10 @@ public class BigQueryTypeUtils {
             case TIMESTAMP:
                 return DataTypes.TIMESTAMP_LTZ();
             case NUMERIC:
-                return DataTypes.DECIMAL(38, 9); 
+                return DataTypes.DECIMAL(38, 9);
             case BIGNUMERIC:
                 return DataTypes.BYTES();
-            case STRUCT:             
+            case STRUCT:
                 FieldList subFields = bigQueryField.getSubFields();
                 List<DataTypes.Field> flinkFields = new ArrayList<>();
                 for (Field subField : subFields) {
@@ -88,7 +84,7 @@ public class BigQueryTypeUtils {
                         DataTypes.FIELD("upper", elementFlinkType)
                 );
             case GEOGRAPHY:
-                return DataTypes.STRING(); 
+                return DataTypes.STRING();
             case JSON:
                 return DataTypes.STRING();
             default:
