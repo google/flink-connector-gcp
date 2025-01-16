@@ -12,7 +12,7 @@ import com.google.cloud.bigquery.StandardSQLTypeName;
 import static com.google.common.truth.Truth.assertThat;
 
 /** Tests for {@link BigQueryTypeUtils}. */
-public class BigQueryUtilsTest {
+public class BigQueryTypeUtilsTest {
 
   @Test
   public void testToFlinkTypeString() {
