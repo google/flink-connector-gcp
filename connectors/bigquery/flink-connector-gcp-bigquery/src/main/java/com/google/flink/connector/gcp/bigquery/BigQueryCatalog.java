@@ -48,7 +48,8 @@ import com.google.cloud.bigquery.TableId;
 import com.google.flink.connector.gcp.bigquery.client.BigQueryClient;
 
 /**
- * Flink Catalog Support for BigQuery.
+ * Flink Catalog Support for BigQuery. This class provides the implementation for
+ * Catalog operations for BigQuery.
  */
 public class BigQueryCatalog extends AbstractCatalog {
 
@@ -184,7 +185,6 @@ public class BigQueryCatalog extends AbstractCatalog {
         }
     }
 
-    // Get functions not supported yet.
     @Override
     public CatalogBaseTable getTable(ObjectPath tablePath) throws TableNotExistException, CatalogException {
         try {
@@ -354,7 +354,7 @@ public class BigQueryCatalog extends AbstractCatalog {
         }
     }
 
-    // TODO: Currently placeholder implementation. Need to implement to get column statistics.
+    // Currently placeholder implementation, in order to get SELECT * FROM table to work.
     @Override
     public CatalogColumnStatistics getTableColumnStatistics(ObjectPath tablePath) throws TableNotExistException, CatalogException {
         Map<String, CatalogColumnStatisticsDataBase> columnStatisticsData = new HashMap<>();
