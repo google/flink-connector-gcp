@@ -29,6 +29,7 @@ import org.apache.flink.formats.avro.typeutils.GenericRecordAvroTypeInfo;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
+import com.google.cloud.bigtable.data.v2.models.RowMutationEntry;
 import com.google.flink.connector.gcp.bigtable.BigtableSink;
 import com.google.flink.connector.gcp.bigtable.serializers.GenericRecordToRowMutationSerializer;
 import org.apache.avro.Schema;

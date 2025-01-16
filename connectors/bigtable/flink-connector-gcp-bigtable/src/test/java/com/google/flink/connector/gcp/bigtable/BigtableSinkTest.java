@@ -24,6 +24,8 @@ import com.google.flink.connector.gcp.bigtable.testingutils.TestingUtils;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Unit tests for the {@link BigtableSink} class.
@@ -44,11 +46,33 @@ public class BigtableSinkTest {
                         .setInstanceId(TestingUtils.INSTANCE)
                         .setSerializer(serializer)
                         .setTable(TestingUtils.TABLE)
+                        .setFlowControl(true)
                         .build();
 
         assertEquals(TestingUtils.PROJECT, sink.projectId());
         assertEquals(TestingUtils.INSTANCE, sink.instanceId());
         assertEquals(TestingUtils.TABLE, sink.table());
+        assertTrue(sink.flowControl());
+        assertEquals(serializer, sink.serializer());
+    }
+
+    @Test
+    public void testCorrectDefaultBigtableSinkInitialization() {
+        FunctionRowMutationSerializer<RowMutationEntry> serializer =
+                new FunctionRowMutationSerializer<RowMutationEntry>(t -> t);
+
+        BigtableSink<RowMutationEntry> sink =
+                BigtableSink.<RowMutationEntry>builder()
+                        .setProjectId(TestingUtils.PROJECT)
+                        .setInstanceId(TestingUtils.INSTANCE)
+                        .setSerializer(serializer)
+                        .setTable(TestingUtils.TABLE)
+                        .build();
+
+        assertEquals(TestingUtils.PROJECT, sink.projectId());
+        assertEquals(TestingUtils.INSTANCE, sink.instanceId());
+        assertEquals(TestingUtils.TABLE, sink.table());
+        assertFalse(sink.flowControl());
         assertEquals(serializer, sink.serializer());
     }
 }

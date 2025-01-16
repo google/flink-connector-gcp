@@ -42,9 +42,9 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * <p>This serializer supports two modes of operation:
  *
  * <ol>
- *   <li>**Column Family Mode:** All fields in the {@link GenericRecord} are written to a single
+ *   <li><b>Column Family Mode:</b> All fields in the {@link GenericRecord} are written to a single
  *       specified column family. Nested fields are not supported in this mode.
- *   <li>**Nested Rows Mode:** Each field in the {@link GenericRecord} (except the row key field)
+ *   <li><b>Nested Rows Mode:</b> Each field in the {@link GenericRecord} (except the row key field)
  *       represents a separate column family, and its value must be another {@link GenericRecord}
  *       containing the columns for that family. Only single nested rows are supported.
  * </ol>
