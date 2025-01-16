@@ -16,6 +16,7 @@
         <slf4j.version>1.7.36</slf4j.version>
         <log4j.version>2.17.2</log4j.version>
         <flink.version>1.20.0</flink.version>
+        <cloud.version>26.53.0</cloud.version>
     </properties>
 
     <repositories>
@@ -37,7 +38,7 @@
             <dependency>
                 <groupId>com.google.cloud</groupId>
                 <artifactId>libraries-bom</artifactId>
-                <version>26.51.0</version>
+                <version>${cloud.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -58,11 +59,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.apache.avro</groupId>
-            <artifactId>avro</artifactId>
-            <version>1.10.2</version>
-        </dependency>
-        <dependency>
             <groupId>com.google.auth</groupId>
             <artifactId>google-auth-library-oauth2-http</artifactId>
         </dependency>
@@ -79,11 +75,6 @@
             <artifactId>flink-table-api-java-bridge</artifactId>
             <version>${flink.version}</version>
             <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.google.cloud.flink</groupId>
-            <artifactId>flink-1.17-connector-bigquery</artifactId>
-            <version>0.4.0</version>
         </dependency>
         <dependency>
             <groupId>org.apache.flink</groupId>

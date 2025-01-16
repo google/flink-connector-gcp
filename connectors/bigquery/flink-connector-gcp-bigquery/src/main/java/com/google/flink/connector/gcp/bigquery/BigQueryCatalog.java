@@ -48,8 +48,8 @@ import com.google.cloud.bigquery.TableId;
 import com.google.flink.connector.gcp.bigquery.client.BigQueryClient;
 
 /**
- * Flink Catalog Support for BigQuery. This class provides the implementation for
- * Catalog operations for BigQuery.
+ * Flink Catalog Support for BigQuery. This class provides the implementation
+ * for Catalog operations for BigQuery.
  */
 public class BigQueryCatalog extends AbstractCatalog {
 
@@ -89,7 +89,7 @@ public class BigQueryCatalog extends AbstractCatalog {
         try {
             Page<Dataset> datasets = bigqueryclient.client.listDatasets(this.projectId, DatasetListOption.pageSize(100));
             if (datasets == null) {
-                LOG.info("Project does not contain any datasets.");
+                LOG.debug("Project does not contain any datasets.");
                 return List.of();
             }
             datasets
@@ -153,10 +153,11 @@ public class BigQueryCatalog extends AbstractCatalog {
         try {
             DatasetId datasetId = DatasetId.of(this.projectId, databaseName);
             Page<Table> tables = bigqueryclient.client.listTables(datasetId, TableListOption.pageSize(100));
+            if (tables != null) {
+                tables.iterateAll().forEach(table -> targetReturnList.add(String.format("%s",
+                        table.getTableId().getTable())));
 
-            tables.iterateAll().forEach(table -> targetReturnList.add(String.format("%s, (Type: %s)",
-                    table.getTableId().getTable(), table.getDefinition().getType().name())));
-
+            }
             return targetReturnList;
 
         } catch (BigQueryException e) {
