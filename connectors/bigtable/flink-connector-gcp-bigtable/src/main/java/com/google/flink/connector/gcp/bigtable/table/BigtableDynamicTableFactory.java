@@ -57,6 +57,8 @@ public class BigtableDynamicTableFactory implements DynamicTableSinkFactory {
         additionalOptions.add(BigtableConnectorOptions.COLUMN_FAMILY);
         additionalOptions.add(BigtableConnectorOptions.USE_NESTED_ROWS_MODE);
         additionalOptions.add(BigtableConnectorOptions.SINK_PARALLELISM);
+        additionalOptions.add(BigtableConnectorOptions.FLOW_CONTROL);
+        additionalOptions.add(BigtableConnectorOptions.APP_PROFILE_ID);
 
         return additionalOptions;
     }

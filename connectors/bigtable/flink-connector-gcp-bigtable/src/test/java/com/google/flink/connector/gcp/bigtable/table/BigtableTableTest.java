@@ -96,6 +96,8 @@ public class BigtableTableTest {
         assertEquals(
                 connectorOptions.get(BigtableConnectorOptions.INSTANCE), TestingUtils.INSTANCE);
         assertEquals(connectorOptions.get(BigtableConnectorOptions.PROJECT), TestingUtils.PROJECT);
+        assertFalse(connectorOptions.get(BigtableConnectorOptions.FLOW_CONTROL));
+        assertNull(connectorOptions.get(BigtableConnectorOptions.APP_PROFILE_ID));
 
         assertEquals(sink.rowKeyField, TestingUtils.ROW_KEY_FIELD);
         assertEquals(sink.resolvedSchema, schema);
@@ -122,6 +124,8 @@ public class BigtableTableTest {
         assertEquals(
                 connectorOptions.get(BigtableConnectorOptions.INSTANCE), TestingUtils.INSTANCE);
         assertEquals(connectorOptions.get(BigtableConnectorOptions.PROJECT), TestingUtils.PROJECT);
+        assertFalse(connectorOptions.get(BigtableConnectorOptions.FLOW_CONTROL));
+        assertNull(connectorOptions.get(BigtableConnectorOptions.APP_PROFILE_ID));
 
         assertEquals(sink.rowKeyField, TestingUtils.ROW_KEY_FIELD);
         assertEquals((Integer) sink.parallelism, (Integer) 2);
@@ -145,10 +149,30 @@ public class BigtableTableTest {
         assertEquals(
                 connectorOptions.get(BigtableConnectorOptions.INSTANCE), TestingUtils.INSTANCE);
         assertEquals(connectorOptions.get(BigtableConnectorOptions.PROJECT), TestingUtils.PROJECT);
+        assertFalse(connectorOptions.get(BigtableConnectorOptions.FLOW_CONTROL));
+        assertNull(connectorOptions.get(BigtableConnectorOptions.APP_PROFILE_ID));
 
         assertEquals(sink.rowKeyField, TestingUtils.ROW_KEY_FIELD);
         assertEquals(sink.resolvedSchema, schema);
         assertNull(sink.parallelism);
+    }
+
+    @Test
+    public void testDynamicTableBigtableSinkExtraOptions() throws IOException {
+        Map<String, String> options = getRequiredOptions();
+        options.put(BigtableConnectorOptions.FLOW_CONTROL.key(), "true");
+        options.put(BigtableConnectorOptions.APP_PROFILE_ID.key(), TestingUtils.APP_PROFILE);
+
+        ResolvedSchema schema = getResolvedSchema(false);
+
+        BigtableDynamicTableSink sink =
+                (BigtableDynamicTableSink) FactoryMocks.createTableSink(schema, options);
+
+        ReadableConfig connectorOptions = sink.connectorOptions;
+        assertTrue(connectorOptions.get(BigtableConnectorOptions.FLOW_CONTROL));
+        assertEquals(
+                connectorOptions.get(BigtableConnectorOptions.APP_PROFILE_ID),
+                TestingUtils.APP_PROFILE);
     }
 
     @Test

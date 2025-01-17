@@ -21,6 +21,8 @@ package com.google.flink.connector.gcp.bigtable.utils;
 import com.google.cloud.bigtable.data.v2.BigtableDataClient;
 import com.google.cloud.bigtable.data.v2.BigtableDataSettings;
 
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 
 /** Utily class to create Bigtable Clients. */
@@ -28,11 +30,16 @@ public class CreateBigtableClients {
 
     /** Creates Data client used for writing. */
     public static BigtableDataClient createDataClient(
-            String project, String instance, Boolean flowControl) throws IOException {
+            String project, String instance, Boolean flowControl, @Nullable String appProfileId)
+            throws IOException {
         BigtableDataSettings.Builder bigtableBuilder = BigtableDataSettings.newBuilder();
         bigtableBuilder.setProjectId(project).setInstanceId(instance);
         bigtableBuilder.stubSettings().setQuotaProjectId(project);
         bigtableBuilder.setBulkMutationFlowControl(flowControl);
+
+        if (appProfileId != null) {
+            bigtableBuilder.setAppProfileId(appProfileId);
+        }
 
         return BigtableDataClient.create(bigtableBuilder.build());
     }
