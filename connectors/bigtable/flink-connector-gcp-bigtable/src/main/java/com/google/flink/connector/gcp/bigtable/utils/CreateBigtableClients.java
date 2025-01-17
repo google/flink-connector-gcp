@@ -18,6 +18,7 @@
 
 package com.google.flink.connector.gcp.bigtable.utils;
 
+import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.bigtable.data.v2.BigtableDataClient;
 import com.google.cloud.bigtable.data.v2.BigtableDataSettings;
 
@@ -30,7 +31,11 @@ public class CreateBigtableClients {
 
     /** Creates Data client used for writing. */
     public static BigtableDataClient createDataClient(
-            String project, String instance, Boolean flowControl, @Nullable String appProfileId)
+            String project,
+            String instance,
+            Boolean flowControl,
+            @Nullable String appProfileId,
+            @Nullable GoogleCredentials credentials)
             throws IOException {
         BigtableDataSettings.Builder bigtableBuilder = BigtableDataSettings.newBuilder();
         bigtableBuilder.setProjectId(project).setInstanceId(instance);
@@ -39,6 +44,10 @@ public class CreateBigtableClients {
 
         if (appProfileId != null) {
             bigtableBuilder.setAppProfileId(appProfileId);
+        }
+
+        if (credentials != null) {
+            bigtableBuilder.setCredentialsProvider(() -> credentials);
         }
 
         return BigtableDataClient.create(bigtableBuilder.build());

@@ -162,6 +162,9 @@ public class BigtableTableTest {
         Map<String, String> options = getRequiredOptions();
         options.put(BigtableConnectorOptions.FLOW_CONTROL.key(), "true");
         options.put(BigtableConnectorOptions.APP_PROFILE_ID.key(), TestingUtils.APP_PROFILE);
+        options.put(BigtableConnectorOptions.CREDENTIALS_ACCESS_TOKEN.key(), "token");
+        options.put(BigtableConnectorOptions.CREDENTIALS_KEY.key(), "key");
+        options.put(BigtableConnectorOptions.CREDENTIALS_FILE.key(), "file");
 
         ResolvedSchema schema = getResolvedSchema(false);
 
@@ -173,6 +176,10 @@ public class BigtableTableTest {
         assertEquals(
                 connectorOptions.get(BigtableConnectorOptions.APP_PROFILE_ID),
                 TestingUtils.APP_PROFILE);
+        assertEquals(
+                connectorOptions.get(BigtableConnectorOptions.CREDENTIALS_ACCESS_TOKEN), "token");
+        assertEquals(connectorOptions.get(BigtableConnectorOptions.CREDENTIALS_KEY), "key");
+        assertEquals(connectorOptions.get(BigtableConnectorOptions.CREDENTIALS_FILE), "file");
     }
 
     @Test

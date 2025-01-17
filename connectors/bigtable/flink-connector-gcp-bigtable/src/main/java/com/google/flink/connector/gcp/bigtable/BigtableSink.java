@@ -22,6 +22,7 @@ import org.apache.flink.api.connector.sink2.Sink;
 import org.apache.flink.api.connector.sink2.SinkWriter;
 import org.apache.flink.api.connector.sink2.WriterInitContext;
 
+import com.google.auth.oauth2.GoogleCredentials;
 import com.google.auto.value.AutoValue;
 import com.google.cloud.bigtable.data.v2.BigtableDataClient;
 import com.google.flink.connector.gcp.bigtable.serializers.BaseRowMutationSerializer;
@@ -57,6 +58,8 @@ public abstract class BigtableSink<T> implements Sink<T> {
 
     public abstract @Nullable String appProfileId();
 
+    public abstract @Nullable GoogleCredentials credentials();
+
     public static <T> Builder<T> builder() {
         return new AutoValue_BigtableSink.Builder<T>().setFlowControl(false);
     }
@@ -74,7 +77,7 @@ public abstract class BigtableSink<T> implements Sink<T> {
     public SinkWriter<T> createWriter(WriterInitContext sinkInitContext) throws IOException {
         BigtableDataClient client =
                 CreateBigtableClients.createDataClient(
-                        projectId(), instanceId(), flowControl(), appProfileId());
+                        projectId(), instanceId(), flowControl(), appProfileId(), credentials());
 
         return new BigtableSinkWriter<T>(
                 new BigtableFlushableWriter(client, sinkInitContext, table()),
@@ -111,6 +114,9 @@ public abstract class BigtableSink<T> implements Sink<T> {
          * parameter for writing. Optional.
          */
         public abstract Builder<T> setAppProfileId(String appProfileId);
+
+        /** Google Credentials for Bigtable. Optional. */
+        public abstract Builder<T> setCredentials(GoogleCredentials credentials);
 
         public abstract BigtableSink<T> build();
     }
