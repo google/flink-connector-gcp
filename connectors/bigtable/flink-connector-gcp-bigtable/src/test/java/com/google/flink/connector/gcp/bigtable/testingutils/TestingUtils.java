@@ -39,6 +39,7 @@ public class TestingUtils {
     public static final String INSTANCE = "instance";
     public static final String PROJECT = "project";
     public static final String COLUMN_FAMILY = "testColumnFamily";
+    public static final String APP_PROFILE = "my-profile";
     public static final String ROW_KEY_FIELD = "keyField";
     public static final String ROW_KEY_VALUE = "my-key";
     public static final String STRING_FIELD = "stringField";

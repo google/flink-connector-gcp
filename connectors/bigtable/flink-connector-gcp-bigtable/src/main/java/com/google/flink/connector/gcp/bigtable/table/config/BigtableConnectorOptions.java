@@ -64,4 +64,17 @@ public class BigtableConnectorOptions {
                     .intType()
                     .noDefaultValue()
                     .withDescription("Sink parallelism");
+
+    public static final ConfigOption<Boolean> FLOW_CONTROL =
+            ConfigOptions.key("flow-control")
+                    .booleanType()
+                    .defaultValue(false)
+                    .withDescription(
+                            "Optional. Specifies the use of batch flow control for writing. Defaults to false.");
+
+    public static final ConfigOption<String> APP_PROFILE_ID =
+            ConfigOptions.key("app-profile-id")
+                    .stringType()
+                    .noDefaultValue()
+                    .withDescription("Optional. Specifies the App Profile Id used when writing.");
 }

@@ -112,13 +112,20 @@ public class BigtableDynamicTableSink implements DynamicTableSink {
                     connectorOptions.get(BigtableConnectorOptions.COLUMN_FAMILY));
         }
 
-        final BigtableSink<RowData> bigtableSink =
+        BigtableSink.Builder<RowData> sinkBuilder =
                 BigtableSink.<RowData>builder()
                         .setProjectId(connectorOptions.get(BigtableConnectorOptions.PROJECT))
                         .setTable(connectorOptions.get(BigtableConnectorOptions.TABLE))
                         .setInstanceId(connectorOptions.get(BigtableConnectorOptions.INSTANCE))
-                        .setSerializer(serializerBuilder.build())
-                        .build();
+                        .setFlowControl(connectorOptions.get(BigtableConnectorOptions.FLOW_CONTROL))
+                        .setSerializer(serializerBuilder.build());
+
+        if (connectorOptions.getOptional(BigtableConnectorOptions.APP_PROFILE_ID).isPresent()) {
+            sinkBuilder.setAppProfileId(
+                    connectorOptions.get(BigtableConnectorOptions.APP_PROFILE_ID));
+        }
+
+        final BigtableSink<RowData> bigtableSink = sinkBuilder.build();
 
         if (parallelism == null) {
             return SinkV2Provider.of(bigtableSink);
