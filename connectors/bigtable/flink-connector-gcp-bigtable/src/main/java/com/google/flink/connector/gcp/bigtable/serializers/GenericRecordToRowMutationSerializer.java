@@ -162,6 +162,36 @@ public class GenericRecordToRowMutationSerializer
     }
 
     /**
+     * Converts a byte array to a field value based on its {@link Schema.Type}.
+     *
+     * @param bytes The byte array to convert.
+     * @param type The {@link Schema.Type} of the field.
+     * @return The field value converted from the byte array.
+     * @throws IllegalArgumentException If the Avro type is not supported.
+     */
+    public static Object convertBytesToField(byte[] bytes, Schema.Type type) {
+        ByteBuffer buffer = ByteBuffer.wrap(bytes);
+        switch (type) {
+            case STRING:
+                return new String(bytes);
+            case BYTES:
+                return ByteBuffer.wrap(bytes);
+            case INT:
+                return buffer.getInt();
+            case LONG:
+                return buffer.getLong();
+            case FLOAT:
+                return buffer.getFloat();
+            case DOUBLE:
+                return buffer.getDouble();
+            case BOOLEAN:
+                return buffer.get() != 0;
+            default:
+                throw new IllegalArgumentException("Unsupported Avro type: " + type);
+        }
+    }
+
+    /**
      * Creates a new {@link Builder} for constructing {@code GenericRecordToRowMutationSerializer}
      * instances.
      *

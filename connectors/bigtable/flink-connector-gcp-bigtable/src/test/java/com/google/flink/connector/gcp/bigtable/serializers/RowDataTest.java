@@ -363,7 +363,9 @@ public class RowDataTest {
             LogicalType type = schema.getLogicalType().getChildren().get(i);
             byte[] convertedBytes =
                     RowDataToRowMutationSerializer.convertFieldToBytes(row, i, type);
-            assertEquals(getObject(row, i, type), convertBytesToField(convertedBytes, type));
+            assertEquals(
+                    getObject(row, i, type),
+                    RowDataToRowMutationSerializer.convertBytesToField(convertedBytes, type));
         }
     }
 
@@ -438,54 +440,6 @@ public class RowDataTest {
                 int decimalPrecision = decimalType.getPrecision();
                 int scale = decimalType.getScale();
                 return row.getDecimal(index, decimalPrecision, scale);
-            default:
-                throw new IllegalArgumentException("Unsupported data type: " + type);
-        }
-    }
-
-    private static Object convertBytesToField(byte[] bytes, LogicalType type) {
-        ByteBuffer buffer = ByteBuffer.wrap(bytes);
-        switch (type.getTypeRoot()) {
-            case CHAR:
-            case VARCHAR:
-                return StringData.fromBytes(bytes);
-            case BOOLEAN:
-                return buffer.get() != 0;
-            case TINYINT:
-            case SMALLINT:
-                return buffer.getShort();
-            case INTERVAL_YEAR_MONTH:
-            case INTEGER:
-                return buffer.getInt();
-            case INTERVAL_DAY_TIME:
-            case BIGINT:
-                return buffer.getLong();
-            case FLOAT:
-                return buffer.getFloat();
-            case DOUBLE:
-                return buffer.getDouble();
-            case VARBINARY:
-            case BINARY:
-                return bytes; // No conversion needed for binary types
-            case TIMESTAMP_WITH_TIME_ZONE:
-            case TIMESTAMP_WITHOUT_TIME_ZONE:
-            case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
-                {
-                    long milliseconds = buffer.getLong(0);
-                    int nanos = buffer.getInt(Long.BYTES);
-                    return TimestampData.fromEpochMillis(milliseconds, nanos);
-                }
-            case TIME_WITHOUT_TIME_ZONE:
-                int milliseconds = buffer.getInt();
-                return LocalTime.ofNanoOfDay(milliseconds * 1_000_000L);
-            case DATE:
-                long daysSinceEpoch = buffer.getLong();
-                return LocalDate.ofEpochDay(daysSinceEpoch);
-            case DECIMAL:
-                DecimalType decimalType = (DecimalType) type;
-                int precision = decimalType.getPrecision();
-                int scale = decimalType.getScale();
-                return DecimalData.fromUnscaledBytes(bytes, precision, scale);
             default:
                 throw new IllegalArgumentException("Unsupported data type: " + type);
         }
