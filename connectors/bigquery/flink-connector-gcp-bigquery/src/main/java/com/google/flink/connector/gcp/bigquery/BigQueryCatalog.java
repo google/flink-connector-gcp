@@ -184,7 +184,6 @@ public class BigQueryCatalog extends AbstractCatalog {
         try {
             Tables.List listTables = this.client.tables().list(this.projectId, databaseName);
             TableList tables = listTables.execute();
-
             if (tables != null && tables.getTables() != null) {
                 tables.getTables().forEach(table -> {
                     if (table.getType().equals("TABLE")) {
@@ -215,7 +214,7 @@ public class BigQueryCatalog extends AbstractCatalog {
             }
 
             return targetReturnList;
-        } catch (IOException e) {            
+        } catch (IOException e) {
             throw new CatalogException("Failed to list views", e);
 
         }
@@ -230,8 +229,9 @@ public class BigQueryCatalog extends AbstractCatalog {
                 throw new TableNotExistException(getName(), tablePath);
             }
 
-            if (table.getExternalCatalogTableOptions() != null){
-                throw new CatalogException("ExternalCatalogTableOptions is not null, external table are not supported yet.");
+            // TableFormat will equals to Iceberg/Biglake if it's an Iceberg/Biglake table
+            if (table.getBiglakeConfiguration().getTableFormat() != null) {
+                throw new CatalogException("BiglakeConfiguration.TableFormat is not null, external table are not supported yet.");
             }
 
             org.apache.flink.table.api.Schema translatedSchema
