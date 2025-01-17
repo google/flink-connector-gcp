@@ -177,7 +177,8 @@ public class GenericRecordTest {
                             record.get(field.name()), field.schema().getType());
             assertEquals(
                     record.get(field.name()),
-                    convertBytesToField(convertedBytes, field.schema().getType()));
+                    GenericRecordToRowMutationSerializer.convertBytesToField(
+                            convertedBytes, field.schema().getType()));
         }
     }
 
@@ -292,27 +293,5 @@ public class GenericRecordTest {
         testRecord.put(TestingUtils.ROW_KEY_FIELD, TestingUtils.ROW_KEY_VALUE);
         testRecord.put("nest", nest);
         return testRecord;
-    }
-
-    private static Object convertBytesToField(byte[] bytes, Schema.Type type) {
-        ByteBuffer buffer = ByteBuffer.wrap(bytes);
-        switch (type) {
-            case STRING:
-                return new String(bytes);
-            case BYTES:
-                return ByteBuffer.wrap(bytes);
-            case INT:
-                return buffer.getInt();
-            case LONG:
-                return buffer.getLong();
-            case FLOAT:
-                return buffer.getFloat();
-            case DOUBLE:
-                return buffer.getDouble();
-            case BOOLEAN:
-                return buffer.get() != 0;
-            default:
-                throw new IllegalArgumentException("Unsupported Avro type: " + type);
-        }
     }
 }
