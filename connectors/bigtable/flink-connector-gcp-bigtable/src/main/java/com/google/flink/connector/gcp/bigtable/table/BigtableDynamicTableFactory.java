@@ -59,6 +59,9 @@ public class BigtableDynamicTableFactory implements DynamicTableSinkFactory {
         additionalOptions.add(BigtableConnectorOptions.SINK_PARALLELISM);
         additionalOptions.add(BigtableConnectorOptions.FLOW_CONTROL);
         additionalOptions.add(BigtableConnectorOptions.APP_PROFILE_ID);
+        additionalOptions.add(BigtableConnectorOptions.CREDENTIALS_FILE);
+        additionalOptions.add(BigtableConnectorOptions.CREDENTIALS_KEY);
+        additionalOptions.add(BigtableConnectorOptions.CREDENTIALS_ACCESS_TOKEN);
 
         return additionalOptions;
     }
