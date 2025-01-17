@@ -21,75 +21,71 @@ import java.util.List;
 import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.types.DataType;
 
-import com.google.cloud.bigquery.Field;
-import com.google.cloud.bigquery.FieldElementType;
-import com.google.cloud.bigquery.FieldList;
-import com.google.cloud.bigquery.Schema;
-import com.google.cloud.bigquery.StandardSQLTypeName;
+import com.google.api.services.bigquery.model.TableFieldSchema;
+import com.google.api.services.bigquery.model.TableSchema;
 
 /**
  * Schema conversion between BigQuery and Flink.
  */
 public class BigQueryTypeUtils {
 
-    public static org.apache.flink.table.api.Schema toFlinkSchema(Schema bigQuerySchema) {
-        FieldList bigQueryFields = bigQuerySchema.getFields();
+    public static org.apache.flink.table.api.Schema toFlinkSchema(TableSchema bigQuerySchema) {
+        List<TableFieldSchema> bigQueryFields = bigQuerySchema.getFields();
         org.apache.flink.table.api.Schema.Builder schemaBuilder
                 = org.apache.flink.table.api.Schema.newBuilder();
-        for (Field bigQueryField : bigQueryFields) {
+        for (TableFieldSchema bigQueryField : bigQueryFields) {
             schemaBuilder.column(bigQueryField.getName(), toFlinkType(bigQueryField));
         }
         return schemaBuilder.build();
     }
 
-    public static DataType toFlinkType(Field bigQueryField) {
-        StandardSQLTypeName typeName = bigQueryField.getType().getStandardType();
+    public static DataType toFlinkType(TableFieldSchema bigQueryField) {
+        String typeName = bigQueryField.getType();
         switch (typeName) {
-            case STRING:
+            case "STRING":
                 return DataTypes.STRING();
-            case INT64:
+            case "INTEGER":
                 return DataTypes.BIGINT();
-            case BOOL:
+            case "BOOLEAN":
                 return DataTypes.BOOLEAN();
-            case FLOAT64:
+            case "FLOAT":
                 return DataTypes.DOUBLE();
-            case BYTES:
+            case "BYTES":
                 return DataTypes.BYTES();
-            case DATE:
+            case "DATE":
                 return DataTypes.DATE();
-            case DATETIME:
+            case "DATETIME":
                 return DataTypes.TIMESTAMP_LTZ();
-            case TIME:
+            case "TIME":
                 return DataTypes.TIME();
-            case TIMESTAMP:
+            case "TIMESTAMP":
                 return DataTypes.TIMESTAMP_LTZ();
-            case NUMERIC:
+            case "NUMERIC":
                 return DataTypes.DECIMAL(38, 9);
-            case BIGNUMERIC:
+            case "BIGNUMERIC":
                 return DataTypes.BYTES();
-            case STRUCT:
-                FieldList subFields = bigQueryField.getSubFields();
-                List<DataTypes.Field> flinkFields = new ArrayList<>();
-                for (Field subField : subFields) {
-                    flinkFields.add(DataTypes.FIELD(subField.getName(), toFlinkType(subField)));
-                }
-                return DataTypes.ROW(flinkFields);
-            case RANGE:
-                FieldElementType rangeElementType = bigQueryField.getRangeElementType();
-                String subTypeName = rangeElementType.getType();
-                Field subField = Field.newBuilder("range_element", StandardSQLTypeName.valueOf(subTypeName)).build();
-                DataType elementFlinkType = toFlinkType(subField);
+            case "RANGE":
+                TableFieldSchema.RangeElementType elementType = bigQueryField.getRangeElementType();                
+                String subTypeName = elementType.getType();
+                TableFieldSchema elementField = new TableFieldSchema().setType(subTypeName);
+                DataType elementFlinkType = toFlinkType(elementField);
                 return DataTypes.ROW(
                         DataTypes.FIELD("lower", elementFlinkType),
                         DataTypes.FIELD("upper", elementFlinkType)
                 );
-            case GEOGRAPHY:
+            case "RECORD":
+                List<TableFieldSchema> subFields = bigQueryField.getFields();
+                List<DataTypes.Field> flinkFields = new ArrayList<>();
+                for (TableFieldSchema subField : subFields) {
+                    flinkFields.add(DataTypes.FIELD(subField.getName(), toFlinkType(subField)));
+                }
+                return DataTypes.ROW(flinkFields);
+            case "GEOGRAPHY":
                 return DataTypes.STRING();
-            case JSON:
+            case "JSON":
                 return DataTypes.STRING();
             default:
         }
         throw new IllegalArgumentException("Unsupported BigQuery type: " + typeName);
     }
-
 }

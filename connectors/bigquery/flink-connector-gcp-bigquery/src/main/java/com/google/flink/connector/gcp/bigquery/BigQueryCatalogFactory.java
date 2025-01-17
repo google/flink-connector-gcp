@@ -1,7 +1,5 @@
 package com.google.flink.connector.gcp.bigquery;
 
-import java.io.IOException;
-import java.security.GeneralSecurityException;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -65,10 +63,7 @@ public class BigQueryCatalogFactory implements CatalogFactory {
             );
             LOG.info("BigQueryCatalog created successfully.");
             return catalog;
-        } catch (IOException | GeneralSecurityException ex) {
-            LOG.error("Error creating BigQueryCatalog: {}", ex.getMessage(), ex);
-            return null;
-        } catch (RuntimeException ex) { // Catch any other potential runtime exceptions
+        } catch (RuntimeException ex) { 
             LOG.error("Unexpected runtime error during BigQueryCatalog creation: {}", ex.getMessage(), ex);
             return null;
         }

@@ -1,6 +1,7 @@
 package com.google.flink.connector.gcp.bigquery;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -36,16 +37,19 @@ import org.apache.flink.table.expressions.Expression;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.api.gax.paging.Page;
-import com.google.cloud.bigquery.BigQuery.DatasetListOption;
-import com.google.cloud.bigquery.BigQuery.TableListOption;
-import com.google.cloud.bigquery.BigQueryException;
-import com.google.cloud.bigquery.Dataset;
-import com.google.cloud.bigquery.DatasetId;
-import com.google.cloud.bigquery.Table;
-import com.google.cloud.bigquery.TableDefinition;
-import com.google.cloud.bigquery.TableId;
-import com.google.flink.connector.gcp.bigquery.client.BigQueryClient;
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
+import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.services.bigquery.Bigquery;
+import com.google.api.services.bigquery.Bigquery.Datasets;
+import com.google.api.services.bigquery.Bigquery.Tables;
+import com.google.api.services.bigquery.BigqueryScopes;
+import com.google.api.services.bigquery.model.Dataset;
+import com.google.api.services.bigquery.model.DatasetList;
+import com.google.api.services.bigquery.model.Table;
+import com.google.api.services.bigquery.model.TableList;
+import com.google.auth.http.HttpCredentialsAdapter;
+import com.google.auth.oauth2.GoogleCredentials;
 
 /**
  * Flink Catalog Support for BigQuery. This class provides the implementation
@@ -55,31 +59,58 @@ public class BigQueryCatalog extends AbstractCatalog {
 
     private static final Logger LOG = LoggerFactory.getLogger(BigQueryCatalog.class);
 
-    private final BigQueryClient bigqueryclient;
+    private Bigquery client;
 
     public static final String DEFAULT_DATASET = "default";
 
     private final String projectId;
 
-    public BigQueryCatalog(String catalogName, String defaultDataset, String project, String credentialFile) throws IOException, GeneralSecurityException {
+    public BigQueryCatalog(String catalogName, String defaultDataset, String project, String credentialFile) {
         super(catalogName, defaultDataset);
         this.projectId = project;
-
-        try {
-            this.bigqueryclient = new BigQueryClient();
-        } catch (CatalogException e) {
-            throw new CatalogException("Failed to create BigQuery client", e);
-        }
         LOG.info("Created BigQueryCatalog: {}", catalogName);
     }
 
     @Override
     public void open() throws CatalogException {
         LOG.info("Connected to BigQuery with project ID: {}", this.projectId);
+
+        try {
+            HttpCredentialsAdapter httpCredentialsAdapter
+                    = new HttpCredentialsAdapter(
+                            GoogleCredentials.getApplicationDefault().createScoped(BigqueryScopes.all()));
+
+            this.client = new Bigquery.Builder(
+                    GoogleNetHttpTransport.newTrustedTransport(),
+                    GsonFactory.getDefaultInstance(),
+                    httpRequest -> {
+                        httpCredentialsAdapter.initialize(httpRequest);
+                        httpRequest.setThrowExceptionOnExecuteError(false);
+                    })
+                    .setApplicationName("BigQuery Iceberg Catalog Plugin")
+                    .build();
+        } catch (CatalogException | GeneralSecurityException | IOException e) {
+            throw new CatalogException("Failed to create BigQuery client", e);
+        }
     }
 
     @Override
     public void close() throws CatalogException {
+        if (client != null && client.getRequestFactory().getTransport() instanceof com.google.api.client.http.javanet.NetHttpTransport) {
+            try {
+                this.client.getRequestFactory().getTransport().shutdown();
+                LOG.info("Shutdown the underlying HTTP transport for BigQuery client.");
+            } catch (IOException e) {
+                throw new CatalogException("Failed to shutdown the HTTP transport", e);
+            } finally {
+                client = null; // Nullify the client as it's no longer usable
+            }
+        } else if (client != null) {
+            client = null; // Still nullify the client even if we don't shut down the transport
+            LOG.info("BigQuery client was open, but using a transport without explicit shutdown. Nullifying client.");
+        } else {
+            LOG.info("BigQuery client was not open, nothing to close.");
+        }
     }
 
     // -- Database Operations --
@@ -87,17 +118,17 @@ public class BigQueryCatalog extends AbstractCatalog {
     public List<String> listDatabases() throws CatalogException {
         List<String> targetReturnList = new ArrayList<>();
         try {
-            Page<Dataset> datasets = bigqueryclient.client.listDatasets(this.projectId, DatasetListOption.pageSize(100));
-            if (datasets == null) {
+            Datasets.List listDatasets = this.client.datasets().list(this.projectId);
+            DatasetList datasets = listDatasets.execute();
+
+            if (datasets == null || datasets.getDatasets() == null) {
                 LOG.debug("Project does not contain any datasets.");
                 return List.of();
             }
-            datasets
-                    .iterateAll()
-                    .forEach(
-                            dataset -> targetReturnList.add(String.format("%s", dataset.getDatasetId().getDataset())));
+            datasets.getDatasets().forEach(dataset
+                    -> targetReturnList.add(dataset.getDatasetReference().getDatasetId()));
             return targetReturnList;
-        } catch (Exception e) {
+        } catch (IOException e) {
             throw new CatalogException("Failed to list databases", e);
         }
 
@@ -105,28 +136,28 @@ public class BigQueryCatalog extends AbstractCatalog {
 
     @Override
     public CatalogDatabase getDatabase(String databaseName) throws DatabaseNotExistException, CatalogException {
-        DatasetId datasetId = DatasetId.of(this.projectId, databaseName);
-        Dataset dataset = bigqueryclient.client.getDataset(datasetId);
-        if (dataset == null) {
-            throw new DatabaseNotExistException(getName(), databaseName);
-        }
+        try {
+            Datasets.Get getDataset = this.client.datasets().get(this.projectId, databaseName);
+            Dataset dataset = getDataset.execute();
+            if (dataset == null) {
+                throw new DatabaseNotExistException(getName(), databaseName);
+            }
 
-        return new BigQueryCatalogDatabase(this.projectId, dataset);
+            return new BigQueryCatalogDatabase(this.projectId, dataset);
+        } catch (IOException e) {
+            throw new CatalogException("Failed to get database " + databaseName, e);
+        }
     }
 
     @Override
     public boolean databaseExists(String databaseName) throws CatalogException {
         try {
-            Page<Dataset> datasets = bigqueryclient.client.listDatasets(this.projectId);
-            if (datasets != null) {
-                for (Dataset dataset : datasets.iterateAll()) {
-                    if (dataset.getDatasetId().getDataset().equals(databaseName)) {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        } catch (BigQueryException e) {
+            Datasets.Get getDataset = this.client.datasets().get(this.projectId, databaseName);
+            Dataset dataset = getDataset.execute();
+            return dataset != null;
+        } catch (GoogleJsonResponseException e) {
+            throw new CatalogException("Failed to check if database exists: " + databaseName, e);
+        } catch (IOException e) {
             throw new CatalogException("Failed to check if database exists: " + databaseName, e);
         }
     }
@@ -151,17 +182,20 @@ public class BigQueryCatalog extends AbstractCatalog {
     public List<String> listTables(String databaseName) throws DatabaseNotExistException, CatalogException {
         List<String> targetReturnList = new ArrayList<>();
         try {
-            DatasetId datasetId = DatasetId.of(this.projectId, databaseName);
-            Page<Table> tables = bigqueryclient.client.listTables(datasetId, TableListOption.pageSize(100));
-            if (tables != null) {
-                tables.iterateAll().forEach(table -> targetReturnList.add(String.format("%s",
-                        table.getTableId().getTable())));
+            Tables.List listTables = this.client.tables().list(this.projectId, databaseName);
+            TableList tables = listTables.execute();
 
+            if (tables != null && tables.getTables() != null) {
+                tables.getTables().forEach(table -> {
+                    if (table.getType().equals("TABLE")) {
+                        targetReturnList.add(table.getTableReference().getTableId());
+                    }
+                });
             }
-            return targetReturnList;
 
-        } catch (BigQueryException e) {
-            return List.of();
+            return targetReturnList;
+        } catch (IOException e) {
+            throw new CatalogException("Failed to list tables", e);
         }
     }
 
@@ -169,36 +203,39 @@ public class BigQueryCatalog extends AbstractCatalog {
     public List<String> listViews(String databaseName) throws DatabaseNotExistException, CatalogException {
         List<String> targetReturnList = new ArrayList<>();
         try {
-            DatasetId datasetId = DatasetId.of(this.projectId, databaseName);
-            Page<Table> tables = bigqueryclient.client.listTables(datasetId, TableListOption.pageSize(100));
+            Tables.List listTables = this.client.tables().list(this.projectId, databaseName);
+            TableList tables = listTables.execute();
 
-            if (tables != null) {
-                tables.iterateAll().forEach(table -> {
-                    if (table.getDefinition().getType() == TableDefinition.Type.VIEW) {
-                        targetReturnList.add(String.format("Success! View ID: %s ", table.getTableId().getTable()));
+            if (tables != null && tables.getTables() != null) {
+                tables.getTables().forEach(table -> {
+                    if (table.getType().equals("VIEW")) {
+                        targetReturnList.add(table.getTableReference().getTableId());
                     }
                 });
             }
 
             return targetReturnList;
-        } catch (BigQueryException e) {
-            return List.of();
+        } catch (IOException e) {            
+            throw new CatalogException("Failed to list views", e);
+
         }
     }
 
     @Override
     public CatalogBaseTable getTable(ObjectPath tablePath) throws TableNotExistException, CatalogException {
         try {
-            DatasetId datasetId = DatasetId.of(this.projectId, tablePath.getDatabaseName());
-            TableId tableId = TableId.of(datasetId.getDataset(), tablePath.getObjectName());
-            Table table = bigqueryclient.client.getTable(tableId);
+            Table table = this.client.tables().get(this.projectId, tablePath.getDatabaseName(), tablePath.getObjectName()).execute();
 
             if (table == null) {
                 throw new TableNotExistException(getName(), tablePath);
             }
 
+            if (table.getExternalCatalogTableOptions() != null){
+                throw new CatalogException("ExternalCatalogTableOptions is not null, external table are not supported yet.");
+            }
+
             org.apache.flink.table.api.Schema translatedSchema
-                    = BigQueryTypeUtils.toFlinkSchema(table.getDefinition().getSchema());
+                    = BigQueryTypeUtils.toFlinkSchema(table.getSchema());
 
             Map<String, String> options = new HashMap<>();
             options.put("connector", "bigquery");
@@ -213,14 +250,22 @@ public class BigQueryCatalog extends AbstractCatalog {
                     options);
             return translated_table;
 
-        } catch (BigQueryException e) {
+        } catch (IOException e) {
             throw new CatalogException("Failed to get table " + tablePath, e);
         }
     }
 
     @Override
     public boolean tableExists(ObjectPath tablePath) throws CatalogException {
-        throw new UnsupportedOperationException("Function tableExists not supported yet.");
+        try {
+            Tables.Get getTable = this.client.tables().get(this.projectId, tablePath.getDatabaseName(), tablePath.getObjectName());
+            Table table = getTable.execute();
+            return table != null;
+        } catch (GoogleJsonResponseException e) {
+            throw new CatalogException("Failed to check if table exists: " + tablePath, e);
+        } catch (IOException e) {
+            throw new CatalogException("Failed to check if table exists: " + tablePath, e);
+        }
     }
 
     @Override
@@ -316,12 +361,11 @@ public class BigQueryCatalog extends AbstractCatalog {
     @Override
     public CatalogTableStatistics getTableStatistics(ObjectPath tablePath) throws TableNotExistException, CatalogException {
         try {
-            DatasetId datasetId = DatasetId.of(this.projectId, tablePath.getDatabaseName());
-            TableId tableId = TableId.of(datasetId.getDataset(), tablePath.getObjectName());
-            Table table = bigqueryclient.client.getTable(tableId);
+            Tables.Get getTable = this.client.tables().get(this.projectId, tablePath.getDatabaseName(), tablePath.getObjectName());
+            Table table = getTable.execute();
 
             if (table != null) {
-                Long numRows = table.getNumRows() != null ? table.getNumRows().longValue() : null;
+                BigInteger numRows = table.getNumRows();
 
                 int fileCount = -1;
                 long totalSize = -1;
@@ -337,7 +381,7 @@ public class BigQueryCatalog extends AbstractCatalog {
                 if (table.getLastModifiedTime() != null) {
                     properties.put("lastModifiedTime", String.valueOf(table.getLastModifiedTime()));
                 }
-                return new CatalogTableStatistics(numRows != null ? numRows : 0,
+                return new CatalogTableStatistics(numRows != null ? numRows.longValue() : 0,
                         fileCount,
                         totalSize,
                         rawDataSize,
@@ -347,8 +391,8 @@ public class BigQueryCatalog extends AbstractCatalog {
             } else {
                 throw new TableNotExistException(getName(), tablePath);
             }
-        } catch (BigQueryException e) {
-            if (e.getCode() == 404) {
+        } catch (IOException e) {
+            if (e instanceof GoogleJsonResponseException && ((GoogleJsonResponseException) e).getStatusCode() == 404) {
                 throw new TableNotExistException(getName(), tablePath);
             }
             throw new CatalogException("Failed to get table statistics for " + tablePath, e);

@@ -7,7 +7,7 @@ import java.util.Optional;
 
 import org.apache.flink.table.catalog.CatalogDatabase;
 
-import com.google.cloud.bigquery.Dataset;
+import com.google.api.services.bigquery.model.Dataset;
 
 /**
  * A lightweight CatalogDatabase implementation for BigQuery, primarily used for
@@ -43,7 +43,7 @@ public class BigQueryCatalogDatabase implements CatalogDatabase {
     public Map<String, String> getProperties() {
         Map<String, String> property = Collections.emptyMap();
         property.put("projectId", projectId);
-        property.put("datasetId", dataset.getDatasetId().getDataset());
+        property.put("datasetId", dataset.getId());
         property.put("description", dataset.getDescription());
         property.put("location", dataset.getLocation());
         return property;
@@ -70,12 +70,12 @@ public class BigQueryCatalogDatabase implements CatalogDatabase {
     public String toString() {
         return "BigQueryCatalogDatabase{"
                 + "projectId='" + projectId + '\''
-                + ", datasetId='" + dataset.getDatasetId() + '\''
+                + ", datasetId='" + dataset.getId() + '\''
                 + '}';
     }
 
     @Override
-    public String getComment() {
+    public String getComment() {        
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

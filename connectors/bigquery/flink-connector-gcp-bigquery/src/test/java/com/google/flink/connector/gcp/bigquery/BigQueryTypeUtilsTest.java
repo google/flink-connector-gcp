@@ -1,14 +1,12 @@
 package com.google.flink.connector.gcp.bigquery;
 
+import com.google.api.services.bigquery.model.TableFieldSchema;
 import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.types.DataType;
 import org.junit.Test;
 
-import com.google.cloud.bigquery.Field;
-import com.google.cloud.bigquery.Field.Mode;
-import com.google.cloud.bigquery.FieldElementType;
-import com.google.cloud.bigquery.FieldList;
-import com.google.cloud.bigquery.StandardSQLTypeName;
+import java.util.Arrays;
+
 import static com.google.common.truth.Truth.assertThat;
 
 /** Tests for {@link BigQueryTypeUtils}. */
@@ -16,91 +14,91 @@ public class BigQueryTypeUtilsTest {
 
   @Test
   public void testToFlinkTypeString() {
-    Field bigQueryField = Field.newBuilder("string_field", StandardSQLTypeName.STRING).build();
+    TableFieldSchema bigQueryField = new TableFieldSchema().setName("string_field").setType("STRING");
     DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
     assertThat(flinkType).isEqualTo(DataTypes.STRING());
   }
 
   @Test
   public void testToFlinkTypeInt64() {
-    Field bigQueryField = Field.newBuilder("int64_field", StandardSQLTypeName.INT64).build();
+    TableFieldSchema bigQueryField = new TableFieldSchema().setName("int64_field").setType("INTEGER");
     DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
     assertThat(flinkType).isEqualTo(DataTypes.BIGINT());
   }
 
   @Test
   public void testToFlinkTypeBool() {
-    Field bigQueryField = Field.newBuilder("bool_field", StandardSQLTypeName.BOOL).build();
+    TableFieldSchema bigQueryField = new TableFieldSchema().setName("bool_field").setType("BOOLEAN");
     DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
     assertThat(flinkType).isEqualTo(DataTypes.BOOLEAN());
   }
 
   @Test
   public void testToFlinkTypeFloat64() {
-    Field bigQueryField = Field.newBuilder("float64_field", StandardSQLTypeName.FLOAT64).build();
+    TableFieldSchema bigQueryField = new TableFieldSchema().setName("float64_field").setType("FLOAT");
     DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
     assertThat(flinkType).isEqualTo(DataTypes.DOUBLE());
   }
 
   @Test
   public void testToFlinkTypeBytes() {
-    Field bigQueryField = Field.newBuilder("bytes_field", StandardSQLTypeName.BYTES).build();
+    TableFieldSchema bigQueryField = new TableFieldSchema().setName("bytes_field").setType("BYTES");
     DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
     assertThat(flinkType).isEqualTo(DataTypes.BYTES());
   }
 
   @Test
   public void testToFlinkTypeDate() {
-    Field bigQueryField = Field.newBuilder("date_field", StandardSQLTypeName.DATE).build();
+    TableFieldSchema bigQueryField = new TableFieldSchema().setName("date_field").setType("DATE");
     DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
     assertThat(flinkType).isEqualTo(DataTypes.DATE());
   }
 
   @Test
   public void testToFlinkTypeDatetime() {
-    Field bigQueryField = Field.newBuilder("datetime_field", StandardSQLTypeName.DATETIME).build();
+    TableFieldSchema bigQueryField = new TableFieldSchema().setName("datetime_field").setType("DATETIME");
     DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
     assertThat(flinkType).isEqualTo(DataTypes.TIMESTAMP_LTZ());
   }
 
   @Test
   public void testToFlinkTypeTime() {
-    Field bigQueryField = Field.newBuilder("time_field", StandardSQLTypeName.TIME).build();
+    TableFieldSchema bigQueryField = new TableFieldSchema().setName("time_field").setType("TIME");
     DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
     assertThat(flinkType).isEqualTo(DataTypes.TIME());
   }
 
   @Test
   public void testToFlinkTypeTimestamp() {
-    Field bigQueryField = Field.newBuilder("timestamp_field", StandardSQLTypeName.TIMESTAMP).build();
+    TableFieldSchema bigQueryField = new TableFieldSchema().setName("timestamp_field").setType("TIMESTAMP");
     DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
     assertThat(flinkType).isEqualTo(DataTypes.TIMESTAMP_LTZ());
   }
 
   @Test
   public void testToFlinkTypeNumeric() {
-    Field bigQueryField = Field.newBuilder("numeric_field", StandardSQLTypeName.NUMERIC).build();
+    TableFieldSchema bigQueryField = new TableFieldSchema().setName("numeric_field").setType("NUMERIC");
     DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
     assertThat(flinkType).isEqualTo(DataTypes.DECIMAL(38, 9));
   }
 
   @Test
   public void testToFlinkTypeBignumeric() {
-    Field bigQueryField = Field.newBuilder("bignumeric_field", StandardSQLTypeName.BIGNUMERIC).build();
+    TableFieldSchema bigQueryField = new TableFieldSchema().setName("bignumeric_field").setType("BIGNUMERIC");
     DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
     assertThat(flinkType).isEqualTo(DataTypes.BYTES());
   }
 
   @Test
   public void testToFlinkTypeStruct() {
-    Field bigQueryField =
-        Field.newBuilder(
-                "struct_field",
-                StandardSQLTypeName.STRUCT,
-                FieldList.of(
-                    Field.of("nested_string", StandardSQLTypeName.STRING),
-                    Field.of("nested_int64", StandardSQLTypeName.INT64)))
-            .build();
+    TableFieldSchema bigQueryField =
+        new TableFieldSchema()
+            .setName("struct_field")
+            .setType("RECORD")
+            .setFields(
+                Arrays.asList(
+                    new TableFieldSchema().setName("nested_string").setType("STRING"),
+                    new TableFieldSchema().setName("nested_int64").setType("INTEGER")));
     DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
     assertThat(flinkType)
         .isEqualTo(
@@ -111,20 +109,20 @@ public class BigQueryTypeUtilsTest {
 
   @Test
   public void testToFlinkTypeNestedStruct() {
-    Field bigQueryField =
-        Field.newBuilder(
-                "nested_struct_field",
-                StandardSQLTypeName.STRUCT,
-                FieldList.of(
-                    Field.of("top_level_string", StandardSQLTypeName.STRING),
-                    Field.newBuilder(
-                            "nested",
-                            StandardSQLTypeName.STRUCT,
-                            FieldList.of(
-                                Field.of("nested_string", StandardSQLTypeName.STRING),
-                                Field.of("nested_int64", StandardSQLTypeName.INT64)))
-                        .build()))
-            .build();
+    TableFieldSchema bigQueryField =
+        new TableFieldSchema()
+            .setName("nested_struct_field")
+            .setType("RECORD")
+            .setFields(
+                Arrays.asList(
+                    new TableFieldSchema().setName("top_level_string").setType("STRING"),
+                    new TableFieldSchema()
+                        .setName("nested")
+                        .setType("RECORD")
+                        .setFields(
+                            Arrays.asList(
+                                new TableFieldSchema().setName("nested_string").setType("STRING"),
+                                new TableFieldSchema().setName("nested_int64").setType("INTEGER")))));
     DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
     assertThat(flinkType)
         .isEqualTo(
@@ -137,12 +135,19 @@ public class BigQueryTypeUtilsTest {
                         DataTypes.FIELD("nested_int64", DataTypes.BIGINT())))));
   }
 
+  // The com.google.api.services.bigquery.model does not have a direct equivalent for RANGE type.
+  // The RANGE type is usually represented as a STRUCT with lower and upper bounds.
+  // Therefore, this test is adapted to reflect that representation.
   @Test
   public void testToFlinkTypeRangeDate() {
-    Field bigQueryField =
-        Field.newBuilder("date_range_field", StandardSQLTypeName.RANGE)
-            .setRangeElementType(FieldElementType.newBuilder().setType(StandardSQLTypeName.DATE.name()).build())
-            .build();
+    TableFieldSchema bigQueryField =
+        new TableFieldSchema()
+            .setName("date_range_field")
+            .setType("RECORD")
+            .setFields(
+                Arrays.asList(
+                    new TableFieldSchema().setName("lower").setType("DATE"),
+                    new TableFieldSchema().setName("upper").setType("DATE")));
     DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
     assertThat(flinkType)
         .isEqualTo(
@@ -151,12 +156,17 @@ public class BigQueryTypeUtilsTest {
                 DataTypes.FIELD("upper", DataTypes.DATE())));
   }
 
+  // Similar to the Date Range, Numeric Range is represented as a STRUCT.
   @Test
   public void testToFlinkTypeRangeNumeric() {
-    Field bigQueryField =
-        Field.newBuilder("numeric_range_field", StandardSQLTypeName.RANGE)
-            .setRangeElementType(FieldElementType.newBuilder().setType(StandardSQLTypeName.NUMERIC.name()).build())
-            .build();
+    TableFieldSchema bigQueryField =
+        new TableFieldSchema()
+            .setName("numeric_range_field")
+            .setType("RECORD")
+            .setFields(
+                Arrays.asList(
+                    new TableFieldSchema().setName("lower").setType("NUMERIC"),
+                    new TableFieldSchema().setName("upper").setType("NUMERIC")));
     DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
     assertThat(flinkType)
         .isEqualTo(
@@ -167,41 +177,36 @@ public class BigQueryTypeUtilsTest {
 
   @Test
   public void testToFlinkTypeJSON() {
-    Field bigQueryField = Field.newBuilder("json_field", StandardSQLTypeName.JSON).build();
+    TableFieldSchema bigQueryField = new TableFieldSchema().setName("json_field").setType("JSON");
     DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
     assertThat(flinkType).isEqualTo(DataTypes.STRING());
   }
-
 
   @Test
   public void testToFlinkTypeGeography() {
-    Field bigQueryField = Field.newBuilder("geography_field", StandardSQLTypeName.GEOGRAPHY).build();
+    TableFieldSchema bigQueryField = new TableFieldSchema().setName("geography_field").setType("GEOGRAPHY");
     DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
     assertThat(flinkType).isEqualTo(DataTypes.STRING());
   }
-  
+
   @Test
   public void testJsonType() {
-    Field jsonField =
-        Field.newBuilder("json_data", StandardSQLTypeName.JSON).build();
+    TableFieldSchema jsonField =
+        new TableFieldSchema().setName("json_data").setType("JSON");
     DataType expectedType = DataTypes.STRING();
     assertThat(BigQueryTypeUtils.toFlinkType(jsonField)).isEqualTo(expectedType);
   }
 
   @Test
   public void testToFlinkTypeNullableFieldsInStruct() {
-    Field bigQueryField =
-        Field.newBuilder(
-                "nullable_struct_field",
-                StandardSQLTypeName.STRUCT,
-                FieldList.of(
-                    Field.newBuilder("nullable_string", StandardSQLTypeName.STRING)
-                        .setMode(Mode.NULLABLE)
-                        .build(),
-                    Field.newBuilder("required_int64", StandardSQLTypeName.INT64)
-                        .setMode(Mode.REQUIRED)
-                        .build()))
-            .build();
+    TableFieldSchema bigQueryField =
+        new TableFieldSchema()
+            .setName("nullable_struct_field")
+            .setType("RECORD")
+            .setFields(
+                Arrays.asList(
+                    new TableFieldSchema().setName("nullable_string").setType("STRING").setMode("NULLABLE"),
+                    new TableFieldSchema().setName("required_int64").setType("INTEGER").setMode("REQUIRED")));
     DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
     assertThat(flinkType)
         .isEqualTo(
