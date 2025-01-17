@@ -85,11 +85,10 @@ public class BigQueryCatalog extends AbstractCatalog {
                     GsonFactory.getDefaultInstance(),
                     httpRequest -> {
                         httpCredentialsAdapter.initialize(httpRequest);
-                        httpRequest.setThrowExceptionOnExecuteError(false);
-                    })
-                    .setApplicationName("BigQuery Iceberg Catalog Plugin")
+                        httpRequest.setThrowExceptionOnExecuteError(false);})
+                    .setApplicationName("BigQuery Flink Catalog Plugin")
                     .build();
-        } catch (CatalogException | GeneralSecurityException | IOException e) {
+        } catch (GeneralSecurityException | IOException e) {
             throw new CatalogException("Failed to create BigQuery client", e);
         }
     }
@@ -103,10 +102,10 @@ public class BigQueryCatalog extends AbstractCatalog {
             } catch (IOException e) {
                 throw new CatalogException("Failed to shutdown the HTTP transport", e);
             } finally {
-                client = null; // Nullify the client as it's no longer usable
+                client = null;
             }
         } else if (client != null) {
-            client = null; // Still nullify the client even if we don't shut down the transport
+            client = null;
             LOG.info("BigQuery client was open, but using a transport without explicit shutdown. Nullifying client.");
         } else {
             LOG.info("BigQuery client was not open, nothing to close.");
@@ -230,8 +229,8 @@ public class BigQueryCatalog extends AbstractCatalog {
             }
 
             // TableFormat will equals to Iceberg/Biglake if it's an Iceberg/Biglake table
-            if (table.getBiglakeConfiguration().getTableFormat() != null) {
-                throw new CatalogException("BiglakeConfiguration.TableFormat is not null, external table are not supported yet.");
+            if (table.getBiglakeConfiguration() != null) {
+                throw new CatalogException("BiglakeConfigurationis not null, external table are not supported yet.");
             }
 
             org.apache.flink.table.api.Schema translatedSchema
