@@ -27,12 +27,15 @@ import org.apache.flink.table.connector.sink.SinkV2Provider;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.DataType;
 
+import com.google.auth.oauth2.GoogleCredentials;
 import com.google.flink.connector.gcp.bigtable.BigtableSink;
 import com.google.flink.connector.gcp.bigtable.serializers.RowDataToRowMutationSerializer;
 import com.google.flink.connector.gcp.bigtable.table.config.BigtableConnectorOptions;
+import com.google.flink.connector.gcp.bigtable.utils.CredentialsFactory;
 import com.google.flink.connector.gcp.bigtable.utils.ErrorMessages;
 
 import java.util.Objects;
+import java.util.Optional;
 
 import static org.apache.flink.util.Preconditions.checkArgument;
 
@@ -112,13 +115,36 @@ public class BigtableDynamicTableSink implements DynamicTableSink {
                     connectorOptions.get(BigtableConnectorOptions.COLUMN_FAMILY));
         }
 
-        final BigtableSink<RowData> bigtableSink =
+        BigtableSink.Builder<RowData> sinkBuilder =
                 BigtableSink.<RowData>builder()
                         .setProjectId(connectorOptions.get(BigtableConnectorOptions.PROJECT))
                         .setTable(connectorOptions.get(BigtableConnectorOptions.TABLE))
                         .setInstanceId(connectorOptions.get(BigtableConnectorOptions.INSTANCE))
-                        .setSerializer(serializerBuilder.build())
-                        .build();
+                        .setFlowControl(connectorOptions.get(BigtableConnectorOptions.FLOW_CONTROL))
+                        .setSerializer(serializerBuilder.build());
+
+        if (connectorOptions.getOptional(BigtableConnectorOptions.APP_PROFILE_ID).isPresent()) {
+            sinkBuilder.setAppProfileId(
+                    connectorOptions.get(BigtableConnectorOptions.APP_PROFILE_ID));
+        }
+
+        Optional<GoogleCredentials> credentials =
+                CredentialsFactory.builder()
+                        .setAccessToken(
+                                connectorOptions.get(
+                                        BigtableConnectorOptions.CREDENTIALS_ACCESS_TOKEN))
+                        .setCredentialsFile(
+                                connectorOptions.get(BigtableConnectorOptions.CREDENTIALS_FILE))
+                        .setCredentialsKey(
+                                connectorOptions.get(BigtableConnectorOptions.CREDENTIALS_KEY))
+                        .build()
+                        .getCredentialsOr();
+
+        if (credentials.isPresent()) {
+            sinkBuilder.setCredentials(credentials.get());
+        }
+
+        final BigtableSink<RowData> bigtableSink = sinkBuilder.build();
 
         if (parallelism == null) {
             return SinkV2Provider.of(bigtableSink);

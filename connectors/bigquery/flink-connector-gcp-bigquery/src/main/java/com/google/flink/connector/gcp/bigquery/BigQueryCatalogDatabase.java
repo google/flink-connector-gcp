@@ -28,7 +28,6 @@ public class BigQueryCatalogDatabase implements CatalogDatabase {
     public BigQueryCatalogDatabase(String projectId, Dataset dataset) {
         this.projectId = projectId;
         this.dataset = dataset;
-
     }
 
     public String getProjectId() {
@@ -75,7 +74,7 @@ public class BigQueryCatalogDatabase implements CatalogDatabase {
     }
 
     @Override
-    public String getComment() {        
+    public String getComment() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

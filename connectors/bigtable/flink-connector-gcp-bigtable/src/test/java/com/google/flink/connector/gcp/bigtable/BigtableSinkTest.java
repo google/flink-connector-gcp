@@ -25,6 +25,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -47,11 +48,13 @@ public class BigtableSinkTest {
                         .setSerializer(serializer)
                         .setTable(TestingUtils.TABLE)
                         .setFlowControl(true)
+                        .setAppProfileId(TestingUtils.APP_PROFILE)
                         .build();
 
         assertEquals(TestingUtils.PROJECT, sink.projectId());
         assertEquals(TestingUtils.INSTANCE, sink.instanceId());
         assertEquals(TestingUtils.TABLE, sink.table());
+        assertEquals(TestingUtils.APP_PROFILE, sink.appProfileId());
         assertTrue(sink.flowControl());
         assertEquals(serializer, sink.serializer());
     }
@@ -74,5 +77,6 @@ public class BigtableSinkTest {
         assertEquals(TestingUtils.TABLE, sink.table());
         assertFalse(sink.flowControl());
         assertEquals(serializer, sink.serializer());
+        assertNull(sink.appProfileId());
     }
 }

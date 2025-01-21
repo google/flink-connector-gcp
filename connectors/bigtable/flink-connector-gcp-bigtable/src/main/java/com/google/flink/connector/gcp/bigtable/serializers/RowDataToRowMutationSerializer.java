@@ -21,7 +21,9 @@ package com.google.flink.connector.gcp.bigtable.serializers;
 import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.connector.sink2.SinkWriter;
 import org.apache.flink.table.api.DataTypes.Field;
+import org.apache.flink.table.data.DecimalData;
 import org.apache.flink.table.data.RowData;
+import org.apache.flink.table.data.StringData;
 import org.apache.flink.table.data.TimestampData;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.logical.DecimalType;
@@ -37,6 +39,8 @@ import com.google.protobuf.ByteString;
 import javax.annotation.Nullable;
 
 import java.nio.ByteBuffer;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.HashMap;
 
 import static org.apache.flink.table.types.logical.utils.LogicalTypeChecks.getPrecision;
@@ -281,6 +285,62 @@ public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer
             default:
                 throw new IllegalArgumentException(
                         ErrorMessages.UNSUPPORTED_SERIALIZATION_TYPE + type.getTypeRoot());
+        }
+    }
+
+    /**
+     * Converts a byte array to a field value based on its {@link LogicalType}.
+     *
+     * @param bytes The byte array to convert.
+     * @param type The {@link LogicalType} of the field.
+     * @return The field value converted from the byte array.
+     * @throws IllegalArgumentException If the Avro logical type is not supported.
+     */
+    public static Object convertBytesToField(byte[] bytes, LogicalType type) {
+        ByteBuffer buffer = ByteBuffer.wrap(bytes);
+        switch (type.getTypeRoot()) {
+            case CHAR:
+            case VARCHAR:
+                return StringData.fromBytes(bytes);
+            case BOOLEAN:
+                return buffer.get() != 0;
+            case TINYINT:
+            case SMALLINT:
+                return buffer.getShort();
+            case INTERVAL_YEAR_MONTH:
+            case INTEGER:
+                return buffer.getInt();
+            case INTERVAL_DAY_TIME:
+            case BIGINT:
+                return buffer.getLong();
+            case FLOAT:
+                return buffer.getFloat();
+            case DOUBLE:
+                return buffer.getDouble();
+            case VARBINARY:
+            case BINARY:
+                return bytes; // No conversion needed for binary types
+            case TIMESTAMP_WITH_TIME_ZONE:
+            case TIMESTAMP_WITHOUT_TIME_ZONE:
+            case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
+                {
+                    long milliseconds = buffer.getLong(0);
+                    int nanos = buffer.getInt(Long.BYTES);
+                    return TimestampData.fromEpochMillis(milliseconds, nanos);
+                }
+            case TIME_WITHOUT_TIME_ZONE:
+                int milliseconds = buffer.getInt();
+                return LocalTime.ofNanoOfDay(milliseconds * 1_000_000L);
+            case DATE:
+                long daysSinceEpoch = buffer.getLong();
+                return LocalDate.ofEpochDay(daysSinceEpoch);
+            case DECIMAL:
+                DecimalType decimalType = (DecimalType) type;
+                int precision = decimalType.getPrecision();
+                int scale = decimalType.getScale();
+                return DecimalData.fromUnscaledBytes(bytes, precision, scale);
+            default:
+                throw new IllegalArgumentException("Unsupported data type: " + type);
         }
     }
 

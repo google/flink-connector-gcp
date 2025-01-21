@@ -38,7 +38,7 @@ public class BigQueryCatalogFactory implements CatalogFactory {
         final Set<ConfigOption<?>> options = new HashSet<>();
         options.add(DEFAULT_DATASET);
         options.add(CREDENTIAL_FILE);
-        options.add(BIGQUERY_PROJECT); // Add this
+        options.add(BIGQUERY_PROJECT);
         return options;
     }
 
@@ -63,7 +63,7 @@ public class BigQueryCatalogFactory implements CatalogFactory {
             );
             LOG.info("BigQueryCatalog created successfully.");
             return catalog;
-        } catch (RuntimeException ex) { 
+        } catch (RuntimeException ex) {
             LOG.error("Unexpected runtime error during BigQueryCatalog creation: {}", ex.getMessage(), ex);
             return null;
         }

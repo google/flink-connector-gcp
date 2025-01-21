@@ -64,4 +64,36 @@ public class BigtableConnectorOptions {
                     .intType()
                     .noDefaultValue()
                     .withDescription("Sink parallelism");
+
+    public static final ConfigOption<Boolean> FLOW_CONTROL =
+            ConfigOptions.key("flow-control")
+                    .booleanType()
+                    .defaultValue(false)
+                    .withDescription(
+                            "Optional. Specifies the use of batch flow control for writing. Defaults to false.");
+
+    public static final ConfigOption<String> APP_PROFILE_ID =
+            ConfigOptions.key("app-profile-id")
+                    .stringType()
+                    .noDefaultValue()
+                    .withDescription("Optional. Specifies the App Profile Id used when writing.");
+
+    public static final ConfigOption<String> CREDENTIALS_FILE =
+            ConfigOptions.key("credentials-file")
+                    .stringType()
+                    .noDefaultValue()
+                    .withDescription("Optional. Specifies the GCP credentials file to use.");
+
+    public static final ConfigOption<String> CREDENTIALS_KEY =
+            ConfigOptions.key("credentials-key")
+                    .stringType()
+                    .noDefaultValue()
+                    .withDescription("Optional. Specifies the GCP credentials key to use.");
+
+    public static final ConfigOption<String> CREDENTIALS_ACCESS_TOKEN =
+            ConfigOptions.key("credentials-access-token")
+                    .stringType()
+                    .noDefaultValue()
+                    .withDescription(
+                            "Optional. Specifies the GCP access token to use as credentials.");
 }

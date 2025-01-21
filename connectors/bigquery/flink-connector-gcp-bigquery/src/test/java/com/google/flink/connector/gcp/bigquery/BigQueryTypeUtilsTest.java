@@ -1,93 +1,43 @@
 package com.google.flink.connector.gcp.bigquery;
 
-import com.google.api.services.bigquery.model.TableFieldSchema;
+import java.util.Arrays;
+import java.util.stream.Stream;
+
 import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.types.DataType;
 import org.junit.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import java.util.Arrays;
-
+import com.google.api.services.bigquery.model.TableFieldSchema;
 import static com.google.common.truth.Truth.assertThat;
 
 /** Tests for {@link BigQueryTypeUtils}. */
 public class BigQueryTypeUtilsTest {
 
-  @Test
-  public void testToFlinkTypeString() {
-    TableFieldSchema bigQueryField = new TableFieldSchema().setName("string_field").setType("STRING");
-    DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
-    assertThat(flinkType).isEqualTo(DataTypes.STRING());
-  }
+    static Stream<Object[]> testToFlinkTypeData() {
+        return Stream.of(
+                new Object[]{"STRING", DataTypes.STRING()},
+                new Object[]{"INTEGER", DataTypes.BIGINT()},
+                new Object[]{"BOOLEAN", DataTypes.BOOLEAN()},
+                new Object[]{"FLOAT", DataTypes.DOUBLE()},
+                new Object[]{"BYTES", DataTypes.BYTES()},
+                new Object[]{"DATE", DataTypes.DATE()},
+                new Object[]{"DATETIME", DataTypes.TIMESTAMP_LTZ()},
+                new Object[]{"TIME", DataTypes.TIME()},
+                new Object[]{"TIMESTAMP", DataTypes.TIMESTAMP_LTZ()},
+                new Object[]{"NUMERIC", DataTypes.DECIMAL(38, 9)},
+                new Object[]{"BIGNUMERIC", DataTypes.BYTES()}
+        );
+    }
 
-  @Test
-  public void testToFlinkTypeInt64() {
-    TableFieldSchema bigQueryField = new TableFieldSchema().setName("int64_field").setType("INTEGER");
-    DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
-    assertThat(flinkType).isEqualTo(DataTypes.BIGINT());
-  }
-
-  @Test
-  public void testToFlinkTypeBool() {
-    TableFieldSchema bigQueryField = new TableFieldSchema().setName("bool_field").setType("BOOLEAN");
-    DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
-    assertThat(flinkType).isEqualTo(DataTypes.BOOLEAN());
-  }
-
-  @Test
-  public void testToFlinkTypeFloat64() {
-    TableFieldSchema bigQueryField = new TableFieldSchema().setName("float64_field").setType("FLOAT");
-    DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
-    assertThat(flinkType).isEqualTo(DataTypes.DOUBLE());
-  }
-
-  @Test
-  public void testToFlinkTypeBytes() {
-    TableFieldSchema bigQueryField = new TableFieldSchema().setName("bytes_field").setType("BYTES");
-    DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
-    assertThat(flinkType).isEqualTo(DataTypes.BYTES());
-  }
-
-  @Test
-  public void testToFlinkTypeDate() {
-    TableFieldSchema bigQueryField = new TableFieldSchema().setName("date_field").setType("DATE");
-    DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
-    assertThat(flinkType).isEqualTo(DataTypes.DATE());
-  }
-
-  @Test
-  public void testToFlinkTypeDatetime() {
-    TableFieldSchema bigQueryField = new TableFieldSchema().setName("datetime_field").setType("DATETIME");
-    DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
-    assertThat(flinkType).isEqualTo(DataTypes.TIMESTAMP_LTZ());
-  }
-
-  @Test
-  public void testToFlinkTypeTime() {
-    TableFieldSchema bigQueryField = new TableFieldSchema().setName("time_field").setType("TIME");
-    DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
-    assertThat(flinkType).isEqualTo(DataTypes.TIME());
-  }
-
-  @Test
-  public void testToFlinkTypeTimestamp() {
-    TableFieldSchema bigQueryField = new TableFieldSchema().setName("timestamp_field").setType("TIMESTAMP");
-    DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
-    assertThat(flinkType).isEqualTo(DataTypes.TIMESTAMP_LTZ());
-  }
-
-  @Test
-  public void testToFlinkTypeNumeric() {
-    TableFieldSchema bigQueryField = new TableFieldSchema().setName("numeric_field").setType("NUMERIC");
-    DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
-    assertThat(flinkType).isEqualTo(DataTypes.DECIMAL(38, 9));
-  }
-
-  @Test
-  public void testToFlinkTypeBignumeric() {
-    TableFieldSchema bigQueryField = new TableFieldSchema().setName("bignumeric_field").setType("BIGNUMERIC");
-    DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
-    assertThat(flinkType).isEqualTo(DataTypes.BYTES());
-  }
+    @ParameterizedTest
+    @MethodSource("testToFlinkTypeData")
+    public void testToFlinkType(String bigQueryType, DataType expectedFlinkType) {
+        TableFieldSchema bigQueryField = new TableFieldSchema().setName(bigQueryType.toLowerCase() + "_field").setType(bigQueryType);
+        DataType flinkType = BigQueryTypeUtils.toFlinkType(bigQueryField);
+        assertThat(flinkType).isEqualTo(expectedFlinkType);
+    }
 
   @Test
   public void testToFlinkTypeStruct() {
