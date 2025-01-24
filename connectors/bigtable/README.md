@@ -25,7 +25,7 @@ The connector is available on [Maven repository](https://mvnrepository.com/artif
 
 ```
 <dependency>
-    <groupId>com.google.flink.connector.gcp.bigtable</groupId>
+    <groupId>com.google.flink.connector.gcp</groupId>
     <artifactId>flink-connector-gcp-bigtable</artifactId>
     <version>0.2.0</version>
 </dependency>
@@ -165,12 +165,14 @@ The following connector options are available:
 | `table` | (Required) The Bigtable table ID. |
 | `column-family` | The column family to write to (incompatible with `use-nested-rows-mode`). |
 | `use-nested-rows-mode` | Whether to use nested rows as column families (incompatible with `column-family`). |
-| `sink.parallelism` | (Optional) The parallelism of the sink. |
-| `flow-control` | (Optional) Specifies the use of batch flow control for writing. Defaults to `false`. |
-| `app-profile-id` | (Optional) Specifies the App Profile ID used when writing. |
-| `credentials-file` | (Optional) Specifies the GCP credentials file to use. |
-| `credentials-key` | (Optional) Specifies the GCP credentials key to use. |
-| `credentials-access-token` | (Optional) Specifies the GCP access token to use as credentials. |
+| `sink.parallelism` | The parallelism of the sink. |
+| `flow-control` | Specifies the use of batch flow control for writing. Defaults to `false`. |
+| `app-profile-id` | Specifies the App Profile ID used when writing. |
+| `credentials-file` | Specifies the GCP credentials file to use. |
+| `credentials-key` | Specifies the GCP credentials key to use. |
+| `credentials-access-token` | Specifies the GCP access token to use as credentials. |
+
+Either `column-family` or `use-nested-rows-mode` is required.
 
 ## Exactly Once
 
