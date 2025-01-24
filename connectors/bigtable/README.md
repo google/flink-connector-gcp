@@ -19,23 +19,23 @@ This is a connector for Bigtable Sink for Apache Flink.
 
 See the `flink-examples-gcp-bigtable` module for example pipelines demonstrating different use cases of the Flink Bigtable Connector.
 
-### Installation
+### Usage
 
-After cloning the repository, you need to install the connector:
-
-```
-cd connectors/bigtable
-mvn clean install -DskipTest
-```
-
-After the connector is installed, you should be able to import it from your **local Maven Repository**.
+The connector is available on [Maven repository](https://mvnrepository.com/artifact/com.google.flink.connector.gcp/flink-connector-gcp-bigtable):
 
 ```
 <dependency>
     <groupId>com.google.flink.connector.gcp.bigtable</groupId>
     <artifactId>flink-connector-gcp-bigtable</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.2.0</version>
 </dependency>
+```
+
+You can also install the connector directly after cloning the repository and import it from your local Maven Repository:
+
+```
+cd connectors/bigtable
+mvn clean install -DskipTest
 ```
 
 ## Serializers
@@ -165,7 +165,12 @@ The following connector options are available:
 | `table` | (Required) The Bigtable table ID. |
 | `column-family` | The column family to write to (incompatible with `use-nested-rows-mode`). |
 | `use-nested-rows-mode` | Whether to use nested rows as column families (incompatible with `column-family`). |
-| `sink.parallelism` | The parallelism of the sink. |
+| `sink.parallelism` | (Optional) The parallelism of the sink. |
+| `flow-control` | (Optional) Specifies the use of batch flow control for writing. Defaults to `false`. |
+| `app-profile-id` | (Optional) Specifies the App Profile ID used when writing. |
+| `credentials-file` | (Optional) Specifies the GCP credentials file to use. |
+| `credentials-key` | (Optional) Specifies the GCP credentials key to use. |
+| `credentials-access-token` | (Optional) Specifies the GCP access token to use as credentials. |
 
 ## Exactly Once
 
