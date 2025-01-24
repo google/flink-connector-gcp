@@ -19,7 +19,7 @@ This is a connector for Bigtable Sink for Apache Flink.
 
 See the `flink-examples-gcp-bigtable` module for example pipelines demonstrating different use cases of the Flink Bigtable Connector.
 
-### Usage
+### Instalation
 
 The connector is available on [Maven repository](https://mvnrepository.com/artifact/com.google.flink.connector.gcp/flink-connector-gcp-bigtable):
 
