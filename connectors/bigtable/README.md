@@ -168,9 +168,9 @@ The following connector options are available:
 | `sink.parallelism` | The parallelism of the sink. |
 | `flow-control` | Specifies the use of batch flow control for writing. Defaults to `false`. |
 | `app-profile-id` | Specifies the App Profile ID used when writing. |
-| `credentials-file` | Specifies the GCP credentials file to use. |
-| `credentials-key` | Specifies the GCP credentials key to use. |
-| `credentials-access-token` | Specifies the GCP access token to use as credentials. |
+| `credentials-file` | Specifies the Google Cloud credentials file to use. |
+| `credentials-key` | Specifies the Google Cloud credentials key to use. |
+| `credentials-access-token` | Specifies the Google Cloud access token to use as credentials. |
 
 Either `column-family` or `use-nested-rows-mode` is required.
 
