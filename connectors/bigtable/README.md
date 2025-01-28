@@ -21,21 +21,21 @@ See the `flink-examples-gcp-bigtable` module for example pipelines demonstrating
 
 ### Installation
 
-After cloning the repository, you need to install the connector:
+The connector is available on [Maven repository](https://mvnrepository.com/artifact/com.google.flink.connector.gcp/flink-connector-gcp-bigtable):
+
+```
+<dependency>
+    <groupId>com.google.flink.connector.gcp</groupId>
+    <artifactId>flink-connector-gcp-bigtable</artifactId>
+    <version>0.2.0</version>
+</dependency>
+```
+
+You can also install the connector directly after cloning the repository and import it from your local Maven Repository:
 
 ```
 cd connectors/bigtable
 mvn clean install -DskipTest
-```
-
-After the connector is installed, you should be able to import it from your **local Maven Repository**.
-
-```
-<dependency>
-    <groupId>com.google.flink.connector.gcp.bigtable</groupId>
-    <artifactId>flink-connector-gcp-bigtable</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
-</dependency>
 ```
 
 ## Serializers
@@ -166,6 +166,13 @@ The following connector options are available:
 | `column-family` | The column family to write to (incompatible with `use-nested-rows-mode`). |
 | `use-nested-rows-mode` | Whether to use nested rows as column families (incompatible with `column-family`). |
 | `sink.parallelism` | The parallelism of the sink. |
+| `flow-control` | Specifies the use of batch flow control for writing. Defaults to `false`. |
+| `app-profile-id` | Specifies the App Profile ID used when writing. |
+| `credentials-file` | Specifies the Google Cloud credentials file to use. |
+| `credentials-key` | Specifies the Google Cloud credentials key to use. |
+| `credentials-access-token` | Specifies the Google Cloud access token to use as credentials. |
+
+Either `column-family` or `use-nested-rows-mode` is required.
 
 ## Exactly Once
 
