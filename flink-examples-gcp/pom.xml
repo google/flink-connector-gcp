@@ -161,7 +161,7 @@ under the License.
     <dependency>
         <groupId>org.apache.kafka</groupId>
         <artifactId>kafka-clients</artifactId>
-        <version>3.4.0</version>
+        <version>3.7.1</version>
         <scope>compile</scope>
     </dependency>
     <dependency>
