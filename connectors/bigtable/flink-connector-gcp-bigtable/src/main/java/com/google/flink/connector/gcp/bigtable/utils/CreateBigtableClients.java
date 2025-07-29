@@ -18,6 +18,7 @@
 
 package com.google.flink.connector.gcp.bigtable.utils;
 
+import com.google.api.gax.batching.BatchingSettings;
 import org.apache.flink.FlinkVersion;
 
 import com.google.api.gax.rpc.FixedHeaderProvider;
@@ -43,11 +44,18 @@ public class CreateBigtableClients {
             String instance,
             Boolean flowControl,
             @Nullable String appProfileId,
-            @Nullable GoogleCredentials credentials)
+            @Nullable GoogleCredentials credentials,
+            long batchSize)
             throws IOException {
         BigtableDataSettings.Builder bigtableBuilder = BigtableDataSettings.newBuilder();
         bigtableBuilder.setProjectId(project).setInstanceId(instance);
         bigtableBuilder.setBulkMutationFlowControl(flowControl);
+        BatchingSettings batchingSettings = bigtableBuilder.stubSettings().bulkMutateRowsSettings().getBatchingSettings();
+        bigtableBuilder.stubSettings().bulkMutateRowsSettings().setBatchingSettings(
+                batchingSettings
+                        .toBuilder()
+                        .setElementCountThreshold(batchSize)
+                        .build());
 
         bigtableBuilder
                 .stubSettings()
