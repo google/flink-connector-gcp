@@ -45,17 +45,11 @@ public class CreateBigtableClients {
             Boolean flowControl,
             @Nullable String appProfileId,
             @Nullable GoogleCredentials credentials,
-            long batchSize)
+            @Nullable Long batchSize)
             throws IOException {
         BigtableDataSettings.Builder bigtableBuilder = BigtableDataSettings.newBuilder();
         bigtableBuilder.setProjectId(project).setInstanceId(instance);
         bigtableBuilder.setBulkMutationFlowControl(flowControl);
-        BatchingSettings batchingSettings = bigtableBuilder.stubSettings().bulkMutateRowsSettings().getBatchingSettings();
-        bigtableBuilder.stubSettings().bulkMutateRowsSettings().setBatchingSettings(
-                batchingSettings
-                        .toBuilder()
-                        .setElementCountThreshold(batchSize)
-                        .build());
 
         bigtableBuilder
                 .stubSettings()
@@ -68,6 +62,19 @@ public class CreateBigtableClients {
 
         if (credentials != null) {
             bigtableBuilder.setCredentialsProvider(() -> credentials);
+        }
+
+        if (batchSize != null) {
+            BatchingSettings batchingSettings =
+                    bigtableBuilder.stubSettings()
+                            .bulkMutateRowsSettings()
+                            .getBatchingSettings()
+                            .toBuilder()
+                            .setElementCountThreshold(batchSize)
+                            .build();
+
+            bigtableBuilder.stubSettings()
+                    .bulkMutateRowsSettings().setBatchingSettings(batchingSettings);
         }
 
         return BigtableDataClient.create(bigtableBuilder.build());

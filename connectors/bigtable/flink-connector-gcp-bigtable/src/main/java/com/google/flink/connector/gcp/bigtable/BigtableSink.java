@@ -56,15 +56,14 @@ public abstract class BigtableSink<T> implements Sink<T> {
 
     public abstract Boolean flowControl();
 
-    public abstract long batchSize();
-
     public abstract @Nullable String appProfileId();
 
     public abstract @Nullable GoogleCredentials credentials();
 
+    public abstract @Nullable Long batchSize();
 
     public static <T> Builder<T> builder() {
-        return new AutoValue_BigtableSink.Builder<T>().setFlowControl(false).setBatchSize(100);
+        return new AutoValue_BigtableSink.Builder<T>().setFlowControl(false);
     }
 
     private static final Logger logger = LoggerFactory.getLogger(BigtableSink.class);
