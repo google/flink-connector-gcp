@@ -60,6 +60,8 @@ public abstract class BigtableSink<T> implements Sink<T> {
 
     public abstract @Nullable GoogleCredentials credentials();
 
+    public abstract @Nullable Long batchSize();
+
     public static <T> Builder<T> builder() {
         return new AutoValue_BigtableSink.Builder<T>().setFlowControl(false);
     }
@@ -77,7 +79,7 @@ public abstract class BigtableSink<T> implements Sink<T> {
     public SinkWriter<T> createWriter(WriterInitContext sinkInitContext) throws IOException {
         BigtableDataClient client =
                 CreateBigtableClients.createDataClient(
-                        projectId(), instanceId(), flowControl(), appProfileId(), credentials());
+                        projectId(), instanceId(), flowControl(), appProfileId(), credentials(), batchSize());
 
         return new BigtableSinkWriter<T>(
                 new BigtableFlushableWriter(client, sinkInitContext, table()),
@@ -117,6 +119,9 @@ public abstract class BigtableSink<T> implements Sink<T> {
 
         /** Google Credentials for Bigtable. Optional. */
         public abstract Builder<T> setCredentials(GoogleCredentials credentials);
+
+        /** The number of elements to group in a batch. **/
+        public abstract Builder<T> setBatchSize(long batchSize);
 
         public abstract BigtableSink<T> build();
     }

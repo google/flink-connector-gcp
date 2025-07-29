@@ -49,6 +49,7 @@ public class BigtableSinkTest {
                         .setTable(TestingUtils.TABLE)
                         .setFlowControl(true)
                         .setAppProfileId(TestingUtils.APP_PROFILE)
+                        .setBatchSize(50)
                         .build();
 
         assertEquals(TestingUtils.PROJECT, sink.projectId());
@@ -56,6 +57,7 @@ public class BigtableSinkTest {
         assertEquals(TestingUtils.TABLE, sink.table());
         assertEquals(TestingUtils.APP_PROFILE, sink.appProfileId());
         assertTrue(sink.flowControl());
+        assertEquals(50L, (long) sink.batchSize());
         assertEquals(serializer, sink.serializer());
     }
 
@@ -78,5 +80,6 @@ public class BigtableSinkTest {
         assertFalse(sink.flowControl());
         assertEquals(serializer, sink.serializer());
         assertNull(sink.appProfileId());
+        assertNull(sink.batchSize());
     }
 }
