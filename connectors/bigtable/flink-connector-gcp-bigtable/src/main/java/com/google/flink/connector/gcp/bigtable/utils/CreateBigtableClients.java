@@ -70,6 +70,7 @@ public class CreateBigtableClients {
             bigtableBuilder.setCredentialsProvider(() -> credentials);
         }
 
+        System.out.println(bigtableBuilder.build());
         return BigtableDataClient.create(bigtableBuilder.build());
     }
 }

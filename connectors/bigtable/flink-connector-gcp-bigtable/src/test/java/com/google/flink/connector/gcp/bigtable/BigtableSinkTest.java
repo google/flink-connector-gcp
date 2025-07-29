@@ -21,12 +21,15 @@ package com.google.flink.connector.gcp.bigtable;
 import com.google.cloud.bigtable.data.v2.models.RowMutationEntry;
 import com.google.flink.connector.gcp.bigtable.serializers.FunctionRowMutationSerializer;
 import com.google.flink.connector.gcp.bigtable.testingutils.TestingUtils;
+import org.apache.flink.api.connector.sink2.SinkWriter;
+import org.apache.flink.api.connector.sink2.WriterInitContext;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
 
 /**
  * Unit tests for the {@link BigtableSink} class.
@@ -49,6 +52,7 @@ public class BigtableSinkTest {
                         .setTable(TestingUtils.TABLE)
                         .setFlowControl(true)
                         .setAppProfileId(TestingUtils.APP_PROFILE)
+                        .setBatchSize(50)
                         .build();
 
         assertEquals(TestingUtils.PROJECT, sink.projectId());
@@ -56,6 +60,7 @@ public class BigtableSinkTest {
         assertEquals(TestingUtils.TABLE, sink.table());
         assertEquals(TestingUtils.APP_PROFILE, sink.appProfileId());
         assertTrue(sink.flowControl());
+        assertEquals(50, sink.batchSize());
         assertEquals(serializer, sink.serializer());
     }
 
@@ -78,5 +83,6 @@ public class BigtableSinkTest {
         assertFalse(sink.flowControl());
         assertEquals(serializer, sink.serializer());
         assertNull(sink.appProfileId());
+        assertEquals(100, sink.batchSize());
     }
 }
