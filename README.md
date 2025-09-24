@@ -1,5 +1,14 @@
 # Apache Flink GCP Connectors
 
+## Connectors
+
+- Catalog support for the BigQuery connector ([GoogleCloudDataproc/flink-bigquery-connector](https://github.com/GoogleCloudDataproc/flink-bigquery-connector))
+- Bigtable sink
+    - Exactly once
+    - Table API
+    - DataStream API 
+    - Custom Serializers
+
 ## Examples
 
 You can find multiple examples that use GCP connectors in `flink-examples-gcp`. These are:
