@@ -68,12 +68,6 @@ public abstract class BigtableSink<T> implements Sink<T> {
 
     private static final Logger logger = LoggerFactory.getLogger(BigtableSink.class);
 
-    @Override
-    public SinkWriter<T> createWriter(Sink.InitContext sinkInitContext) throws IOException {
-        // https://nightlies.apache.org/flink/flink-docs-release-1.19/api/java/org/apache/flink/api/connector/sink2/Sink.InitContext.html
-        // Discussion: https://lists.apache.org/thread/ydjypynwrh56s7x64lo5jt5wofl4jgk9
-        throw new UnsupportedOperationException("Not supported. InitContext is deprecated");
-    }
 
     @Override
     public SinkWriter<T> createWriter(WriterInitContext sinkInitContext) throws IOException {
