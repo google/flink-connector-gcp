@@ -66,15 +66,18 @@ public class CreateBigtableClients {
 
         if (batchSize != null) {
             BatchingSettings batchingSettings =
-                    bigtableBuilder.stubSettings()
+                    bigtableBuilder
+                            .stubSettings()
                             .bulkMutateRowsSettings()
                             .getBatchingSettings()
                             .toBuilder()
                             .setElementCountThreshold(batchSize)
                             .build();
 
-            bigtableBuilder.stubSettings()
-                    .bulkMutateRowsSettings().setBatchingSettings(batchingSettings);
+            bigtableBuilder
+                    .stubSettings()
+                    .bulkMutateRowsSettings()
+                    .setBatchingSettings(batchingSettings);
         }
 
         return BigtableDataClient.create(bigtableBuilder.build());
