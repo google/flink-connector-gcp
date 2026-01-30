@@ -35,7 +35,6 @@ import org.apache.flink.types.Row;
 import static org.apache.flink.table.api.Expressions.$;
 import static org.apache.flink.table.api.Expressions.call;
 
-
 /** GCS to GCS Wordcount using TableAPI. */
 public class GCStoGCSTableApi {
 

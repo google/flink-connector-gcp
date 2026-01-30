@@ -18,7 +18,6 @@
 
 package com.google.flink.connector.gcp.bigtable.examples;
 
-import org.apache.flink.util.ParameterTool;
 import org.apache.flink.connector.datagen.table.DataGenConnectorOptions;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.DataTypes;
@@ -27,6 +26,7 @@ import org.apache.flink.table.api.Schema;
 import org.apache.flink.table.api.Table;
 import org.apache.flink.table.api.TableDescriptor;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
+import org.apache.flink.util.ParameterTool;
 
 import com.google.flink.connector.gcp.bigtable.table.config.BigtableConnectorOptions;
 
