@@ -18,9 +18,9 @@
 
 package com.google.flink.connector.gcp.bigtable.utils;
 
-import com.google.api.gax.batching.BatchingSettings;
 import org.apache.flink.FlinkVersion;
 
+import com.google.api.gax.batching.BatchingSettings;
 import com.google.api.gax.rpc.FixedHeaderProvider;
 import com.google.api.gax.rpc.HeaderProvider;
 import com.google.auth.oauth2.GoogleCredentials;

@@ -68,7 +68,6 @@ public abstract class BigtableSink<T> implements Sink<T> {
 
     private static final Logger logger = LoggerFactory.getLogger(BigtableSink.class);
 
-
     @Override
     public SinkWriter<T> createWriter(WriterInitContext sinkInitContext) throws IOException {
         BigtableDataClient client =
