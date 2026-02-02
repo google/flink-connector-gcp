@@ -30,3 +30,9 @@ Guidelines](https://opensource.google/conduct/).
 All submissions, including submissions by project members, require review. We
 use [GitHub pull requests](https://docs.github.com/articles/about-pull-requests)
 for this purpose.
+
+### Commit Messages
+
+Please structure your commit messages according to the
+[Conventional Commits specification](https://www.conventionalcommits.org). This
+helps automate our release process and keeps the commit history clear.
