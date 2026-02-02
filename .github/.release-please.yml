@@ -1,4 +1,4 @@
-handleGHRelease: false
+handleGHRelease: true
 manifest: true
 monorepoTags: true
 primaryBranch: main
