@@ -1,0 +1,14 @@
+{
+  "bootstrap-sha": "ac0f5f2204c9dd3ba6bb805395eb62b6669e3aeb",
+  "packages": {
+    "connectors/bigtable/flink-connector-gcp-bigtable": {
+      "release-type": "java-yoshi"
+    },
+    "connectors/bigtable/flink-examples-gcp-bigtable": {
+      "release-type": "java-yoshi"
+    },
+    "connectors/bigtable": {
+        "release-type": "java-yoshi"
+    }
+  }
+}

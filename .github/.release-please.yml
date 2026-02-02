@@ -1,0 +1,6 @@
+handleGHRelease: false
+manifest: true
+monorepoTags: true
+primaryBranch: main
+manifestFile: .github/.release-please-manifest.json
+manifestConfig: .github/release-please-config.json
