@@ -7,5 +7,6 @@ my*.yaml
 *.txt
 !LICENSE.txt
 !words.txt
+!versions.txt
 schema.json
 .idea/
