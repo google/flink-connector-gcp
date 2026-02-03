@@ -1,5 +1,3 @@
 {
-  "connectors/bigtable/flink-connector-gcp-bigtable": "0.2.0",
-  "connectors/bigtable/flink-examples-gcp-bigtable": "0.2.0",
   "connectors/bigtable": "0.2.0"
 }
