@@ -27,9 +27,11 @@ The connector is available on [Maven repository](https://mvnrepository.com/artif
 <dependency>
     <groupId>com.google.flink.connector.gcp</groupId>
     <artifactId>flink-connector-gcp-bigtable</artifactId>
-    <version>0.2.0</version>
+    <version>VERSION_HERE</version>
 </dependency>
 ```
+
+**The latest version is: `0.2.0`**.
 
 You can also install the connector directly after cloning the repository and import it from your local Maven Repository:
 
