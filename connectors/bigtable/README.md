@@ -171,6 +171,7 @@ The following connector options are available:
 | `credentials-file` | Specifies the Google Cloud credentials file to use. |
 | `credentials-key` | Specifies the Google Cloud credentials key to use. |
 | `credentials-access-token` | Specifies the Google Cloud access token to use as credentials. |
+| `batchSize` | The number of elements to group in a batch. |
 
 Either `column-family` or `use-nested-rows-mode` is required.
 
