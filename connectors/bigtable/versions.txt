@@ -1,6 +1,6 @@
 # Format:
 # module:released-version:current-version
 
-flink-connector-bigtable-parent:0.2.0:0.2.1-SNAPSHOT
-flink-connector-gcp-bigtable:0.2.0:0.2.1-SNAPSHOT
-flink-examples-gcp-bigtable:0.2.0:0.2.1-SNAPSHOT
+flink-connector-bigtable-parent:0.3.0:0.3.0
+flink-connector-gcp-bigtable:0.3.0:0.3.0
+flink-examples-gcp-bigtable:0.3.0:0.3.0
