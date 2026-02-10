@@ -21,7 +21,7 @@ See the `flink-examples-gcp-bigtable` module for example pipelines demonstrating
 
 ### Installation
 
-The connector is available on [Maven repository](https://mvnrepository.com/artifact/com.google.flink.connector.gcp/flink-connector-gcp-bigtable). **The latest version is: `0.3.2`**.
+The connector is available on [Maven repository](https://mvnrepository.com/artifact/com.google.flink.connector.gcp/flink-connector-gcp-bigtable). **The latest version is: `0.3.3`**.
 
 ```
 <dependency>
