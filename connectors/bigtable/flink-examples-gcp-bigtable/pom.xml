@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.google.flink.connector.gcp</groupId>
         <artifactId>flink-connector-bigtable-parent</artifactId>
-        <version>0.3.0</version><!-- {x-version-update:flink-connector-bigtable-parent:current} -->
+        <version>0.3.1-SNAPSHOT</version><!-- {x-version-update:flink-connector-bigtable-parent:current} -->
     </parent>
 
     <name>Bigtable Flink Connector Examples</name>
