@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/google/flink-connector-gcp/compare/v0.3.1...v0.3.2) (2026-02-10)
+
+
+### Documentation
+
+* updating connectors/bigtable version number ([3681a46](https://github.com/google/flink-connector-gcp/commit/3681a46a31c8bb5401f71198a9b4d4f09e164ec7))
+
 ## [0.3.1](https://github.com/google/flink-connector-gcp/compare/v0.3.0...v0.3.1) (2026-02-10)
 
 
