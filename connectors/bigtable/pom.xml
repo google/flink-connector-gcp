@@ -10,7 +10,7 @@
     It provides a unified approach for writing data to Google Cloud Bigtable using Apache Flink.</description>
     <url>https://github.com/google/flink-connector-gcp/tree/main/connectors/bigtable</url>
     <artifactId>flink-connector-bigtable-parent</artifactId>
-    <version>0.3.2-SNAPSHOT</version><!-- {x-version-update:flink-connector-bigtable-parent:current} -->
+    <version>0.3.2</version><!-- {x-version-update:flink-connector-bigtable-parent:current} -->
     <modules>
         <module>flink-connector-gcp-bigtable</module>
         <module>flink-examples-gcp-bigtable</module>
