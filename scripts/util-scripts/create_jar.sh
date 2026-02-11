@@ -29,4 +29,4 @@ echo "Building JAR"
 mvn -f ../../flink-examples-gcp/ clean package
 
 echo "Uploading JAR to $jar_uri"
-gsutil cp ../../flink-examples-gcp/target/flink-examples-gcp-0.0.0-shaded.jar "$jar_uri"
+gcloud storage cp ../../flink-examples-gcp/target/flink-examples-gcp-0.0.0-shaded.jar "$jar_uri"
