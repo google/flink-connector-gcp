@@ -20,6 +20,8 @@ package com.google.flink.connector.gcp.bigtable.table;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.configuration.ConfigOption;
+import org.apache.flink.configuration.ReadableConfig;
+import org.apache.flink.table.api.ValidationException;
 import org.apache.flink.table.connector.sink.DynamicTableSink;
 import org.apache.flink.table.factories.DynamicTableSinkFactory;
 import org.apache.flink.table.factories.FactoryUtil;
@@ -62,6 +64,7 @@ public class BigtableDynamicTableFactory implements DynamicTableSinkFactory {
         additionalOptions.add(BigtableConnectorOptions.CREDENTIALS_FILE);
         additionalOptions.add(BigtableConnectorOptions.CREDENTIALS_KEY);
         additionalOptions.add(BigtableConnectorOptions.CREDENTIALS_ACCESS_TOKEN);
+        additionalOptions.add(BigtableConnectorOptions.CHANGELOG_MODE);
 
         return additionalOptions;
     }
@@ -73,7 +76,41 @@ public class BigtableDynamicTableFactory implements DynamicTableSinkFactory {
 
         helper.validate();
 
+        final ReadableConfig tableOptions = helper.getOptions();
+        final String changelogMode =
+                tableOptions.get(BigtableConnectorOptions.CHANGELOG_MODE);
+
+        validateChangelogMode(changelogMode, context);
+
         return new BigtableDynamicTableSink(
-                context.getCatalogTable().getResolvedSchema(), helper.getOptions());
+                context.getCatalogTable().getResolvedSchema(), tableOptions);
+    }
+
+    private static void validateChangelogMode(String changelogMode, Context context) {
+        if (!"insert-only".equals(changelogMode)
+                && !"upsert".equals(changelogMode)
+                && !"all".equals(changelogMode)) {
+            throw new ValidationException(
+                    String.format(
+                            "Invalid 'changelog-mode' value '%s'. "
+                                    + "Supported values are: 'insert-only', 'upsert', 'all'.",
+                            changelogMode));
+        }
+
+        if (!"insert-only".equals(changelogMode)) {
+            int[] primaryKeyIndexes =
+                    context.getCatalogTable()
+                            .getResolvedSchema()
+                            .getPrimaryKeyIndexes();
+            if (primaryKeyIndexes.length == 0) {
+                throw new ValidationException(
+                        String.format(
+                                "'bigtable' connector with changelog-mode '%s' requires a "
+                                        + "PRIMARY KEY to be defined. The PRIMARY KEY specifies "
+                                        + "which columns map to the Bigtable row key and "
+                                        + "determines how records are updated or deleted.",
+                                changelogMode));
+            }
+        }
     }
 }

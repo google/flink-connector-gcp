@@ -96,7 +96,15 @@ public class BigtableDynamicTableSink implements DynamicTableSink {
 
     @Override
     public ChangelogMode getChangelogMode(ChangelogMode requestedMode) {
-        return ChangelogMode.insertOnly();
+        String mode = connectorOptions.get(BigtableConnectorOptions.CHANGELOG_MODE);
+        switch (mode) {
+            case "upsert":
+                return ChangelogMode.upsert();
+            case "all":
+                return ChangelogMode.all();
+            default:
+                return ChangelogMode.insertOnly();
+        }
     }
 
     @Override
@@ -106,7 +114,13 @@ public class BigtableDynamicTableSink implements DynamicTableSink {
         RowDataToRowMutationSerializer.Builder serializerBuilder =
                 RowDataToRowMutationSerializer.builder()
                         .withSchema(physicalSchema)
-                        .withRowKeyField(this.rowKeyField);
+                        .withRowKeyField(this.rowKeyField)
+                        .withUpsertMode(
+                                !"insert-only"
+                                        .equals(
+                                                connectorOptions.get(
+                                                        BigtableConnectorOptions
+                                                                .CHANGELOG_MODE)));
 
         if (connectorOptions.get(BigtableConnectorOptions.USE_NESTED_ROWS_MODE)) {
             serializerBuilder.withNestedRowsMode();

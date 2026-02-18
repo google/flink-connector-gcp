@@ -30,6 +30,8 @@ import org.apache.flink.table.factories.utils.FactoryMocks;
 import com.google.flink.connector.gcp.bigtable.table.config.BigtableConnectorOptions;
 import com.google.flink.connector.gcp.bigtable.testingutils.TestingUtils;
 import com.google.flink.connector.gcp.bigtable.utils.ErrorMessages;
+import org.apache.flink.table.connector.ChangelogMode;
+import org.apache.flink.types.RowKind;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -315,6 +317,102 @@ public class BigtableTableTest {
                                 "integer-key", Arrays.asList(TestingUtils.INTEGER_FIELD)),
                         String.format(
                                 ErrorMessages.ROW_KEY_STRING_TYPE_TEMPLATE, DataTypes.INT())));
+    }
+
+    @Test
+    public void testUpsertModeChangelogMode() throws IOException {
+        Map<String, String> options = getRequiredOptions();
+        options.put(BigtableConnectorOptions.COLUMN_FAMILY.key(), TestingUtils.COLUMN_FAMILY);
+        options.put(BigtableConnectorOptions.CHANGELOG_MODE.key(), "upsert");
+
+        ResolvedSchema schema = getResolvedSchema(false);
+
+        BigtableDynamicTableSink sink =
+                (BigtableDynamicTableSink) FactoryMocks.createTableSink(schema, options);
+
+        ChangelogMode changelogMode = sink.getChangelogMode(ChangelogMode.insertOnly());
+        assertTrue(changelogMode.contains(RowKind.INSERT));
+        assertTrue(changelogMode.contains(RowKind.UPDATE_AFTER));
+        assertTrue(changelogMode.contains(RowKind.DELETE));
+        assertFalse(changelogMode.contains(RowKind.UPDATE_BEFORE));
+    }
+
+    @Test
+    public void testAllModeChangelogMode() throws IOException {
+        Map<String, String> options = getRequiredOptions();
+        options.put(BigtableConnectorOptions.COLUMN_FAMILY.key(), TestingUtils.COLUMN_FAMILY);
+        options.put(BigtableConnectorOptions.CHANGELOG_MODE.key(), "all");
+
+        ResolvedSchema schema = getResolvedSchema(false);
+
+        BigtableDynamicTableSink sink =
+                (BigtableDynamicTableSink) FactoryMocks.createTableSink(schema, options);
+
+        ChangelogMode changelogMode = sink.getChangelogMode(ChangelogMode.insertOnly());
+        assertTrue(changelogMode.contains(RowKind.INSERT));
+        assertTrue(changelogMode.contains(RowKind.UPDATE_AFTER));
+        assertTrue(changelogMode.contains(RowKind.DELETE));
+        assertTrue(changelogMode.contains(RowKind.UPDATE_BEFORE));
+    }
+
+    @Test
+    public void testNonUpsertModeChangelogMode() throws IOException {
+        Map<String, String> options = getRequiredOptions();
+        options.put(BigtableConnectorOptions.COLUMN_FAMILY.key(), TestingUtils.COLUMN_FAMILY);
+
+        ResolvedSchema schema = getResolvedSchema(false);
+
+        BigtableDynamicTableSink sink =
+                (BigtableDynamicTableSink) FactoryMocks.createTableSink(schema, options);
+
+        ChangelogMode changelogMode = sink.getChangelogMode(ChangelogMode.insertOnly());
+        assertTrue(changelogMode.contains(RowKind.INSERT));
+        assertFalse(changelogMode.contains(RowKind.UPDATE_AFTER));
+        assertFalse(changelogMode.contains(RowKind.DELETE));
+    }
+
+    @Test
+    public void testChangelogModeWithoutPrimaryKeyThrows() throws IOException {
+        Map<String, String> options = getRequiredOptions();
+        options.put(BigtableConnectorOptions.COLUMN_FAMILY.key(), TestingUtils.COLUMN_FAMILY);
+        options.put(BigtableConnectorOptions.CHANGELOG_MODE.key(), "upsert");
+
+        ResolvedSchema schemaWithoutPK =
+                new ResolvedSchema(SCHEMA_LIST, Collections.emptyList(), null);
+
+        Assertions.assertThatThrownBy(
+                        () -> FactoryMocks.createTableSink(schemaWithoutPK, options))
+                .hasStackTraceContaining("requires a PRIMARY KEY");
+    }
+
+    @Test
+    public void testInvalidChangelogModeThrows() throws IOException {
+        Map<String, String> options = getRequiredOptions();
+        options.put(BigtableConnectorOptions.COLUMN_FAMILY.key(), TestingUtils.COLUMN_FAMILY);
+        options.put(BigtableConnectorOptions.CHANGELOG_MODE.key(), "bogus");
+
+        ResolvedSchema schema = getResolvedSchema(false);
+
+        Assertions.assertThatThrownBy(
+                        () -> FactoryMocks.createTableSink(schema, options))
+                .hasStackTraceContaining("Invalid 'changelog-mode' value 'bogus'");
+    }
+
+    @Test
+    public void testChangelogModeCopy() {
+        Map<String, String> options = getRequiredOptions();
+        options.put(BigtableConnectorOptions.COLUMN_FAMILY.key(), TestingUtils.COLUMN_FAMILY);
+        options.put(BigtableConnectorOptions.CHANGELOG_MODE.key(), "upsert");
+
+        ResolvedSchema schema = getResolvedSchema(false);
+
+        BigtableDynamicTableSink sink =
+                (BigtableDynamicTableSink) FactoryMocks.createTableSink(schema, options);
+        BigtableDynamicTableSink sink2 =
+                (BigtableDynamicTableSink) FactoryMocks.createTableSink(schema, options);
+
+        assertEquals(sink2, sink.copy());
+        assertTrue(sink2.equals(sink.copy()));
     }
 
     private static ResolvedSchema getResolvedSchema(Boolean useNestedRowsMode) {

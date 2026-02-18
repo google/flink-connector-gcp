@@ -27,6 +27,7 @@ import org.apache.flink.table.data.TimestampData;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.logical.DecimalType;
 import org.apache.flink.table.types.logical.LogicalType;
+import org.apache.flink.types.RowKind;
 
 import com.google.cloud.bigtable.data.v2.models.RowMutationEntry;
 import com.google.flink.connector.gcp.bigtable.testingutils.TestingUtils;
@@ -45,6 +46,8 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit tests for the {@link GenericRecordToRowMutationSerializer} class.
@@ -367,6 +370,102 @@ public class RowDataTest {
                     getObject(row, i, type),
                     RowDataToRowMutationSerializer.convertBytesToField(convertedBytes, type));
         }
+    }
+
+    @Test
+    public void testUpsertModeInsertRow() {
+        RowDataToRowMutationSerializer serializer = createUpsertSerializer();
+
+        GenericRowData row = createSimpleRow();
+        row.setRowKind(RowKind.INSERT);
+
+        RowMutationEntry entry = serializer.serialize(row, null);
+        RowMutationEntry wantedEntry = TestingUtils.getTestRowMutationEntry(false);
+        TestingUtils.assertRowMutationEntryEquality(entry, wantedEntry);
+    }
+
+    @Test
+    public void testUpsertModeUpdateAfterRow() {
+        RowDataToRowMutationSerializer serializer = createUpsertSerializer();
+
+        GenericRowData row = createSimpleRow();
+        row.setRowKind(RowKind.UPDATE_AFTER);
+
+        RowMutationEntry entry = serializer.serialize(row, null);
+        RowMutationEntry wantedEntry = TestingUtils.getTestRowMutationEntry(false);
+        TestingUtils.assertRowMutationEntryEquality(entry, wantedEntry);
+    }
+
+    @Test
+    public void testUpsertModeUpdateBeforeReturnsNull() {
+        RowDataToRowMutationSerializer serializer = createUpsertSerializer();
+
+        GenericRowData row = createSimpleRow();
+        row.setRowKind(RowKind.UPDATE_BEFORE);
+
+        RowMutationEntry entry = serializer.serialize(row, null);
+        assertEquals(null, entry);
+    }
+
+    @Test
+    public void testUpsertModeDeleteRow() {
+        RowDataToRowMutationSerializer serializer = createUpsertSerializer();
+
+        GenericRowData row = createSimpleRow();
+        row.setRowKind(RowKind.DELETE);
+
+        RowMutationEntry entry = serializer.serialize(row, null);
+
+        // Verify the row key is correct
+        assertEquals(
+                TestingUtils.ROW_KEY_VALUE,
+                entry.toProto().getRowKey().toStringUtf8());
+        // Verify that the mutation is a deleteFromRow (not a setCell)
+        assertTrue(entry.toProto().getMutations(0).hasDeleteFromRow());
+    }
+
+    @Test
+    public void testNonUpsertModeIgnoresRowKind() {
+        // In non-upsert mode, DELETE RowKind should NOT produce a delete mutation;
+        // it should still serialize normally (existing insert-only behavior).
+        RowDataToRowMutationSerializer serializer = createTestSerializer(false);
+
+        GenericRowData row = createSimpleRow();
+        row.setRowKind(RowKind.DELETE);
+
+        RowMutationEntry entry = serializer.serialize(row, null);
+        // Should have normal setCell mutations, not deleteRow
+        RowMutationEntry wantedEntry = TestingUtils.getTestRowMutationEntry(false);
+        TestingUtils.assertRowMutationEntryEquality(entry, wantedEntry);
+    }
+
+    @Test
+    public void testUpsertModeBuilderSetsFlag() {
+        RowDataToRowMutationSerializer serializer = createUpsertSerializer();
+        assertTrue(serializer.upsertMode);
+    }
+
+    @Test
+    public void testNonUpsertModeBuilderDefault() {
+        RowDataToRowMutationSerializer serializer = createTestSerializer(false);
+        assertFalse(serializer.upsertMode);
+    }
+
+    private RowDataToRowMutationSerializer createUpsertSerializer() {
+        return RowDataToRowMutationSerializer.builder()
+                .withRowKeyField(TestingUtils.ROW_KEY_FIELD)
+                .withColumnFamily(TestingUtils.COLUMN_FAMILY)
+                .withSchema(dtSchema)
+                .withUpsertMode(true)
+                .build();
+    }
+
+    private static GenericRowData createSimpleRow() {
+        GenericRowData r = new GenericRowData(3);
+        r.setField(0, StringData.fromString(TestingUtils.ROW_KEY_VALUE));
+        r.setField(1, StringData.fromString(TestingUtils.STRING_VALUE));
+        r.setField(2, TestingUtils.INTEGER_VALUE);
+        return r;
     }
 
     private RowDataToRowMutationSerializer createTestSerializer(Boolean useNestedRows) {
