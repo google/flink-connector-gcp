@@ -74,7 +74,9 @@ jobs:
       MVN_BUILD_OUTPUT_FILE: "/tmp/mvn_build_output.out"
       MVN_VALIDATION_DIR: "/tmp/flink-validation-deployment"
     steps:
-      - run: echo "Running CI pipeline for JDK version ${{ matrix.jdk }}"
+      - run: echo "Running CI pipeline for JDK version ${MATRIX_JDK}"
+        env:
+          MATRIX_JDK: ${{ matrix.jdk }}
 
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -99,18 +101,20 @@ jobs:
 
       - name: "Enable optional maven profiles"
         if: ${{ inputs.optional_maven_profiles }}
-        run: echo "MVN_COMMON_OPTIONS=${MVN_COMMON_OPTIONS} -P ${{ inputs.optional_maven_profiles }}" >> $GITHUB_ENV
+        run: echo "MVN_COMMON_OPTIONS=${MVN_COMMON_OPTIONS} -P ${INPUTS_OPTIONAL_MAVEN_PROFILES}" >> $GITHUB_ENV
+        env:
+          INPUTS_OPTIONAL_MAVEN_PROFILES: ${{ inputs.optional_maven_profiles }}
 
       - name: "Determine Flink binary url"
         run: |
-          binary_url=${{ inputs.flink_url }}
+          binary_url=${INPUTS_FLINK_URL}
           cache_binary=${{ inputs.cache_flink_binary }}
           if [ "$binary_url" = "" ]; then
-            if [[ "${{ inputs.flink_version }}" = *-SNAPSHOT ]]; then
-              binary_url=https://s3.amazonaws.com/flink-nightly/flink-${{ inputs.flink_version }}-bin-scala_2.12.tgz
+            if [[ "${INPUTS_FLINK_VERSION}" = *-SNAPSHOT ]]; then
+              binary_url=https://s3.amazonaws.com/flink-nightly/flink-${INPUTS_FLINK_VERSION}-bin-scala_2.12.tgz
               cache_binary=false
             else
-              binary_url=https://archive.apache.org/dist/flink/flink-${{ inputs.flink_version }}/flink-${{ inputs.flink_version }}-bin-scala_2.12.tgz
+              binary_url=https://archive.apache.org/dist/flink/flink-${INPUTS_FLINK_VERSION}/flink-${INPUTS_FLINK_VERSION}-bin-scala_2.12.tgz
               cache_binary=true
             fi
           else
@@ -121,9 +125,12 @@ jobs:
           fi
           echo "binary_url=$binary_url" >> ${GITHUB_ENV}
           echo "cache_binary=$cache_binary" >> ${GITHUB_ENV}
+        env:
+          INPUTS_FLINK_URL: ${{ inputs.flink_url }}
+          INPUTS_FLINK_VERSION: ${{ inputs.flink_version }}
 
       - name: "Print Flink binary url / caching"
-        run: echo "${{ env.binary_url }} / caching=${{ env.cache_binary }}"
+        run: echo "${BINARY_URL} / caching=${CACHE_BINARY}"
 
       - name: Create cache dirs
         run: mkdir -p ${{ env.FLINK_CACHE_DIR }}
@@ -139,7 +146,7 @@ jobs:
       - name: Download Flink binary
         working-directory: ${{ env.FLINK_CACHE_DIR }}
         if: steps.restore-cache-flink.outputs.cache-hit != 'true'
-        run: wget -q -c ${{ env.binary_url }} -O - | tar -xz
+        run: wget -q -c ${BINARY_URL} -O - | tar -xz
 
       - name: Cache Flink binary
         if: ${{ env.cache_binary == 'true' }}
@@ -157,11 +164,13 @@ jobs:
           mvn clean deploy ${MVN_COMMON_OPTIONS} \
             -DaltDeploymentRepository=validation_repository::default::file:${{ env.MVN_VALIDATION_DIR }} \
             -Dscala-2.12 \
-            -Prun-end-to-end-tests -DdistDir=${{ env.FLINK_CACHE_DIR }}/flink-${{ inputs.flink_version }} \
-            ${{ env.MVN_DEPENDENCY_CONVERGENCE }} \
+            -Prun-end-to-end-tests -DdistDir=${{ env.FLINK_CACHE_DIR }}/flink-${INPUTS_FLINK_VERSION} \
+            ${MVN_DEPENDENCY_CONVERGENCE} \
             ${{ env.MVN_CONNECTION_OPTIONS }} \
             -Dlog4j.configurationFile=file://$(pwd)/tools/ci/log4j.properties \
             | tee ${{ env.MVN_BUILD_OUTPUT_FILE }}
+        env:
+          INPUTS_FLINK_VERSION: ${{ inputs.flink_version }}
 
       - name: Check licensing
         run: |
