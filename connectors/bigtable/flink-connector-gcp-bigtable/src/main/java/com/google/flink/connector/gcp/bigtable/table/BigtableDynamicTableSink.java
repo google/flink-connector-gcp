@@ -119,8 +119,7 @@ public class BigtableDynamicTableSink implements DynamicTableSink {
                                 !"insert-only"
                                         .equals(
                                                 connectorOptions.get(
-                                                        BigtableConnectorOptions
-                                                                .CHANGELOG_MODE)));
+                                                        BigtableConnectorOptions.CHANGELOG_MODE)));
 
         if (connectorOptions.get(BigtableConnectorOptions.USE_NESTED_ROWS_MODE)) {
             serializerBuilder.withNestedRowsMode();

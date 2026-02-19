@@ -54,7 +54,10 @@ public class BigtableSinkWriter<T> implements SinkWriter<T> {
                 context.metricGroup().counter("numSerializationErrorsCounter");
     }
 
-    /** Serializes and collects elements. Null entries (e.g. UPDATE_BEFORE in upsert mode) are skipped. */
+    /**
+     * Serializes and collects elements. Null entries (e.g. UPDATE_BEFORE in upsert mode) are
+     * skipped.
+     */
     @Override
     public void write(T element, Context context) throws InterruptedException {
         RowMutationEntry entry;

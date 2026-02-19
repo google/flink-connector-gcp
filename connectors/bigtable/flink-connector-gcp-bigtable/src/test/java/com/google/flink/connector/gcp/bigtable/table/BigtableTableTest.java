@@ -23,15 +23,15 @@ import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.catalog.Column;
 import org.apache.flink.table.catalog.ResolvedSchema;
 import org.apache.flink.table.catalog.UniqueConstraint;
+import org.apache.flink.table.connector.ChangelogMode;
 import org.apache.flink.table.factories.DynamicTableFactory;
 import org.apache.flink.table.factories.FactoryUtil;
 import org.apache.flink.table.factories.utils.FactoryMocks;
+import org.apache.flink.types.RowKind;
 
 import com.google.flink.connector.gcp.bigtable.table.config.BigtableConnectorOptions;
 import com.google.flink.connector.gcp.bigtable.testingutils.TestingUtils;
 import com.google.flink.connector.gcp.bigtable.utils.ErrorMessages;
-import org.apache.flink.table.connector.ChangelogMode;
-import org.apache.flink.types.RowKind;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -380,8 +380,7 @@ public class BigtableTableTest {
         ResolvedSchema schemaWithoutPK =
                 new ResolvedSchema(SCHEMA_LIST, Collections.emptyList(), null);
 
-        Assertions.assertThatThrownBy(
-                        () -> FactoryMocks.createTableSink(schemaWithoutPK, options))
+        Assertions.assertThatThrownBy(() -> FactoryMocks.createTableSink(schemaWithoutPK, options))
                 .hasStackTraceContaining("requires a PRIMARY KEY");
     }
 
@@ -393,8 +392,7 @@ public class BigtableTableTest {
 
         ResolvedSchema schema = getResolvedSchema(false);
 
-        Assertions.assertThatThrownBy(
-                        () -> FactoryMocks.createTableSink(schema, options))
+        Assertions.assertThatThrownBy(() -> FactoryMocks.createTableSink(schema, options))
                 .hasStackTraceContaining("Invalid 'changelog-mode' value 'bogus'");
     }
 

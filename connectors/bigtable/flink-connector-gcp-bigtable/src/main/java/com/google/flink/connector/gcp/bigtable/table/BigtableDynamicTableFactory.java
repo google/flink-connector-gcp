@@ -77,8 +77,7 @@ public class BigtableDynamicTableFactory implements DynamicTableSinkFactory {
         helper.validate();
 
         final ReadableConfig tableOptions = helper.getOptions();
-        final String changelogMode =
-                tableOptions.get(BigtableConnectorOptions.CHANGELOG_MODE);
+        final String changelogMode = tableOptions.get(BigtableConnectorOptions.CHANGELOG_MODE);
 
         validateChangelogMode(changelogMode, context);
 
@@ -99,9 +98,7 @@ public class BigtableDynamicTableFactory implements DynamicTableSinkFactory {
 
         if (!"insert-only".equals(changelogMode)) {
             int[] primaryKeyIndexes =
-                    context.getCatalogTable()
-                            .getResolvedSchema()
-                            .getPrimaryKeyIndexes();
+                    context.getCatalogTable().getResolvedSchema().getPrimaryKeyIndexes();
             if (primaryKeyIndexes.length == 0) {
                 throw new ValidationException(
                         String.format(

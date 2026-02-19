@@ -417,9 +417,7 @@ public class RowDataTest {
         RowMutationEntry entry = serializer.serialize(row, null);
 
         // Verify the row key is correct
-        assertEquals(
-                TestingUtils.ROW_KEY_VALUE,
-                entry.toProto().getRowKey().toStringUtf8());
+        assertEquals(TestingUtils.ROW_KEY_VALUE, entry.toProto().getRowKey().toStringUtf8());
         // Verify that the mutation is a deleteFromRow (not a setCell)
         assertTrue(entry.toProto().getMutations(0).hasDeleteFromRow());
     }
