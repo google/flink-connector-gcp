@@ -30,6 +30,7 @@ import org.apache.flink.table.types.logical.DecimalType;
 import org.apache.flink.table.types.logical.LogicalType;
 import org.apache.flink.table.types.logical.LogicalTypeFamily;
 import org.apache.flink.table.types.logical.LogicalTypeRoot;
+import org.apache.flink.types.RowKind;
 
 import com.google.cloud.bigtable.data.v2.models.RowMutationEntry;
 import com.google.flink.connector.gcp.bigtable.utils.BigtableUtils;
@@ -68,6 +69,7 @@ public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer
     public Boolean useNestedRowsMode;
     public String rowKeyField;
     public Integer rowKeyIndex;
+    public final boolean upsertMode;
 
     private final HashMap<String, DataType> columnTypeMap = new HashMap<String, DataType>();
     private final HashMap<Integer, String> indexMap = new HashMap<Integer, String>();
@@ -96,10 +98,12 @@ public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer
             DataType schema,
             String rowKeyField,
             Boolean useNestedRowsMode,
-            @Nullable String columnFamily) {
+            @Nullable String columnFamily,
+            boolean upsertMode) {
         this.columnFamily = columnFamily;
         this.useNestedRowsMode = useNestedRowsMode;
         this.rowKeyField = rowKeyField;
+        this.upsertMode = upsertMode;
 
         // Go through schema to generate maps
         generateMapsFromSchema(schema, rowKeyField);
@@ -112,8 +116,23 @@ public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer
 
     @Override
     public RowMutationEntry serialize(RowData record, SinkWriter.Context context) {
-        RowMutationEntry entry =
-                RowMutationEntry.create(record.getString(this.rowKeyIndex).toString());
+        String rowKey = record.getString(this.rowKeyIndex).toString();
+
+        if (upsertMode) {
+            RowKind kind = record.getRowKind();
+            if (kind == RowKind.DELETE) {
+                // Delete the entire row from Bigtable
+                return RowMutationEntry.create(rowKey).deleteRow();
+            }
+            if (kind == RowKind.UPDATE_BEFORE) {
+                // Skip UPDATE_BEFORE; the UPDATE_AFTER that follows will carry the new values
+                return null;
+            }
+            // INSERT and UPDATE_AFTER fall through to normal setCell serialization logic.
+            // In Bigtable, setCell is inherently an upsert operation.
+        }
+
+        RowMutationEntry entry = RowMutationEntry.create(rowKey);
 
         if (!useNestedRowsMode) {
             return serializeWithColumnFamily(
@@ -374,6 +393,7 @@ public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer
         private String rowKeyField;
         private String columnFamily;
         private Boolean useNestedRowsMode = false;
+        private boolean upsertMode = false;
 
         public Builder withSchema(DataType schema) {
             this.schema = schema;
@@ -395,6 +415,11 @@ public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer
             return this;
         }
 
+        public Builder withUpsertMode(boolean upsertMode) {
+            this.upsertMode = upsertMode;
+            return this;
+        }
+
         public RowDataToRowMutationSerializer build() {
             checkNotNull(this.rowKeyField, ErrorMessages.ROW_KEY_FIELD_NULL);
             checkNotNull(this.schema, ErrorMessages.SCHEMA_NULL);
@@ -406,7 +431,7 @@ public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer
                         ErrorMessages.COLUMN_FAMILY_OR_NESTED_ROWS_REQUIRED);
             }
             return new RowDataToRowMutationSerializer(
-                    schema, rowKeyField, useNestedRowsMode, columnFamily);
+                    schema, rowKeyField, useNestedRowsMode, columnFamily, upsertMode);
         }
     }
 }
