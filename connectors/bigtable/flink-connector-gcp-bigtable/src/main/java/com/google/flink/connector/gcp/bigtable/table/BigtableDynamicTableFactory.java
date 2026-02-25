@@ -26,6 +26,7 @@ import org.apache.flink.table.connector.sink.DynamicTableSink;
 import org.apache.flink.table.factories.DynamicTableSinkFactory;
 import org.apache.flink.table.factories.FactoryUtil;
 
+import com.google.flink.connector.gcp.bigtable.table.config.BigtableChangelogMode;
 import com.google.flink.connector.gcp.bigtable.table.config.BigtableConnectorOptions;
 
 import java.util.HashSet;
@@ -86,17 +87,9 @@ public class BigtableDynamicTableFactory implements DynamicTableSinkFactory {
     }
 
     private static void validateChangelogMode(String changelogMode, Context context) {
-        if (!"insert-only".equals(changelogMode)
-                && !"upsert".equals(changelogMode)
-                && !"all".equals(changelogMode)) {
-            throw new ValidationException(
-                    String.format(
-                            "Invalid 'changelog-mode' value '%s'. "
-                                    + "Supported values are: 'insert-only', 'upsert', 'all'.",
-                            changelogMode));
-        }
+        BigtableChangelogMode mode = BigtableChangelogMode.fromString(changelogMode);
 
-        if (!"insert-only".equals(changelogMode)) {
+        if (mode != BigtableChangelogMode.INSERT_ONLY) {
             int[] primaryKeyIndexes =
                     context.getCatalogTable().getResolvedSchema().getPrimaryKeyIndexes();
             if (primaryKeyIndexes.length == 0) {

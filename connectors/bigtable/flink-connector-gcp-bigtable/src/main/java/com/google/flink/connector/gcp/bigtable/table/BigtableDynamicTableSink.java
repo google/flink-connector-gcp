@@ -30,6 +30,7 @@ import org.apache.flink.table.types.DataType;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.flink.connector.gcp.bigtable.BigtableSink;
 import com.google.flink.connector.gcp.bigtable.serializers.RowDataToRowMutationSerializer;
+import com.google.flink.connector.gcp.bigtable.table.config.BigtableChangelogMode;
 import com.google.flink.connector.gcp.bigtable.table.config.BigtableConnectorOptions;
 import com.google.flink.connector.gcp.bigtable.utils.CredentialsFactory;
 import com.google.flink.connector.gcp.bigtable.utils.ErrorMessages;
@@ -96,14 +97,18 @@ public class BigtableDynamicTableSink implements DynamicTableSink {
 
     @Override
     public ChangelogMode getChangelogMode(ChangelogMode requestedMode) {
-        String mode = connectorOptions.get(BigtableConnectorOptions.CHANGELOG_MODE);
+        BigtableChangelogMode mode =
+                BigtableChangelogMode.fromString(
+                        connectorOptions.get(BigtableConnectorOptions.CHANGELOG_MODE));
         switch (mode) {
-            case "upsert":
+            case INSERT_ONLY:
+                return ChangelogMode.insertOnly();
+            case UPSERT:
                 return ChangelogMode.upsert();
-            case "all":
+            case ALL:
                 return ChangelogMode.all();
             default:
-                return ChangelogMode.insertOnly();
+                throw new IllegalArgumentException("Unsupported changelog mode: " + mode);
         }
     }
 
@@ -116,10 +121,10 @@ public class BigtableDynamicTableSink implements DynamicTableSink {
                         .withSchema(physicalSchema)
                         .withRowKeyField(this.rowKeyField)
                         .withUpsertMode(
-                                !"insert-only"
-                                        .equals(
+                                BigtableChangelogMode.fromString(
                                                 connectorOptions.get(
-                                                        BigtableConnectorOptions.CHANGELOG_MODE)));
+                                                        BigtableConnectorOptions.CHANGELOG_MODE))
+                                        != BigtableChangelogMode.INSERT_ONLY);
 
         if (connectorOptions.get(BigtableConnectorOptions.USE_NESTED_ROWS_MODE)) {
             serializerBuilder.withNestedRowsMode();
