@@ -22,6 +22,8 @@ import org.apache.flink.api.connector.sink2.SinkWriter;
 
 import com.google.cloud.bigtable.data.v2.models.RowMutationEntry;
 
+import javax.annotation.Nullable;
+
 import java.io.Serializable;
 
 /**
@@ -30,5 +32,6 @@ import java.io.Serializable;
  * <p>This class implements the interface to serialize to {@link RowMutationEntry}.
  */
 public interface BaseRowMutationSerializer<T> extends Serializable {
+    @Nullable
     RowMutationEntry serialize(T element, SinkWriter.Context context);
 }
