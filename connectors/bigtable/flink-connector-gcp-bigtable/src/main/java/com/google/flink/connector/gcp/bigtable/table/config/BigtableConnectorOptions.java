@@ -96,4 +96,15 @@ public class BigtableConnectorOptions {
                     .noDefaultValue()
                     .withDescription(
                             "Optional. Specifies the GCP access token to use as credentials.");
+
+    public static final ConfigOption<String> CHANGELOG_MODE =
+            ConfigOptions.key("changelog-mode")
+                    .stringType()
+                    .defaultValue("insert-only")
+                    .withDescription(
+                            "Changelog mode for the sink. Supported values: "
+                                    + "'insert-only' (default), "
+                                    + "'upsert' (INSERT, UPDATE_AFTER, DELETE), "
+                                    + "'all' (INSERT, UPDATE_BEFORE, UPDATE_AFTER, DELETE). "
+                                    + "Modes other than 'insert-only' require a PRIMARY KEY.");
 }
