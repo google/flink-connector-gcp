@@ -19,13 +19,13 @@
 package com.google.flink.connector.gcp.bigtable.table;
 
 import org.apache.flink.configuration.ReadableConfig;
-import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.catalog.ResolvedSchema;
 import org.apache.flink.table.connector.ChangelogMode;
 import org.apache.flink.table.connector.sink.DynamicTableSink;
 import org.apache.flink.table.connector.sink.SinkV2Provider;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.DataType;
+import org.apache.flink.table.types.logical.LogicalTypeRoot;
 
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.flink.connector.gcp.bigtable.BigtableSink;
@@ -34,6 +34,7 @@ import com.google.flink.connector.gcp.bigtable.table.config.BigtableConnectorOpt
 import com.google.flink.connector.gcp.bigtable.utils.CredentialsFactory;
 import com.google.flink.connector.gcp.bigtable.utils.ErrorMessages;
 
+import java.util.EnumSet;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -44,6 +45,16 @@ import static org.apache.flink.util.Preconditions.checkArgument;
  * Sink for Table API.
  */
 public class BigtableDynamicTableSink implements DynamicTableSink {
+    /** Row key types that can be automatically converted to a String row key. */
+    static final EnumSet<LogicalTypeRoot> SUPPORTED_ROW_KEY_TYPES =
+            EnumSet.of(
+                    LogicalTypeRoot.VARCHAR,
+                    LogicalTypeRoot.CHAR,
+                    LogicalTypeRoot.BIGINT,
+                    LogicalTypeRoot.INTEGER,
+                    LogicalTypeRoot.SMALLINT,
+                    LogicalTypeRoot.TINYINT);
+
     protected final Integer parallelism;
     protected final ReadableConfig connectorOptions;
     protected final ResolvedSchema resolvedSchema;
@@ -57,12 +68,15 @@ public class BigtableDynamicTableSink implements DynamicTableSink {
                         ErrorMessages.MULTIPLE_PRIMARY_KEYS_TEMPLATE,
                         resolvedSchema.getPrimaryKeyIndexes().length));
         int rowKeyIndex = resolvedSchema.getPrimaryKeyIndexes()[0];
-        checkArgument(
+        LogicalTypeRoot rowKeyType =
                 resolvedSchema
                         .getColumn(rowKeyIndex)
                         .get()
                         .getDataType()
-                        .equals(DataTypes.STRING().notNull()),
+                        .getLogicalType()
+                        .getTypeRoot();
+        checkArgument(
+                SUPPORTED_ROW_KEY_TYPES.contains(rowKeyType),
                 String.format(
                         ErrorMessages.ROW_KEY_STRING_TYPE_TEMPLATE,
                         resolvedSchema.getColumn(rowKeyIndex).get().getDataType()));

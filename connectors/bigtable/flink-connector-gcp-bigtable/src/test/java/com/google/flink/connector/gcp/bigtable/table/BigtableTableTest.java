@@ -26,6 +26,7 @@ import org.apache.flink.table.catalog.UniqueConstraint;
 import org.apache.flink.table.factories.DynamicTableFactory;
 import org.apache.flink.table.factories.FactoryUtil;
 import org.apache.flink.table.factories.utils.FactoryMocks;
+import org.apache.flink.table.types.DataType;
 
 import com.google.flink.connector.gcp.bigtable.table.config.BigtableConnectorOptions;
 import com.google.flink.connector.gcp.bigtable.testingutils.TestingUtils;
@@ -309,12 +310,55 @@ public class BigtableTableTest {
                                 "many-keys",
                                 Arrays.asList(
                                         TestingUtils.ROW_KEY_FIELD, TestingUtils.STRING_FIELD)),
-                        String.format(ErrorMessages.MULTIPLE_PRIMARY_KEYS_TEMPLATE, 2)),
-                Arguments.of(
-                        UniqueConstraint.primaryKey(
-                                "integer-key", Arrays.asList(TestingUtils.INTEGER_FIELD)),
+                        String.format(ErrorMessages.MULTIPLE_PRIMARY_KEYS_TEMPLATE, 2)));
+    }
+
+    @Test
+    public void testUnsupportedRowKeyType() {
+        List<Column> columns =
+                Arrays.asList(
+                        Column.physical("doubleField", DataTypes.DOUBLE().notNull()),
+                        Column.physical(TestingUtils.STRING_FIELD, DataTypes.STRING()));
+        ResolvedSchema schema =
+                new ResolvedSchema(
+                        columns,
+                        Collections.emptyList(),
+                        UniqueConstraint.primaryKey("pk", Arrays.asList("doubleField")));
+        Assertions.assertThatThrownBy(() -> new BigtableDynamicTableSink(schema, null))
+                .hasMessageContaining(
                         String.format(
-                                ErrorMessages.ROW_KEY_STRING_TYPE_TEMPLATE, DataTypes.INT())));
+                                ErrorMessages.ROW_KEY_STRING_TYPE_TEMPLATE,
+                                DataTypes.DOUBLE().notNull()));
+    }
+
+    @ParameterizedTest
+    @MethodSource("supportedRowKeyTypes")
+    public void testNonStringPrimaryKeyAccepted(String fieldName, DataType dataType) {
+        List<Column> columns =
+                Arrays.asList(
+                        Column.physical(fieldName, dataType.notNull()),
+                        Column.physical(TestingUtils.STRING_FIELD, DataTypes.STRING()));
+        ResolvedSchema schema =
+                new ResolvedSchema(
+                        columns,
+                        Collections.emptyList(),
+                        UniqueConstraint.primaryKey("pk", Arrays.asList(fieldName)));
+
+        Map<String, String> options = getRequiredOptions();
+        options.put(BigtableConnectorOptions.COLUMN_FAMILY.key(), TestingUtils.COLUMN_FAMILY);
+
+        BigtableDynamicTableSink sink =
+                (BigtableDynamicTableSink) FactoryMocks.createTableSink(schema, options);
+        assertEquals(fieldName, sink.rowKeyField);
+    }
+
+    private static Stream<Arguments> supportedRowKeyTypes() {
+        return Stream.of(
+                Arguments.of("stringKey", DataTypes.STRING()),
+                Arguments.of("intKey", DataTypes.INT()),
+                Arguments.of("bigintKey", DataTypes.BIGINT()),
+                Arguments.of("smallintKey", DataTypes.SMALLINT()),
+                Arguments.of("tinyintKey", DataTypes.TINYINT()));
     }
 
     private static ResolvedSchema getResolvedSchema(Boolean useNestedRowsMode) {

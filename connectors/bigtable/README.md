@@ -142,7 +142,9 @@ The connector is named `bigtable`.
 
 ### Row Key
 
-The Bigtable Flink Connector uses the primary key defined in your Flink schema as the row key for writing data to Bigtable. It must be of type `STRING` and cannot be null. Only one primary key can be used.
+The Bigtable Flink Connector uses the primary key defined in your Flink schema as the row key for writing data to Bigtable. It cannot be null and only one primary key can be used.
+
+The supported row key types are: `STRING`, `BIGINT`, `INT`, `SMALLINT`, and `TINYINT`. Non-string types are automatically converted to their string representation.
 
 ```
 Schema schema =
@@ -151,6 +153,17 @@ Schema schema =
                 .column("stringColumn", DataTypes.STRING())
                 .column("intColumn", DataTypes.INT())
                 .primaryKey("my-key")
+                .build();
+```
+
+You can also use numeric primary keys:
+
+```
+Schema schema =
+        Schema.newBuilder()
+                .column("id", DataTypes.INT().notNull())
+                .column("stringColumn", DataTypes.STRING())
+                .primaryKey("id")
                 .build();
 ```
 
