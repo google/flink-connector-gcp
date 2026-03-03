@@ -418,8 +418,12 @@ public class RowDataTest {
 
         // Verify the row key is correct
         assertEquals(TestingUtils.ROW_KEY_VALUE, entry.toProto().getRowKey().toStringUtf8());
-        // Verify that the mutation is a deleteFromRow (not a setCell)
-        assertTrue(entry.toProto().getMutations(0).hasDeleteFromRow());
+        // Verify that the mutation is a deleteFromFamily for the managed column family
+        assertEquals(1, entry.toProto().getMutationsCount());
+        assertTrue(entry.toProto().getMutations(0).hasDeleteFromFamily());
+        assertEquals(
+                TestingUtils.COLUMN_FAMILY,
+                entry.toProto().getMutations(0).getDeleteFromFamily().getFamilyName());
     }
 
     @Test
@@ -495,8 +499,16 @@ public class RowDataTest {
 
         // Verify the row key is correct
         assertEquals(TestingUtils.ROW_KEY_VALUE, entry.toProto().getRowKey().toStringUtf8());
-        // Verify that the mutation is a deleteFromRow (not a setCell)
-        assertTrue(entry.toProto().getMutations(0).hasDeleteFromRow());
+        // Verify that deleteFamily mutations are emitted for each managed column family
+        assertEquals(2, entry.toProto().getMutationsCount());
+        assertTrue(entry.toProto().getMutations(0).hasDeleteFromFamily());
+        assertTrue(entry.toProto().getMutations(1).hasDeleteFromFamily());
+        // Collect the deleted family names
+        java.util.Set<String> deletedFamilies = new java.util.HashSet<>();
+        deletedFamilies.add(entry.toProto().getMutations(0).getDeleteFromFamily().getFamilyName());
+        deletedFamilies.add(entry.toProto().getMutations(1).getDeleteFromFamily().getFamilyName());
+        assertTrue(deletedFamilies.contains(TestingUtils.NESTED_COLUMN_FAMILY_1));
+        assertTrue(deletedFamilies.contains(TestingUtils.NESTED_COLUMN_FAMILY_2));
     }
 
     @Test

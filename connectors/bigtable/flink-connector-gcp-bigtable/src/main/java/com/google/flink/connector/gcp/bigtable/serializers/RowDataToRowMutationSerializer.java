@@ -43,6 +43,7 @@ import java.nio.ByteBuffer;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.HashMap;
+import java.util.Map;
 
 import static org.apache.flink.table.types.logical.utils.LogicalTypeChecks.getPrecision;
 import static org.apache.flink.util.Preconditions.checkNotNull;
@@ -122,8 +123,19 @@ public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer
         if (upsertMode) {
             RowKind kind = record.getRowKind();
             if (kind == RowKind.DELETE) {
-                // Delete the entire row from Bigtable
-                return RowMutationEntry.create(rowKey).deleteRow();
+                // Delete only the column families managed by this connector,
+                // leaving other column families on the same row untouched.
+                RowMutationEntry deleteEntry = RowMutationEntry.create(rowKey);
+                if (!useNestedRowsMode) {
+                    deleteEntry.deleteFamily(this.columnFamily);
+                } else {
+                    for (Map.Entry<Integer, String> e : this.indexMap.entrySet()) {
+                        if (!e.getKey().equals(this.rowKeyIndex)) {
+                            deleteEntry.deleteFamily(e.getValue());
+                        }
+                    }
+                }
+                return deleteEntry;
             }
             if (kind == RowKind.UPDATE_BEFORE) {
                 // Skip UPDATE_BEFORE; the UPDATE_AFTER that follows will carry the new values
