@@ -14,3 +14,4 @@
 # limitations under the License.
 
 com.google.flink.connector.gcp.bigtable.table.BigtableDynamicTableFactory
+com.google.flink.connector.gcp.bigtable.changestream.BigtableChangeStreamDynamicTableFactory
