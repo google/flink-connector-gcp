@@ -33,14 +33,17 @@ import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 
 /**
  * Enumerates Bigtable Change Stream partitions and assigns them as splits to readers.
  *
  * <p>On {@link #start()}, discovers the initial partitions via the Bigtable API and distributes
- * them round-robin to available readers. Splits returned from failed readers are re-queued.
+ * them to available readers using a least-loaded strategy. Supports cooperative rebalancing when
+ * new readers join.
  */
 public class BigtableChangeStreamEnumerator
         implements SplitEnumerator<
@@ -54,6 +57,9 @@ public class BigtableChangeStreamEnumerator
     private final String tableId;
     private final Queue<BigtableChangeStreamSplit> pendingSplits;
 
+    /** Tracks how many splits each reader currently owns, for least-loaded assignment. */
+    private final Map<Integer, Integer> readerSplitCounts = new HashMap<>();
+
     private transient BigtableDataClient client;
 
     // Metrics
@@ -63,6 +69,8 @@ public class BigtableChangeStreamEnumerator
     private final Counter initialPartitionsDiscovered;
     private final Counter partitionChangedNoReaders;
     private final Counter unknownSourceEvents;
+    private final Counter splitsRebalanced;
+    private final Counter splitsRebalanceRequested;
 
     public BigtableChangeStreamEnumerator(
             SplitEnumeratorContext<BigtableChangeStreamSplit> context,
@@ -88,6 +96,8 @@ public class BigtableChangeStreamEnumerator
                 context.metricGroup().counter("initial_partitions_discovered");
         partitionChangedNoReaders = context.metricGroup().counter("partition_changed_no_readers");
         unknownSourceEvents = context.metricGroup().counter("unknown_source_events");
+        splitsRebalanced = context.metricGroup().counter("splits_rebalanced");
+        splitsRebalanceRequested = context.metricGroup().counter("splits_rebalance_requested");
         context.metricGroup().gauge("pending_splits", () -> pendingSplits.size());
     }
 
@@ -128,6 +138,7 @@ public class BigtableChangeStreamEnumerator
         BigtableChangeStreamSplit split = pendingSplits.poll();
         if (split != null) {
             context.assignSplit(split, subtaskId);
+            readerSplitCounts.merge(subtaskId, 1, Integer::sum);
             splitsAssigned.inc();
             LOG.info("Assigned split {} to subtask {}", split.splitId(), subtaskId);
         } else {
@@ -139,6 +150,8 @@ public class BigtableChangeStreamEnumerator
     public void addSplitsBack(List<BigtableChangeStreamSplit> splits, int subtaskId) {
         LOG.info("Adding {} split(s) back from subtask {}", splits.size(), subtaskId);
         splitsAddedBack.inc(splits.size());
+        // Clear the failed reader's count
+        readerSplitCounts.remove(subtaskId);
         pendingSplits.addAll(splits);
         assignPendingSplits();
     }
@@ -146,7 +159,9 @@ public class BigtableChangeStreamEnumerator
     @Override
     public void addReader(int subtaskId) {
         LOG.info("Reader {} registered", subtaskId);
+        readerSplitCounts.putIfAbsent(subtaskId, 0);
         assignPendingSplits();
+        triggerRebalanceIfNeeded();
     }
 
     @Override
@@ -154,14 +169,39 @@ public class BigtableChangeStreamEnumerator
         if (sourceEvent instanceof PartitionChangedEvent) {
             PartitionChangedEvent event = (PartitionChangedEvent) sourceEvent;
             partitionChangedEventsReceived.inc();
+
+            // Decrement sender's count — the closed partition is gone
+            readerSplitCounts.merge(subtaskId, -1, Integer::sum);
+            if (readerSplitCounts.getOrDefault(subtaskId, 0) < 0) {
+                readerSplitCounts.put(subtaskId, 0);
+            }
+
             List<BigtableChangeStreamSplit> newSplits = event.getNewSplits();
             LOG.info(
-                    "Received PartitionChangedEvent from subtask {}: closedPartition={}, status={}, {} new split(s)",
+                    "Received PartitionChangedEvent from subtask {}: closedPartition={}, "
+                            + "status={}, {} new split(s)",
                     subtaskId,
                     event.getClosedPartitionId(),
                     event.getCloseStreamStatus(),
                     newSplits.size());
             pendingSplits.addAll(newSplits);
+            assignPendingSplits();
+        } else if (sourceEvent instanceof SplitsReleasedEvent) {
+            SplitsReleasedEvent event = (SplitsReleasedEvent) sourceEvent;
+            List<BigtableChangeStreamSplit> released = event.getReleasedSplits();
+            splitsRebalanced.inc(released.size());
+
+            // Decrement sender's count for each released split
+            readerSplitCounts.merge(subtaskId, -released.size(), Integer::sum);
+            if (readerSplitCounts.getOrDefault(subtaskId, 0) < 0) {
+                readerSplitCounts.put(subtaskId, 0);
+            }
+
+            LOG.info(
+                    "Received SplitsReleasedEvent from subtask {}: {} split(s) released",
+                    subtaskId,
+                    released.size());
+            pendingSplits.addAll(released);
             assignPendingSplits();
         } else {
             unknownSourceEvents.inc();
@@ -182,7 +222,7 @@ public class BigtableChangeStreamEnumerator
         }
     }
 
-    /** Assigns at most one pending split per registered reader (round-robin). */
+    /** Assigns ALL pending splits to the least-loaded readers. */
     private void assignPendingSplits() {
         int[] registeredReaders =
                 context.registeredReaders().keySet().stream().mapToInt(Integer::intValue).toArray();
@@ -195,20 +235,61 @@ public class BigtableChangeStreamEnumerator
             return;
         }
 
-        // Assign one split per reader to avoid starving long-lived unbounded splits.
-        // Remaining splits stay in pendingSplits and are assigned via handleSplitRequest.
-        for (int subtaskId : registeredReaders) {
+        while (!pendingSplits.isEmpty()) {
             BigtableChangeStreamSplit split = pendingSplits.poll();
             if (split == null) {
                 break;
             }
-            context.assignSplit(split, subtaskId);
+            int target = leastLoadedReader(registeredReaders);
+            context.assignSplit(split, target);
+            readerSplitCounts.merge(target, 1, Integer::sum);
             splitsAssigned.inc();
-            LOG.info("Assigned split {} to subtask {}", split.splitId(), subtaskId);
+            LOG.info("Assigned split {} to subtask {}", split.splitId(), target);
+        }
+    }
+
+    /** Returns the subtask ID with the fewest tracked splits, breaking ties by lowest ID. */
+    private int leastLoadedReader(int[] registeredReaders) {
+        int best = registeredReaders[0];
+        int bestCount = readerSplitCounts.getOrDefault(best, 0);
+        for (int i = 1; i < registeredReaders.length; i++) {
+            int count = readerSplitCounts.getOrDefault(registeredReaders[i], 0);
+            if (count < bestCount || (count == bestCount && registeredReaders[i] < best)) {
+                best = registeredReaders[i];
+                bestCount = count;
+            }
+        }
+        return best;
+    }
+
+    /**
+     * Checks whether any reader is significantly overloaded relative to the ideal distribution, and
+     * sends {@link RebalanceRequestEvent}s to request voluntary split release.
+     */
+    private void triggerRebalanceIfNeeded() {
+        int numReaders = context.registeredReaders().size();
+        if (numReaders < 2) {
+            return;
         }
 
-        if (!pendingSplits.isEmpty()) {
-            LOG.info("{} split(s) remaining in pending queue", pendingSplits.size());
+        int totalSplits = 0;
+        for (int count : readerSplitCounts.values()) {
+            totalSplits += count;
+        }
+        int ideal = totalSplits / numReaders;
+
+        for (Map.Entry<Integer, Integer> entry : readerSplitCounts.entrySet()) {
+            int excess = entry.getValue() - (ideal + 1);
+            if (excess > 0) {
+                splitsRebalanceRequested.inc();
+                context.sendEventToSourceReader(entry.getKey(), new RebalanceRequestEvent(excess));
+                LOG.info(
+                        "Sent RebalanceRequestEvent({}) to reader {} (has {}, ideal {})",
+                        excess,
+                        entry.getKey(),
+                        entry.getValue(),
+                        ideal);
+            }
         }
     }
 }

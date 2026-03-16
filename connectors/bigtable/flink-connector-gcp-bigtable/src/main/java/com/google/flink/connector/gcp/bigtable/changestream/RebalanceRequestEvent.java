@@ -18,17 +18,30 @@
 
 package com.google.flink.connector.gcp.bigtable.changestream;
 
-import org.junit.jupiter.api.Test;
+import org.apache.flink.api.connector.source.SourceEvent;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+/**
+ * Sent from the enumerator to an overloaded reader, requesting it to voluntarily release splits.
+ *
+ * <p>The reader picks the N oldest splits (by start time), marks them for release, and sends them
+ * back via {@link SplitsReleasedEvent} once the partition threads exit gracefully.
+ */
+public class RebalanceRequestEvent implements SourceEvent {
 
-class BigtableChangeStreamSourceReaderBufferTest {
+    private static final long serialVersionUID = 1L;
 
-    @Test
-    void defaultBufferCapacityIs1000() {
-        assertEquals(
-                1000,
-                BigtableChangeStreamDynamicTableFactory.BUFFER_CAPACITY.defaultValue(),
-                "Default buffer capacity should be 1000 for backpressure");
+    private final int splitsToRelease;
+
+    public RebalanceRequestEvent(int splitsToRelease) {
+        this.splitsToRelease = splitsToRelease;
+    }
+
+    public int getSplitsToRelease() {
+        return splitsToRelease;
+    }
+
+    @Override
+    public String toString() {
+        return "RebalanceRequestEvent{splitsToRelease=" + splitsToRelease + "}";
     }
 }

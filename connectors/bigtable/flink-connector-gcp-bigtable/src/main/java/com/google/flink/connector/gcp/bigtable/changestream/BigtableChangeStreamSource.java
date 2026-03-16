@@ -29,7 +29,6 @@ import org.apache.flink.api.java.typeutils.ResultTypeQueryable;
 import org.apache.flink.core.io.SimpleVersionedSerializer;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.runtime.typeutils.InternalTypeInfo;
-import org.apache.flink.table.types.logical.RowType;
 
 import java.util.Collection;
 
@@ -37,7 +36,8 @@ import java.util.Collection;
  * FLIP-27 Source that reads from Bigtable Change Streams and emits {@link RowData}.
  *
  * <p>Each Bigtable partition becomes a {@link BigtableChangeStreamSplit} assigned to a reader. The
- * reader deserializes proto-encoded cells into Flink rows using the configured protobuf class.
+ * reader deserializes cell value bytes using a pluggable {@link
+ * RowKeyInjectingDeserializationSchema}.
  */
 public class BigtableChangeStreamSource
         implements Source<
@@ -49,10 +49,10 @@ public class BigtableChangeStreamSource
     private final String tableId;
     private final String columnFamily;
     private final String cellColumn;
-    private final String messageClassName;
-    private final RowType rowType;
-    private final String rowKeyField;
+    private final RowKeyInjectingDeserializationSchema deserializationSchema;
     private final int startLookbackSeconds;
+    private final int bufferCapacity;
+    private final int grpcChannelPoolSize;
 
     public BigtableChangeStreamSource(
             String projectId,
@@ -60,19 +60,19 @@ public class BigtableChangeStreamSource
             String tableId,
             String columnFamily,
             String cellColumn,
-            String messageClassName,
-            RowType rowType,
-            String rowKeyField,
-            int startLookbackSeconds) {
+            RowKeyInjectingDeserializationSchema deserializationSchema,
+            int startLookbackSeconds,
+            int bufferCapacity,
+            int grpcChannelPoolSize) {
         this.projectId = projectId;
         this.instanceId = instanceId;
         this.tableId = tableId;
         this.columnFamily = columnFamily;
         this.cellColumn = cellColumn;
-        this.messageClassName = messageClassName;
-        this.rowType = rowType;
-        this.rowKeyField = rowKeyField;
+        this.deserializationSchema = deserializationSchema;
         this.startLookbackSeconds = startLookbackSeconds;
+        this.bufferCapacity = bufferCapacity;
+        this.grpcChannelPoolSize = grpcChannelPoolSize;
     }
 
     @Override
@@ -90,10 +90,10 @@ public class BigtableChangeStreamSource
                 tableId,
                 columnFamily,
                 cellColumn,
-                messageClassName,
-                rowType,
-                rowKeyField,
-                startLookbackSeconds);
+                deserializationSchema,
+                startLookbackSeconds,
+                bufferCapacity,
+                grpcChannelPoolSize);
     }
 
     @Override
@@ -125,6 +125,6 @@ public class BigtableChangeStreamSource
 
     @Override
     public TypeInformation<RowData> getProducedType() {
-        return InternalTypeInfo.of(rowType);
+        return InternalTypeInfo.of(deserializationSchema.getRowType());
     }
 }

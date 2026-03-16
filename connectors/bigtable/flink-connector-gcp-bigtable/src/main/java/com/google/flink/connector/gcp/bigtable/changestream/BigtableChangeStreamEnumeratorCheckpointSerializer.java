@@ -75,10 +75,24 @@ public final class BigtableChangeStreamEnumeratorCheckpointSerializer
 
         DataInputStream in = new DataInputStream(new ByteArrayInputStream(serialized));
         int count = in.readInt();
+        if (count < 0 || count > serialized.length) {
+            throw new IOException(
+                    String.format(
+                            "Invalid split count %d (total serialized bytes: %d)",
+                            count, serialized.length));
+        }
+
         Collection<BigtableChangeStreamSplit> splits = new ArrayList<>(count);
 
         for (int i = 0; i < count; i++) {
             int len = in.readInt();
+            if (len < 0 || len > serialized.length) {
+                throw new IOException(
+                        String.format(
+                                "Invalid split byte length %d at index %d "
+                                        + "(total serialized bytes: %d)",
+                                len, i, serialized.length));
+            }
             byte[] splitBytes = new byte[len];
             in.readFully(splitBytes);
             splits.add(

@@ -84,10 +84,12 @@ public final class BigtableChangeStreamSplitSerializer
         DataInputStream in = new DataInputStream(new ByteArrayInputStream(serialized));
 
         int startLen = in.readInt();
+        validateLength(startLen, serialized.length, "partition start");
         byte[] start = new byte[startLen];
         in.readFully(start);
 
         int endLen = in.readInt();
+        validateLength(endLen, serialized.length, "partition end");
         byte[] end = new byte[endLen];
         in.readFully(end);
 
@@ -97,11 +99,27 @@ public final class BigtableChangeStreamSplitSerializer
         String token = null;
         if (in.readBoolean()) {
             int tokenLen = in.readInt();
+            validateLength(tokenLen, serialized.length, "continuation token");
             byte[] tokenBytes = new byte[tokenLen];
             in.readFully(tokenBytes);
             token = new String(tokenBytes, StandardCharsets.UTF_8);
         }
 
         return new BigtableChangeStreamSplit(partition, token);
+    }
+
+    /**
+     * Validates that a deserialized length value is non-negative and does not exceed the total
+     * serialized byte array size. Protects against corrupted checkpoint data causing
+     * OutOfMemoryError from oversized array allocations.
+     */
+    private static void validateLength(int length, int totalBytes, String fieldName)
+            throws IOException {
+        if (length < 0 || length > totalBytes) {
+            throw new IOException(
+                    String.format(
+                            "Invalid %s length %d (total serialized bytes: %d)",
+                            fieldName, length, totalBytes));
+        }
     }
 }

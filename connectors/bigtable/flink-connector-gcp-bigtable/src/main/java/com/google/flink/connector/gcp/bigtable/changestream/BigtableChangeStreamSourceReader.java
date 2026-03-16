@@ -18,18 +18,18 @@
 
 package com.google.flink.connector.gcp.bigtable.changestream;
 
+import org.apache.flink.api.common.serialization.DeserializationSchema;
 import org.apache.flink.api.connector.source.ReaderOutput;
+import org.apache.flink.api.connector.source.SourceEvent;
 import org.apache.flink.api.connector.source.SourceReader;
 import org.apache.flink.api.connector.source.SourceReaderContext;
 import org.apache.flink.core.io.InputStatus;
 import org.apache.flink.dropwizard.metrics.DropwizardHistogramWrapper;
 import org.apache.flink.metrics.Counter;
 import org.apache.flink.metrics.Histogram;
-import org.apache.flink.table.data.GenericRowData;
+import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.table.data.RowData;
-import org.apache.flink.table.data.StringData;
-import org.apache.flink.table.types.logical.LogicalTypeRoot;
-import org.apache.flink.table.types.logical.RowType;
+import org.apache.flink.util.UserCodeClassLoader;
 
 import com.google.cloud.bigtable.data.v2.BigtableDataClient;
 import com.google.cloud.bigtable.data.v2.BigtableDataSettings;
@@ -41,27 +41,31 @@ import com.google.cloud.bigtable.data.v2.models.Entry;
 import com.google.cloud.bigtable.data.v2.models.Heartbeat;
 import com.google.cloud.bigtable.data.v2.models.ReadChangeStreamQuery;
 import com.google.cloud.bigtable.data.v2.models.SetCell;
-import com.google.protobuf.Descriptors.Descriptor;
-import com.google.protobuf.Descriptors.FieldDescriptor;
-import com.google.protobuf.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Queue;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 /**
  * Reads Bigtable Change Stream partitions assigned as {@link BigtableChangeStreamSplit}s.
  *
- * <p>For each assigned split, opens a blocking {@code ReadChangeStream} call on a background thread
- * and buffers deserialized {@link RowData} records for the Flink runtime to poll.
+ * <p>For each assigned split, opens a blocking {@code ReadChangeStream} call on a dedicated thread
+ * (one thread per partition via a cached thread pool) and buffers deserialized {@link RowData}
+ * records for the Flink runtime to poll.
+ *
+ * <p>Supports cooperative rebalancing via {@link RebalanceRequestEvent} and {@link
+ * SplitsReleasedEvent}.
  */
 public class BigtableChangeStreamSourceReader
         implements SourceReader<RowData, BigtableChangeStreamSplit> {
@@ -75,18 +79,22 @@ public class BigtableChangeStreamSourceReader
     private final String tableId;
     private final String columnFamily;
     private final String cellColumn;
-    private final String messageClassName;
-    private final RowType rowType;
-    private final String rowKeyField;
+    private final RowKeyInjectingDeserializationSchema deserializationSchema;
     private final int startLookbackSeconds;
-
-    // Row key injection: resolved from rowKeyField during start()
-    private int rowKeyFieldIndex = -1;
-    private LogicalTypeRoot rowKeyTypeRoot;
+    private final int bufferCapacity;
+    private final int grpcChannelPoolSize;
 
     private transient BigtableDataClient client;
-    private transient Message defaultInstance;
-    private transient Descriptor protoDescriptor;
+
+    // Concurrent partition reading: one thread per partition
+    private final ConcurrentHashMap<String, BigtableChangeStreamSplit> activeSplits =
+            new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Long> splitStartTimes = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Future<?>> activeThreads = new ConcurrentHashMap<>();
+    private ExecutorService executor;
+
+    // Splits received before start() — restored from checkpoint
+    private final List<BigtableChangeStreamSplit> pendingSplitsBeforeStart = new ArrayList<>();
 
     // Metrics
     private transient Histogram notificationLatencyMs;
@@ -118,20 +126,17 @@ public class BigtableChangeStreamSourceReader
     private transient Counter streamExhaustedWithoutCloseStream;
     private transient Counter heartbeatsReceived;
 
-    // Split management
-    private final Queue<BigtableChangeStreamSplit> assignedSplits = new ArrayDeque<>();
-    private volatile BigtableChangeStreamSplit currentSplit;
-    private volatile Thread streamThread;
+    // Rebalancing metrics
+    private transient Counter splitsRebalanced;
+
     private volatile boolean finished = false;
     private volatile Throwable streamError;
-    private volatile long currentSplitStartTimeMs;
 
-    // Bounded buffer for records produced by the stream thread.
-    // The stream thread blocks on offer() when the buffer is full, providing backpressure.
-    static final int RECORD_BUFFER_CAPACITY = 1000;
+    // Bounded buffer for records produced by stream threads.
+    // Stream threads block on offer() when the buffer is full, providing backpressure.
+    static final int DEFAULT_RECORD_BUFFER_CAPACITY = 1000;
     private static final long BUFFER_OFFER_TIMEOUT_MS = 100;
-    private final LinkedBlockingQueue<RowData> recordBuffer =
-            new LinkedBlockingQueue<>(RECORD_BUFFER_CAPACITY);
+    private final LinkedBlockingQueue<RowData> recordBuffer;
 
     // Guards availableFuture and recordBuffer together to prevent lost-notification races.
     private final Object lock = new Object();
@@ -144,20 +149,21 @@ public class BigtableChangeStreamSourceReader
             String tableId,
             String columnFamily,
             String cellColumn,
-            String messageClassName,
-            RowType rowType,
-            String rowKeyField,
-            int startLookbackSeconds) {
+            RowKeyInjectingDeserializationSchema deserializationSchema,
+            int startLookbackSeconds,
+            int bufferCapacity,
+            int grpcChannelPoolSize) {
         this.readerContext = readerContext;
         this.projectId = projectId;
         this.instanceId = instanceId;
         this.tableId = tableId;
         this.columnFamily = columnFamily;
         this.cellColumn = cellColumn;
-        this.messageClassName = messageClassName;
-        this.rowType = rowType;
-        this.rowKeyField = rowKeyField;
+        this.deserializationSchema = deserializationSchema;
         this.startLookbackSeconds = startLookbackSeconds;
+        this.bufferCapacity = bufferCapacity > 0 ? bufferCapacity : DEFAULT_RECORD_BUFFER_CAPACITY;
+        this.grpcChannelPoolSize = grpcChannelPoolSize;
+        this.recordBuffer = new LinkedBlockingQueue<>(this.bufferCapacity);
     }
 
     @Override
@@ -167,6 +173,15 @@ public class BigtableChangeStreamSourceReader
                     BigtableDataSettings.newBuilder()
                             .setProjectId(projectId)
                             .setInstanceId(instanceId);
+
+            if (grpcChannelPoolSize > 0) {
+                builder.stubSettings()
+                        .setTransportChannelProvider(
+                                com.google.api.gax.grpc.InstantiatingGrpcChannelProvider
+                                        .newBuilder()
+                                        .setPoolSize(grpcChannelPoolSize)
+                                        .build());
+            }
 
             // ReadChangeStream is a long-lived streaming RPC that can run for hours/days.
             // The default attempt timeout (5 min) and wait timeout (1 min) cause
@@ -192,8 +207,31 @@ public class BigtableChangeStreamSourceReader
             throw new RuntimeException("Failed to create BigtableDataClient in reader", e);
         }
 
-        initProto();
-        initRowKeyField();
+        // Open the pluggable format's deserialization schema
+        try {
+            deserializationSchema.open(
+                    new DeserializationSchema.InitializationContext() {
+                        @Override
+                        public MetricGroup getMetricGroup() {
+                            return readerContext.metricGroup();
+                        }
+
+                        @Override
+                        public UserCodeClassLoader getUserCodeClassLoader() {
+                            return readerContext.getUserCodeClassLoader();
+                        }
+                    });
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to open deserialization schema", e);
+        }
+
+        executor =
+                Executors.newCachedThreadPool(
+                        r -> {
+                            Thread t = new Thread(r);
+                            t.setDaemon(true);
+                            return t;
+                        });
 
         // Register Flink metrics — histogram for Flink UI, gauge for Prometheus
         notificationLatencyMs =
@@ -235,9 +273,7 @@ public class BigtableChangeStreamSourceReader
         bufferFullEvents = readerContext.metricGroup().counter("buffer_full_events");
         readerContext
                 .metricGroup()
-                .gauge(
-                        "buffer_utilization",
-                        () -> (double) recordBuffer.size() / RECORD_BUFFER_CAPACITY);
+                .gauge("buffer_utilization", () -> (double) recordBuffer.size() / bufferCapacity);
 
         // Stream thread lifecycle
         streamThreadStarted = readerContext.metricGroup().counter("stream_thread_started");
@@ -253,42 +289,26 @@ public class BigtableChangeStreamSourceReader
                 readerContext.metricGroup().counter("stream_exhausted_without_closestream");
         heartbeatsReceived = readerContext.metricGroup().counter("heartbeats_received");
 
+        // Rebalancing
+        splitsRebalanced = readerContext.metricGroup().counter("splits_rebalanced");
+
+        // Active partitions gauge
+        readerContext.metricGroup().gauge("active_partitions", () -> activeSplits.size());
+
         LOG.info(
-                "SourceReader started: project={}, instance={}, table={}",
+                "SourceReader started: project={}, instance={}, table={}, bufferCapacity={}, "
+                        + "grpcChannelPoolSize={}",
                 projectId,
                 instanceId,
-                tableId);
-    }
+                tableId,
+                bufferCapacity,
+                grpcChannelPoolSize);
 
-    private void initProto() {
-        try {
-            Class<?> protoClass = Class.forName(messageClassName);
-            defaultInstance = (Message) protoClass.getMethod("getDefaultInstance").invoke(null);
-            protoDescriptor = defaultInstance.getDescriptorForType();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to load protobuf class: " + messageClassName, e);
+        // Start any splits received before start() (restored from checkpoint)
+        for (BigtableChangeStreamSplit split : pendingSplitsBeforeStart) {
+            startReadingSplit(split);
         }
-    }
-
-    private void initRowKeyField() {
-        if (rowKeyField == null || rowKeyField.isEmpty()) {
-            return;
-        }
-        List<RowType.RowField> fields = rowType.getFields();
-        for (int i = 0; i < fields.size(); i++) {
-            if (fields.get(i).getName().equals(rowKeyField)) {
-                rowKeyFieldIndex = i;
-                rowKeyTypeRoot = fields.get(i).getType().getTypeRoot();
-                LOG.info(
-                        "Row key field '{}' mapped to index {} (type {})",
-                        rowKeyField,
-                        i,
-                        rowKeyTypeRoot);
-                return;
-            }
-        }
-        throw new IllegalArgumentException(
-                "row-key-field '" + rowKeyField + "' not found in schema: " + rowType);
+        pendingSplitsBeforeStart.clear();
     }
 
     @Override
@@ -298,8 +318,6 @@ public class BigtableChangeStreamSourceReader
         }
 
         // Single lock covers buffer check + future reset to prevent lost notifications.
-        // Without this, notifyAvailable() could complete the old future between our buffer
-        // check and the future swap, causing Flink to block on a never-completed future.
         synchronized (lock) {
             RowData row = recordBuffer.poll();
             if (row != null) {
@@ -307,19 +325,8 @@ public class BigtableChangeStreamSourceReader
                 return InputStatus.MORE_AVAILABLE;
             }
 
-            // No records buffered — check if we should start reading the next split
-            if (streamThread == null || !streamThread.isAlive()) {
-                synchronized (assignedSplits) {
-                    BigtableChangeStreamSplit next = assignedSplits.poll();
-                    if (next != null) {
-                        startReadingSplit(next);
-                        return InputStatus.NOTHING_AVAILABLE;
-                    }
-                }
-
-                if (finished) {
-                    return InputStatus.END_OF_INPUT;
-                }
+            if (finished && activeSplits.isEmpty()) {
+                return InputStatus.END_OF_INPUT;
             }
 
             // Reset the availability future so Flink waits for the next notification
@@ -340,8 +347,14 @@ public class BigtableChangeStreamSourceReader
 
     @Override
     public void addSplits(List<BigtableChangeStreamSplit> splits) {
-        synchronized (assignedSplits) {
-            assignedSplits.addAll(splits);
+        if (executor == null) {
+            // start() not called yet — queue for later
+            pendingSplitsBeforeStart.addAll(splits);
+            LOG.info("Queued {} split(s) before start()", splits.size());
+            return;
+        }
+        for (BigtableChangeStreamSplit split : splits) {
+            startReadingSplit(split);
         }
         LOG.info("Added {} split(s) to reader", splits.size());
         notifyAvailable();
@@ -351,49 +364,76 @@ public class BigtableChangeStreamSourceReader
     public void notifyNoMoreSplits() {
         LOG.info("No more splits will be assigned");
         // We keep running — change streams are unbounded.
-        // This just means the enumerator has assigned all initial partitions.
+    }
+
+    @Override
+    public void handleSourceEvents(SourceEvent sourceEvent) {
+        if (sourceEvent instanceof RebalanceRequestEvent) {
+            RebalanceRequestEvent request = (RebalanceRequestEvent) sourceEvent;
+            int toRelease = request.getSplitsToRelease();
+            LOG.info("Received rebalance request to release {} split(s)", toRelease);
+
+            // Pick the N oldest splits by start time
+            List<Map.Entry<String, Long>> sorted = new ArrayList<>(splitStartTimes.entrySet());
+            sorted.sort(Map.Entry.comparingByValue());
+
+            List<BigtableChangeStreamSplit> released = new ArrayList<>();
+            for (int i = 0; i < toRelease && i < sorted.size(); i++) {
+                String splitId = sorted.get(i).getKey();
+                BigtableChangeStreamSplit split = activeSplits.get(splitId);
+                if (split != null) {
+                    // Cancel the thread and remove tracking
+                    Future<?> future = activeThreads.remove(splitId);
+                    if (future != null) {
+                        future.cancel(true);
+                    }
+                    activeSplits.remove(splitId);
+                    splitStartTimes.remove(splitId);
+                    released.add(split);
+                    splitsRebalanced.inc();
+                }
+            }
+
+            if (!released.isEmpty()) {
+                readerContext.sendSourceEventToCoordinator(new SplitsReleasedEvent(released));
+                LOG.info("Released {} split(s) for rebalancing", released.size());
+            }
+        }
     }
 
     @Override
     public List<BigtableChangeStreamSplit> snapshotState(long checkpointId) {
-        // Return current split (with latest token) plus any unstarted splits
-        java.util.List<BigtableChangeStreamSplit> state = new java.util.ArrayList<>();
-        if (currentSplit != null) {
-            state.add(currentSplit);
-        }
-        synchronized (assignedSplits) {
-            state.addAll(assignedSplits);
-        }
+        List<BigtableChangeStreamSplit> state = new ArrayList<>(activeSplits.values());
+        state.addAll(pendingSplitsBeforeStart);
         return state;
     }
 
     @Override
     public void close() throws Exception {
         finished = true;
-        // Close client first to unblock the blocking ReadChangeStream RPC iterator,
-        // then interrupt + join the thread. Thread.interrupt() alone may not unblock gRPC calls.
+        // Close client first to unblock blocking ReadChangeStream RPC iterators
         if (client != null) {
             client.close();
             LOG.info("Closed reader BigtableDataClient");
         }
-        if (streamThread != null) {
-            streamThread.interrupt();
-            streamThread.join(5000);
-            if (streamThread.isAlive()) {
-                LOG.warn(
-                        "Stream thread {} still alive after 5s join timeout",
-                        streamThread.getName());
+        if (executor != null) {
+            executor.shutdownNow();
+            if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+                LOG.warn("Executor did not terminate within 5s");
             }
         }
     }
 
     private void startReadingSplit(BigtableChangeStreamSplit split) {
-        currentSplit = split;
-        currentSplitStartTimeMs = System.currentTimeMillis();
-        streamThread =
-                new Thread(
+        String splitId = split.splitId();
+        activeSplits.put(splitId, split);
+        splitStartTimes.put(splitId, System.currentTimeMillis());
+
+        Future<?> future =
+                executor.submit(
                         () -> {
                             try {
+                                streamThreadStarted.inc();
                                 readPartition(split);
                                 streamThreadCompleted.inc();
                             } catch (Exception e) {
@@ -407,22 +447,27 @@ public class BigtableChangeStreamSourceReader
                                     streamError = e;
                                     notifyAvailable();
                                 }
+                            } finally {
+                                activeSplits.remove(splitId);
+                                splitStartTimes.remove(splitId);
+                                activeThreads.remove(splitId);
+                                // Notify enumerator that this reader finished a split
+                                readerContext.sendSourceEventToCoordinator(
+                                        new SplitsReleasedEvent(Collections.singletonList(split)));
                             }
-                        },
-                        "bt-cs-" + Integer.toHexString(split.splitId().hashCode()));
-        streamThread.setDaemon(true);
-        streamThread.start();
-        streamThreadStarted.inc();
+                        });
+        activeThreads.put(splitId, future);
     }
 
     private void readPartition(BigtableChangeStreamSplit split) {
+        String splitId = split.splitId();
         ReadChangeStreamQuery query =
                 ReadChangeStreamQuery.create(tableId)
                         .streamPartition(split.getPartition())
                         .heartbeatDuration(org.threeten.bp.Duration.ofSeconds(30));
 
         if (split.getContinuationToken() != null) {
-            LOG.info("Resuming partition {} from continuation token", split.splitId());
+            LOG.info("Resuming partition {} from continuation token", splitId);
             query.continuationTokens(
                     Collections.singletonList(
                             ChangeStreamContinuationToken.create(
@@ -431,10 +476,11 @@ public class BigtableChangeStreamSourceReader
             org.threeten.bp.Instant startTime =
                     org.threeten.bp.Instant.now().minusSeconds(startLookbackSeconds);
             query.startTime(startTime);
-            LOG.info("Starting partition {} from {}s ago", split.splitId(), startLookbackSeconds);
+            LOG.info("Starting partition {} from {}s ago", splitId, startLookbackSeconds);
         }
 
         boolean receivedCloseStream = false;
+        long partitionStartTimeMs = System.currentTimeMillis();
 
         for (ChangeStreamRecord record : client.readChangeStream(query)) {
             if (finished) {
@@ -452,14 +498,14 @@ public class BigtableChangeStreamSourceReader
                 lastNotificationLatencyMs = latency;
                 mutationsReceived.inc();
 
-                byte[] protoBytes = extractProtoBytes(mutation);
+                byte[] cellBytes = extractCellBytes(mutation);
                 String token = mutation.getToken();
 
-                if (protoBytes != null) {
+                if (cellBytes != null) {
                     try {
-                        String rowKey =
-                                rowKeyFieldIndex >= 0 ? mutation.getRowKey().toStringUtf8() : null;
-                        RowData row = deserialize(protoBytes, rowKey);
+                        String rowKey = mutation.getRowKey().toStringUtf8();
+                        RowData row =
+                                deserializationSchema.deserializeWithRowKey(cellBytes, rowKey);
                         recordsDeserialized.inc();
                         // Block if buffer is full — applies backpressure to the gRPC stream
                         while (!finished) {
@@ -469,27 +515,28 @@ public class BigtableChangeStreamSourceReader
                             }
                             bufferFullEvents.inc();
                         }
-                        currentSplit = split.withToken(token);
+                        activeSplits.put(splitId, split.withToken(token));
                         notifyAvailable();
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
                         break;
                     } catch (Exception e) {
-                        LOG.error("Failed to deserialize proto: {}", e.getMessage(), e);
+                        LOG.error("Failed to deserialize record: {}", e.getMessage(), e);
                         deserializationErrors.inc();
                         recordsSkipped.inc();
-                        currentSplit = split.withToken(token);
+                        activeSplits.put(splitId, split.withToken(token));
                     }
                 } else {
                     nullProtoBytes.inc();
                     recordsSkipped.inc();
-                    currentSplit = split.withToken(token);
+                    activeSplits.put(splitId, split.withToken(token));
                 }
             } else if (record instanceof Heartbeat) {
                 heartbeatsReceived.inc();
                 Heartbeat heartbeat = (Heartbeat) record;
-                currentSplit =
-                        split.withToken(heartbeat.getChangeStreamContinuationToken().getToken());
+                activeSplits.put(
+                        splitId,
+                        split.withToken(heartbeat.getChangeStreamContinuationToken().getToken()));
             } else if (record instanceof CloseStream) {
                 receivedCloseStream = true;
                 closeStreamReceived.inc();
@@ -498,7 +545,7 @@ public class BigtableChangeStreamSourceReader
                         closeStream.getChangeStreamContinuationTokens();
                 LOG.info(
                         "CloseStream received for partition {}: status={}, newPartitions={}",
-                        split.splitId(),
+                        splitId,
                         closeStream.getStatus(),
                         newTokens.size());
 
@@ -512,25 +559,27 @@ public class BigtableChangeStreamSourceReader
                     partitionSplitsCreated.inc(newSplits.size());
                     readerContext.sendSourceEventToCoordinator(
                             new PartitionChangedEvent(
-                                    newSplits,
-                                    split.splitId(),
-                                    closeStream.getStatus().toString()));
+                                    newSplits, splitId, closeStream.getStatus().toString()));
                     LOG.info(
                             "Sent {} new split(s) to enumerator after partition change",
                             newSplits.size());
                 } else {
                     closeStreamEmptyTokens.inc();
                     LOG.warn(
-                            "CloseStream for partition {} had zero continuation tokens — partition may be lost",
-                            split.splitId());
+                            "CloseStream for partition {} had zero continuation tokens "
+                                    + "— re-enqueueing original split",
+                            splitId);
+                    // Re-enqueue the original split so the partition is not lost
+                    readerContext.sendSourceEventToCoordinator(
+                            new PartitionChangedEvent(
+                                    Collections.singletonList(split),
+                                    splitId,
+                                    closeStream.getStatus().toString()));
                 }
 
-                long lifetime = System.currentTimeMillis() - currentSplitStartTimeMs;
+                long lifetime = System.currentTimeMillis() - partitionStartTimeMs;
                 partitionLifetimeMs.update(lifetime);
                 lastPartitionLifetimeMs = lifetime;
-
-                // Current partition is done — clear it so we pick up the next assigned split
-                currentSplit = null;
                 break;
             }
         }
@@ -538,12 +587,18 @@ public class BigtableChangeStreamSourceReader
         if (!finished && !receivedCloseStream) {
             streamExhaustedWithoutCloseStream.inc();
             LOG.warn(
-                    "Stream iterator for partition {} ended without CloseStream — connection may have died",
-                    split.splitId());
+                    "Stream iterator for partition {} ended without CloseStream "
+                            + "— connection may have died",
+                    splitId);
         }
     }
 
-    private byte[] extractProtoBytes(ChangeStreamMutation mutation) {
+    /**
+     * Extracts the cell value bytes from the configured column family and column qualifier.
+     *
+     * @return the cell bytes, or {@code null} if no matching cell was found
+     */
+    private byte[] extractCellBytes(ChangeStreamMutation mutation) {
         for (Entry entry : mutation.getEntries()) {
             if (entry instanceof SetCell) {
                 SetCell setCell = (SetCell) entry;
@@ -554,75 +609,6 @@ public class BigtableChangeStreamSourceReader
             }
         }
         return null;
-    }
-
-    private GenericRowData deserialize(byte[] protoBytes, String rowKey) throws Exception {
-        Message message = defaultInstance.getParserForType().parseFrom(protoBytes);
-        List<RowType.RowField> fields = rowType.getFields();
-        GenericRowData row = new GenericRowData(fields.size());
-
-        for (int i = 0; i < fields.size(); i++) {
-            // Inject the row key for the designated field instead of reading from proto
-            if (i == rowKeyFieldIndex && rowKey != null) {
-                row.setField(i, parseRowKey(rowKey, rowKeyTypeRoot));
-                continue;
-            }
-
-            RowType.RowField field = fields.get(i);
-            FieldDescriptor fd = protoDescriptor.findFieldByName(field.getName());
-
-            if (fd == null) {
-                row.setField(i, null);
-                continue;
-            }
-
-            if (fd.hasPresence() && !message.hasField(fd)) {
-                row.setField(i, null);
-                continue;
-            }
-
-            Object value = message.getField(fd);
-            row.setField(i, convertToFlink(value, field.getType().getTypeRoot()));
-        }
-
-        return row;
-    }
-
-    /** Parses the Bigtable row key string back into the appropriate Flink type. */
-    private static Object parseRowKey(String rowKey, LogicalTypeRoot typeRoot) {
-        switch (typeRoot) {
-            case BIGINT:
-                return Long.parseLong(rowKey);
-            case INTEGER:
-            case SMALLINT:
-            case TINYINT:
-                return Integer.parseInt(rowKey);
-            case VARCHAR:
-            case CHAR:
-                return StringData.fromString(rowKey);
-            default:
-                throw new UnsupportedOperationException(
-                        "Unsupported row key type for deserialization: " + typeRoot);
-        }
-    }
-
-    private static Object convertToFlink(Object protoValue, LogicalTypeRoot typeRoot) {
-        switch (typeRoot) {
-            case BIGINT:
-                return ((Number) protoValue).longValue();
-            case INTEGER:
-            case SMALLINT:
-            case TINYINT:
-                return ((Number) protoValue).intValue();
-            case BOOLEAN:
-                return protoValue;
-            case VARCHAR:
-            case CHAR:
-                return StringData.fromString(protoValue.toString());
-            default:
-                throw new UnsupportedOperationException(
-                        "Unsupported Flink type for proto deserialization: " + typeRoot);
-        }
     }
 
     private void notifyAvailable() {

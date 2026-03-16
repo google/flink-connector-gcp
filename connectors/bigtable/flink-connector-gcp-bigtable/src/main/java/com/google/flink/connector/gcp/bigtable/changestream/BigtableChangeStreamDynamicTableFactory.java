@@ -18,9 +18,13 @@
 
 package com.google.flink.connector.gcp.bigtable.changestream;
 
+import org.apache.flink.api.common.serialization.DeserializationSchema;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ConfigOptions;
+import org.apache.flink.table.connector.format.DecodingFormat;
 import org.apache.flink.table.connector.source.DynamicTableSource;
+import org.apache.flink.table.data.RowData;
+import org.apache.flink.table.factories.DeserializationFormatFactory;
 import org.apache.flink.table.factories.DynamicTableSourceFactory;
 import org.apache.flink.table.factories.FactoryUtil;
 import org.apache.flink.table.types.DataType;
@@ -33,6 +37,8 @@ import java.util.Set;
  * Factory for the {@code bigtable-changestream} source connector.
  *
  * <p>Registered via SPI in {@code META-INF/services/org.apache.flink.table.factories.Factory}.
+ *
+ * <p>Supports pluggable formats via the standard {@code format} option (e.g. protobuf, json, avro).
  */
 public class BigtableChangeStreamDynamicTableFactory implements DynamicTableSourceFactory {
 
@@ -53,9 +59,6 @@ public class BigtableChangeStreamDynamicTableFactory implements DynamicTableSour
     static final ConfigOption<String> CELL_COLUMN =
             ConfigOptions.key("cell-column").stringType().defaultValue("payload");
 
-    static final ConfigOption<String> PROTOBUF_MESSAGE_CLASS =
-            ConfigOptions.key("protobuf.message-class").stringType().noDefaultValue();
-
     static final ConfigOption<String> ROW_KEY_FIELD =
             ConfigOptions.key("row-key-field")
                     .stringType()
@@ -69,6 +72,28 @@ public class BigtableChangeStreamDynamicTableFactory implements DynamicTableSour
     static final ConfigOption<Integer> START_LOOKBACK_SECONDS =
             ConfigOptions.key("start-lookback-seconds").intType().defaultValue(300);
 
+    static final ConfigOption<Integer> BUFFER_CAPACITY =
+            ConfigOptions.key("buffer-capacity")
+                    .intType()
+                    .defaultValue(1000)
+                    .withDescription(
+                            "Bounded buffer capacity for records produced by stream threads. "
+                                    + "Stream threads block when the buffer is full, providing backpressure.");
+
+    static final ConfigOption<Integer> GRPC_CHANNEL_POOL_SIZE =
+            ConfigOptions.key("grpc-channel-pool-size")
+                    .intType()
+                    .defaultValue(0)
+                    .withDescription(
+                            "Number of gRPC channels in the pool. 0 uses the client default.");
+
+    static final ConfigOption<Integer> PARALLELISM =
+            ConfigOptions.key("parallelism")
+                    .intType()
+                    .defaultValue(0)
+                    .withDescription(
+                            "Source parallelism override. 0 uses the environment default.");
+
     @Override
     public String factoryIdentifier() {
         return IDENTIFIER;
@@ -81,7 +106,6 @@ public class BigtableChangeStreamDynamicTableFactory implements DynamicTableSour
         options.add(INSTANCE);
         options.add(TABLE);
         options.add(COLUMN_FAMILY);
-        options.add(PROTOBUF_MESSAGE_CLASS);
         return options;
     }
 
@@ -91,12 +115,19 @@ public class BigtableChangeStreamDynamicTableFactory implements DynamicTableSour
         options.add(CELL_COLUMN);
         options.add(ROW_KEY_FIELD);
         options.add(START_LOOKBACK_SECONDS);
+        options.add(BUFFER_CAPACITY);
+        options.add(GRPC_CHANNEL_POOL_SIZE);
+        options.add(PARALLELISM);
         return options;
     }
 
     @Override
     public DynamicTableSource createDynamicTableSource(Context context) {
         FactoryUtil.TableFactoryHelper helper = FactoryUtil.createTableFactoryHelper(this, context);
+
+        DecodingFormat<DeserializationSchema<RowData>> decodingFormat =
+                helper.discoverDecodingFormat(
+                        DeserializationFormatFactory.class, FactoryUtil.FORMAT);
         helper.validate();
 
         DataType physicalSchema =
@@ -109,9 +140,12 @@ public class BigtableChangeStreamDynamicTableFactory implements DynamicTableSour
                 helper.getOptions().get(TABLE),
                 helper.getOptions().get(COLUMN_FAMILY),
                 helper.getOptions().get(CELL_COLUMN),
-                helper.getOptions().get(PROTOBUF_MESSAGE_CLASS),
+                decodingFormat,
                 rowType,
                 helper.getOptions().get(ROW_KEY_FIELD),
-                helper.getOptions().get(START_LOOKBACK_SECONDS));
+                helper.getOptions().get(START_LOOKBACK_SECONDS),
+                helper.getOptions().get(BUFFER_CAPACITY),
+                helper.getOptions().get(GRPC_CHANNEL_POOL_SIZE),
+                helper.getOptions().get(PARALLELISM));
     }
 }
