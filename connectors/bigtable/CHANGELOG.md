@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/google/flink-connector-gcp/compare/v0.3.2...v0.4.0) (2026-03-17)
+
+
+### Features
+
+* UPSERT Support : New Changelog-mode Option for Bigtable Connector ([#130](https://github.com/google/flink-connector-gcp/issues/130)) ([d649481](https://github.com/google/flink-connector-gcp/commit/d6494813fd98ea2523ed55d4638b25e637e0305f))
+
 ## [0.3.2](https://github.com/google/flink-connector-gcp/compare/v0.3.1...v0.3.2) (2026-02-10)
 
 
