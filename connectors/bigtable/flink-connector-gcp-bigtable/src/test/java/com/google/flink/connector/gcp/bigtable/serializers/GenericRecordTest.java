@@ -144,7 +144,8 @@ public class GenericRecordTest {
 
         Assertions.assertThatThrownBy(() -> serializer.serialize(testRecord, null))
                 .hasMessage(
-                        String.format(ErrorMessages.ROW_KEY_STRING_TYPE_TEMPLATE, Schema.Type.INT));
+                        String.format(
+                                ErrorMessages.ROW_KEY_UNSUPPORTED_TYPE_TEMPLATE, Schema.Type.INT));
     }
 
     @Test

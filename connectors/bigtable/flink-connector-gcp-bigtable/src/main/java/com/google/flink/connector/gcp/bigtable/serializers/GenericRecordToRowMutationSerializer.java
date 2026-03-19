@@ -84,7 +84,7 @@ public class GenericRecordToRowMutationSerializer
         if (record.getSchema().getField(rowKeyField).schema().getType() != Schema.Type.STRING) {
             throw new RuntimeException(
                     String.format(
-                            ErrorMessages.ROW_KEY_STRING_TYPE_TEMPLATE,
+                            ErrorMessages.ROW_KEY_UNSUPPORTED_TYPE_TEMPLATE,
                             record.getSchema().getField(rowKeyField).schema().getType()));
         }
 

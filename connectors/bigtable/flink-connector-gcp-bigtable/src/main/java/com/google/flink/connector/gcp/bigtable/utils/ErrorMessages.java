@@ -31,8 +31,8 @@ public class ErrorMessages {
             "Nested Rows mode require all non-key fields to be of type ";
     public static final String NESTED_TYPE_ERROR =
             "Nested rows are only supported with withNestedRowsMode and not double nested. Use Bytes for more complex types";
-    public static final String ROW_KEY_STRING_TYPE_TEMPLATE =
-            "Row Key has to be of type String, got %s.";
+    public static final String ROW_KEY_UNSUPPORTED_TYPE_TEMPLATE =
+            "Row Key has to be of type VARCHAR, CHAR, BIGINT, INTEGER, SMALLINT, or TINYINT, got %s.";
     public static final String SERIALIZER_ERROR =
             "Error while serializing element to RowMutationEntry: ";
     public static final String METRICS_ENTRY_SERIALIZATION_WARNING =
@@ -44,4 +44,5 @@ public class ErrorMessages {
     public static final String SCHEMA_NULL = "Row key field must be set";
     public static final String MULTIPLE_PRIMARY_KEYS_TEMPLATE =
             "There must be exactly one primary key, found %d.";
+    public static final String ROW_KEY_NULLABLE = "Row key column must not be nullable";
 }
