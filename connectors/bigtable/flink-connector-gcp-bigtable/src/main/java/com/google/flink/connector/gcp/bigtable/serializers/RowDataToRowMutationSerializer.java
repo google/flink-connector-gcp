@@ -42,6 +42,7 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -66,11 +67,22 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
  * converting them to appropriate byte arrays for Bigtable.
  */
 public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer<RowData> {
+    /** Row key types that can be automatically converted to a String row key. */
+    public static final EnumSet<LogicalTypeRoot> SUPPORTED_ROW_KEY_TYPES =
+            EnumSet.of(
+                    LogicalTypeRoot.VARCHAR,
+                    LogicalTypeRoot.CHAR,
+                    LogicalTypeRoot.BIGINT,
+                    LogicalTypeRoot.INTEGER,
+                    LogicalTypeRoot.SMALLINT,
+                    LogicalTypeRoot.TINYINT);
+
     public final String columnFamily;
     public Boolean useNestedRowsMode;
     public String rowKeyField;
     public Integer rowKeyIndex;
     public final boolean upsertMode;
+    private LogicalTypeRoot rowKeyTypeRoot;
 
     private final HashMap<String, DataType> columnTypeMap = new HashMap<String, DataType>();
     private final HashMap<Integer, String> indexMap = new HashMap<Integer, String>();
@@ -79,6 +91,8 @@ public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer
 
     protected static final int MIN_DATETIME_PRECISION = 0;
     protected static final int MAX_DATETIME_PRECISION = 6;
+    // 19 is the number of digits in Long.MAX_VALUE.
+    protected static final String ROW_KEY_NUMERIC_FORMAT = "%019d";
 
     /**
      * Constructs a {@code RowDataToMutationSerializer}.
@@ -86,7 +100,10 @@ public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer
      * @param schema The {@link DataType} of the {@link RowData} to be serialized.
      * @param rowKeyField The name of the field in the {@link RowData} that represents the Bigtable
      *     <a href="https://cloud.google.com/bigtable/docs/schema-design#row-keys">row key</a>. It
-     *     must be of type String.
+     *     must be of type VARCHAR, CHAR, BIGINT, INTEGER, SMALLINT, or TINYINT. Numeric types are
+     *     zero-padded to 19 digits to preserve lexicographic sort order for non-negative values.
+     *     Negative values are not recommended as row keys, as their sort order is inverted
+     *     lexicographically.
      * @param useNestedRowsMode Whether to use nested rows mode. If {@code true}, each field in the
      *     {@link RowData} (except the row key field) represents a separate column family.
      *     Otherwise, all fields are written to a single column family specified by {@code
@@ -118,7 +135,7 @@ public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer
     @Override
     @Nullable
     public RowMutationEntry serialize(RowData record, SinkWriter.Context context) {
-        String rowKey = record.getString(this.rowKeyIndex).toString();
+        String rowKey = extractRowKeyAsString(record, this.rowKeyIndex, this.rowKeyTypeRoot);
 
         if (upsertMode) {
             RowKind kind = record.getRowKind();
@@ -169,6 +186,39 @@ public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer
         return entry;
     }
 
+    /**
+     * Extracts the row key field from a {@link RowData} and converts it to a String.
+     *
+     * <p>Supports VARCHAR, CHAR, BIGINT, INTEGER, SMALLINT, and TINYINT types. Numeric types are
+     * zero-padded to 19 digits (e.g., {@code 42} → {@code "0000000000000000042"}) to preserve
+     * lexicographic sort order for non-negative values, as recommended by the Bigtable schema
+     * design guide.
+     *
+     * @param record The row data containing the key field.
+     * @param index The field index of the row key.
+     * @param typeRoot The logical type root of the row key field.
+     * @return The row key as a String.
+     */
+    @VisibleForTesting
+    static String extractRowKeyAsString(RowData record, int index, LogicalTypeRoot typeRoot) {
+        switch (typeRoot) {
+            case VARCHAR:
+            case CHAR:
+                return record.getString(index).toString();
+            case BIGINT:
+                return String.format(ROW_KEY_NUMERIC_FORMAT, record.getLong(index));
+            case INTEGER:
+                return String.format(ROW_KEY_NUMERIC_FORMAT, record.getInt(index));
+            case SMALLINT:
+                return String.format(ROW_KEY_NUMERIC_FORMAT, record.getShort(index));
+            case TINYINT:
+                return String.format(ROW_KEY_NUMERIC_FORMAT, record.getByte(index));
+            default:
+                throw new IllegalArgumentException(
+                        String.format(ErrorMessages.ROW_KEY_UNSUPPORTED_TYPE_TEMPLATE, typeRoot));
+        }
+    }
+
     private RowMutationEntry serializeWithColumnFamily(
             RowData record,
             RowMutationEntry entry,
@@ -204,13 +254,15 @@ public class RowDataToRowMutationSerializer implements BaseRowMutationSerializer
         for (Field field : DataType.getFields(schema)) {
             // Check if key
             if (field.getName().equals(rowKeyField)) {
-                if (!field.getDataType().getLogicalType().is(LogicalTypeFamily.CHARACTER_STRING)) {
+                LogicalTypeRoot typeRoot = field.getDataType().getLogicalType().getTypeRoot();
+                if (!SUPPORTED_ROW_KEY_TYPES.contains(typeRoot)) {
                     throw new IllegalArgumentException(
                             String.format(
-                                    ErrorMessages.ROW_KEY_STRING_TYPE_TEMPLATE,
+                                    ErrorMessages.ROW_KEY_UNSUPPORTED_TYPE_TEMPLATE,
                                     field.getDataType()));
                 }
                 this.rowKeyIndex = index;
+                this.rowKeyTypeRoot = typeRoot;
             }
 
             // Populate maps for ROWs

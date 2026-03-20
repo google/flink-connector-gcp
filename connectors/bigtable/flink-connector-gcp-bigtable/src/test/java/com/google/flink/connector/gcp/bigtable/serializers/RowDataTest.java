@@ -27,6 +27,7 @@ import org.apache.flink.table.data.TimestampData;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.logical.DecimalType;
 import org.apache.flink.table.types.logical.LogicalType;
+import org.apache.flink.table.types.logical.LogicalTypeRoot;
 import org.apache.flink.types.RowKind;
 
 import com.google.cloud.bigtable.data.v2.models.RowMutationEntry;
@@ -210,19 +211,21 @@ public class RowDataTest {
     }
 
     @Test
-    public void testRowKeyNoStringError() {
-        DataType dtIntegerKeySchema =
-                DataTypes.ROW(DataTypes.FIELD(TestingUtils.ROW_KEY_FIELD, DataTypes.INT()));
+    public void testRowKeyUnsupportedTypeError() {
+        DataType dtDoubleKeySchema =
+                DataTypes.ROW(DataTypes.FIELD(TestingUtils.ROW_KEY_FIELD, DataTypes.DOUBLE()));
 
         Assertions.assertThatThrownBy(
                         () ->
                                 RowDataToRowMutationSerializer.builder()
-                                        .withSchema(dtIntegerKeySchema)
+                                        .withSchema(dtDoubleKeySchema)
                                         .withRowKeyField(TestingUtils.ROW_KEY_FIELD)
                                         .withColumnFamily(TestingUtils.COLUMN_FAMILY)
                                         .build())
                 .hasMessage(
-                        String.format(ErrorMessages.ROW_KEY_STRING_TYPE_TEMPLATE, DataTypes.INT()));
+                        String.format(
+                                ErrorMessages.ROW_KEY_UNSUPPORTED_TYPE_TEMPLATE,
+                                DataTypes.DOUBLE()));
     }
 
     @Test
@@ -563,6 +566,153 @@ public class RowDataTest {
         r.setField(1, nested1);
         r.setField(2, nested2);
         return r;
+    }
+
+    @Test
+    public void testIntegerRowKeySerialization() {
+        DataType schema =
+                DataTypes.ROW(
+                        DataTypes.FIELD("id", DataTypes.INT()),
+                        DataTypes.FIELD("value", DataTypes.STRING()));
+
+        RowDataToRowMutationSerializer serializer =
+                RowDataToRowMutationSerializer.builder()
+                        .withSchema(schema)
+                        .withRowKeyField("id")
+                        .withColumnFamily(TestingUtils.COLUMN_FAMILY)
+                        .build();
+
+        GenericRowData row = new GenericRowData(2);
+        row.setField(0, 42);
+        row.setField(1, StringData.fromString("hello"));
+
+        RowMutationEntry entry = serializer.serialize(row, null);
+        assertEquals("0000000000000000042", entry.toProto().getRowKey().toStringUtf8());
+    }
+
+    @Test
+    public void testBigintRowKeySerialization() {
+        DataType schema =
+                DataTypes.ROW(
+                        DataTypes.FIELD("id", DataTypes.BIGINT()),
+                        DataTypes.FIELD("value", DataTypes.STRING()));
+
+        RowDataToRowMutationSerializer serializer =
+                RowDataToRowMutationSerializer.builder()
+                        .withSchema(schema)
+                        .withRowKeyField("id")
+                        .withColumnFamily(TestingUtils.COLUMN_FAMILY)
+                        .build();
+
+        GenericRowData row = new GenericRowData(2);
+        row.setField(0, 9876543210L);
+        row.setField(1, StringData.fromString("world"));
+
+        RowMutationEntry entry = serializer.serialize(row, null);
+        assertEquals("0000000009876543210", entry.toProto().getRowKey().toStringUtf8());
+    }
+
+    @Test
+    public void testSmallintRowKeySerialization() {
+        DataType schema =
+                DataTypes.ROW(
+                        DataTypes.FIELD("id", DataTypes.SMALLINT()),
+                        DataTypes.FIELD("value", DataTypes.STRING()));
+
+        RowDataToRowMutationSerializer serializer =
+                RowDataToRowMutationSerializer.builder()
+                        .withSchema(schema)
+                        .withRowKeyField("id")
+                        .withColumnFamily(TestingUtils.COLUMN_FAMILY)
+                        .build();
+
+        GenericRowData row = new GenericRowData(2);
+        row.setField(0, (short) 99);
+        row.setField(1, StringData.fromString("test"));
+
+        RowMutationEntry entry = serializer.serialize(row, null);
+        assertEquals("0000000000000000099", entry.toProto().getRowKey().toStringUtf8());
+    }
+
+    @Test
+    public void testTinyintRowKeySerialization() {
+        DataType schema =
+                DataTypes.ROW(
+                        DataTypes.FIELD("id", DataTypes.TINYINT()),
+                        DataTypes.FIELD("value", DataTypes.STRING()));
+
+        RowDataToRowMutationSerializer serializer =
+                RowDataToRowMutationSerializer.builder()
+                        .withSchema(schema)
+                        .withRowKeyField("id")
+                        .withColumnFamily(TestingUtils.COLUMN_FAMILY)
+                        .build();
+
+        GenericRowData row = new GenericRowData(2);
+        row.setField(0, (byte) 7);
+        row.setField(1, StringData.fromString("test"));
+
+        RowMutationEntry entry = serializer.serialize(row, null);
+        assertEquals("0000000000000000007", entry.toProto().getRowKey().toStringUtf8());
+    }
+
+    @Test
+    public void testExtractRowKeyAsString() {
+        GenericRowData row = new GenericRowData(5);
+        row.setField(0, StringData.fromString("key1"));
+        row.setField(1, 42);
+        row.setField(2, 9876543210L);
+        row.setField(3, (short) 99);
+        row.setField(4, (byte) 7);
+
+        assertEquals(
+                "key1",
+                RowDataToRowMutationSerializer.extractRowKeyAsString(
+                        row, 0, LogicalTypeRoot.VARCHAR));
+        assertEquals(
+                "0000000000000000042",
+                RowDataToRowMutationSerializer.extractRowKeyAsString(
+                        row, 1, LogicalTypeRoot.INTEGER));
+        assertEquals(
+                "0000000009876543210",
+                RowDataToRowMutationSerializer.extractRowKeyAsString(
+                        row, 2, LogicalTypeRoot.BIGINT));
+        assertEquals(
+                "0000000000000000099",
+                RowDataToRowMutationSerializer.extractRowKeyAsString(
+                        row, 3, LogicalTypeRoot.SMALLINT));
+        assertEquals(
+                "0000000000000000007",
+                RowDataToRowMutationSerializer.extractRowKeyAsString(
+                        row, 4, LogicalTypeRoot.TINYINT));
+    }
+
+    @Test
+    public void testExtractRowKeyAsStringEdgeCases() {
+        GenericRowData row = new GenericRowData(2);
+        row.setField(0, Long.MAX_VALUE);
+        row.setField(1, 0L);
+
+        assertEquals(
+                "9223372036854775807",
+                RowDataToRowMutationSerializer.extractRowKeyAsString(
+                        row, 0, LogicalTypeRoot.BIGINT));
+        assertEquals(
+                "0000000000000000000",
+                RowDataToRowMutationSerializer.extractRowKeyAsString(
+                        row, 1, LogicalTypeRoot.BIGINT));
+    }
+
+    @Test
+    public void testExtractRowKeyAsStringUnsupportedType() {
+        GenericRowData row = new GenericRowData(1);
+        row.setField(0, 3.14);
+
+        Assertions.assertThatThrownBy(
+                        () ->
+                                RowDataToRowMutationSerializer.extractRowKeyAsString(
+                                        row, 0, LogicalTypeRoot.DOUBLE))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     private RowDataToRowMutationSerializer createTestSerializer(Boolean useNestedRows) {

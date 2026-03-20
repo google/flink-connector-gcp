@@ -19,13 +19,13 @@
 package com.google.flink.connector.gcp.bigtable.table;
 
 import org.apache.flink.configuration.ReadableConfig;
-import org.apache.flink.table.api.DataTypes;
 import org.apache.flink.table.catalog.ResolvedSchema;
 import org.apache.flink.table.connector.ChangelogMode;
 import org.apache.flink.table.connector.sink.DynamicTableSink;
 import org.apache.flink.table.connector.sink.SinkV2Provider;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.types.DataType;
+import org.apache.flink.table.types.logical.LogicalTypeRoot;
 
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.flink.connector.gcp.bigtable.BigtableSink;
@@ -38,6 +38,7 @@ import com.google.flink.connector.gcp.bigtable.utils.ErrorMessages;
 import java.util.Objects;
 import java.util.Optional;
 
+import static com.google.flink.connector.gcp.bigtable.serializers.RowDataToRowMutationSerializer.SUPPORTED_ROW_KEY_TYPES;
 import static org.apache.flink.util.Preconditions.checkArgument;
 
 /**
@@ -58,15 +59,13 @@ public class BigtableDynamicTableSink implements DynamicTableSink {
                         ErrorMessages.MULTIPLE_PRIMARY_KEYS_TEMPLATE,
                         resolvedSchema.getPrimaryKeyIndexes().length));
         int rowKeyIndex = resolvedSchema.getPrimaryKeyIndexes()[0];
+        DataType rowKeyDataType = resolvedSchema.getColumn(rowKeyIndex).get().getDataType();
+        LogicalTypeRoot rowKeyType = rowKeyDataType.getLogicalType().getTypeRoot();
         checkArgument(
-                resolvedSchema
-                        .getColumn(rowKeyIndex)
-                        .get()
-                        .getDataType()
-                        .equals(DataTypes.STRING().notNull()),
-                String.format(
-                        ErrorMessages.ROW_KEY_STRING_TYPE_TEMPLATE,
-                        resolvedSchema.getColumn(rowKeyIndex).get().getDataType()));
+                rowKeyDataType.equals(rowKeyDataType.notNull()), ErrorMessages.ROW_KEY_NULLABLE);
+        checkArgument(
+                SUPPORTED_ROW_KEY_TYPES.contains(rowKeyType),
+                String.format(ErrorMessages.ROW_KEY_UNSUPPORTED_TYPE_TEMPLATE, rowKeyDataType));
 
         this.connectorOptions = connectorOptions;
         this.resolvedSchema = resolvedSchema;
