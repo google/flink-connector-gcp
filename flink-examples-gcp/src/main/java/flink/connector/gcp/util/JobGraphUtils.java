@@ -30,6 +30,7 @@ import org.apache.flink.util.SerializedValue;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.StreamWriteConstraints;
+import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
@@ -45,6 +46,16 @@ import java.util.Map;
  * Flink JobGraph Json Serializer.
  */
 public class JobGraphUtils {
+
+  private static void addSerializerIfPresent(
+      SimpleModule module, String className, JsonSerializer<?> serializer) {
+    try {
+      Class<?> clazz = Class.forName(className);
+      module.addSerializer((Class<Object>) clazz, (JsonSerializer<Object>) serializer);
+    } catch (ClassNotFoundException e) {
+      // ignore
+    }
+  }
 
   public static JobGraph deserializeJobGraph(File jobGraphFile)
       throws IOException, ClassNotFoundException {
@@ -76,7 +87,7 @@ public class JobGraphUtils {
           new StringSerializer());
       module.addSerializer(org.apache.flink.runtime.jobgraph.IntermediateDataSet.class,
           new StringSerializer());
-      module.addSerializer(org.apache.flink.api.common.serialization.SerializerConfig.class,
+      addSerializerIfPresent(module, "org.apache.flink.api.common.serialization.SerializerConfig",
           new StringSerializer());
       module.addSerializer(org.apache.flink.configuration.Configuration.class,
           new ConfigurationSerializer());
@@ -125,7 +136,7 @@ public class JobGraphUtils {
       module.addSerializer(ExecutionConfig.GlobalJobParameters.class, new StringSerializer());
       module.addSerializer(org.apache.flink.runtime.jobgraph.JobVertex.class,
           new StringSerializer());
-      module.addSerializer(org.apache.flink.api.common.serialization.SerializerConfig.class,
+      addSerializerIfPresent(module, "org.apache.flink.api.common.serialization.SerializerConfig",
           new StringSerializer());
       module.addSerializer(org.apache.flink.configuration.Configuration.class,
           new ConfigurationSerializer());

@@ -82,7 +82,7 @@ public class GMKLoadGeneratorTest {
         CollectSink.VALUES.clear();
 
         // create a stream of custom elements and apply transformations
-        this.env.fromData(1L, 2L, 3L, 4L)
+        this.env.fromElements(1L, 2L, 3L, 4L)
                 .filter(new InputLoadFilter(3600, "random", this.clock, this.random))
                 .addSink(new CollectSink());
 
@@ -99,7 +99,7 @@ public class GMKLoadGeneratorTest {
         CollectSink.VALUES.clear();
 
         // create a stream of custom elements and apply transformations
-        this.env.fromData(1L, 2L, 3L, 4L)
+        this.env.fromElements(1L, 2L, 3L, 4L)
                 .filter(new InputLoadFilter(3600, "static", this.clock, this.random))
                 .addSink(new CollectSink());
 
@@ -116,7 +116,7 @@ public class GMKLoadGeneratorTest {
         CollectSink.VALUES.clear();
 
         // create a stream of custom elements and apply transformations
-        this.env.fromData(1L, 2L, 3L, 4L)
+        this.env.fromElements(1L, 2L, 3L, 4L)
                 .filter(new InputLoadFilter(3600, "sin", this.clock, this.random))
                 .addSink(new CollectSink());
 
@@ -133,7 +133,7 @@ public class GMKLoadGeneratorTest {
         CollectSink.VALUES.clear();
 
         // create a stream of custom elements and apply transformations
-        this.env.fromData(1L, 2L, 3L, 4L)
+        this.env.fromElements(1L, 2L, 3L, 4L)
                 .filter(new InputLoadFilter(3600, "rampup", this.clock, this.random))
                 .addSink(new CollectSink());
 
@@ -150,7 +150,7 @@ public class GMKLoadGeneratorTest {
         CollectSink.VALUES.clear();
 
         // create a stream of custom elements and apply transformations
-        this.env.fromData(1L, 2L, 3L, 4L)
+        this.env.fromElements(1L, 2L, 3L, 4L)
                 .filter(new InputLoadFilter(8000, "rampdown", this.clock, this.random))
                 .addSink(new CollectSink());
 
