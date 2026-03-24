@@ -24,7 +24,6 @@ import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringEncoder;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.connector.file.sink.FileSink;
 import org.apache.flink.connector.file.sink.compactor.DecoderBasedReader;
 import org.apache.flink.connector.file.sink.compactor.FileCompactStrategy;
@@ -40,6 +39,7 @@ import org.apache.flink.streaming.api.functions.sink.filesystem.OutputFileConfig
 import org.apache.flink.streaming.api.functions.sink.filesystem.rollingpolicies.DefaultRollingPolicy;
 import org.apache.flink.util.Collector;
 
+import flink.connector.gcp.util.ParameterToolCompat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,15 +55,15 @@ public class GCStoGCSUnboundedWC {
 
     public static void main(String[] args) throws Exception {
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        final ParameterTool parameters = ParameterTool.fromArgs(args);
+        final Object parameters = ParameterToolCompat.fromArgs(args);
 
         env.setRuntimeMode(RuntimeExecutionMode.STREAMING);
-        env.getConfig().setGlobalJobParameters(parameters);
+        env.getConfig().setGlobalJobParameters((org.apache.flink.api.common.ExecutionConfig.GlobalJobParameters) parameters);
 
-        String inputPath = parameters.get("input");
-        String outputPath = parameters.get("output");
-        String jobName = parameters.get("job-name", "GCS-GCS-word-count");
-        int shuffleStages = parameters.getInt("shuffle-stages", 1);
+        String inputPath = ParameterToolCompat.get(parameters, "input");
+        String outputPath = ParameterToolCompat.get(parameters, "output");
+        String jobName = ParameterToolCompat.get(parameters, "job-name", "GCS-GCS-word-count");
+        int shuffleStages = ParameterToolCompat.getInt(parameters, "shuffle-stages", 1);
 
         // Source (Unbounded Read)
         FileSource<String> textUnboundedSource =

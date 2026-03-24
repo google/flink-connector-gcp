@@ -18,7 +18,6 @@
 
 package flink.connector.gcp;
 
-import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.connector.base.DeliveryGuarantee;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.annotation.DataTypeHint;
@@ -35,6 +34,7 @@ import org.apache.flink.types.Row;
 import com.google.cloud.flink.bigquery.sink.serializer.BigQueryTableSchemaProvider;
 import com.google.cloud.flink.bigquery.table.config.BigQuerySinkTableConfig;
 import com.google.cloud.flink.bigquery.table.config.BigQueryTableConfig;
+import flink.connector.gcp.util.ParameterToolCompat;
 
 import java.time.Duration;
 
@@ -45,11 +45,11 @@ import static org.apache.flink.table.api.Expressions.call;
  public class BQTableAPI {
 
      public static void main(String[] args) throws Exception {
-         ParameterTool params = ParameterTool.fromArgs(args);
-         String projectId = params.get("project-id");
-         String datasetName = params.get("dataset-name");
-         String tableName = params.get("table-name");
-         String rowsPerSec = params.get("rows-per-second");
+         Object params = ParameterToolCompat.fromArgs(args);
+         String projectId = ParameterToolCompat.get(params, "project-id");
+         String datasetName = ParameterToolCompat.get(params, "dataset-name");
+         String tableName = ParameterToolCompat.get(params, "table-name");
+         String rowsPerSec = ParameterToolCompat.get(params, "rows-per-second");
 
         EnvironmentSettings settings = EnvironmentSettings
                 .newInstance()
@@ -57,7 +57,7 @@ import static org.apache.flink.table.api.Expressions.call;
                 .build();
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.getConfig().setGlobalJobParameters(params);
+        env.getConfig().setGlobalJobParameters((org.apache.flink.api.common.ExecutionConfig.GlobalJobParameters) params);
         env.enableCheckpointing(Duration.ofSeconds(5).toMillis());
 
          StreamTableEnvironment tableEnv = StreamTableEnvironment.create(env, settings);

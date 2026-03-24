@@ -23,7 +23,6 @@ import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringEncoder;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.connector.file.sink.FileSink;
 import org.apache.flink.connector.file.src.FileSource;
 import org.apache.flink.connector.file.src.reader.TextLineInputFormat;
@@ -33,6 +32,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.filesystem.OutputFileConfig;
 import org.apache.flink.util.Collector;
 
+import flink.connector.gcp.util.ParameterToolCompat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,15 +43,15 @@ public class GCStoGCSWordCount {
 
     public static void main(String[] args) throws Exception {
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        final ParameterTool parameters = ParameterTool.fromArgs(args);
+        final Object parameters = ParameterToolCompat.fromArgs(args);
         env.setRuntimeMode(RuntimeExecutionMode.BATCH);
-        env.getConfig().setGlobalJobParameters(parameters);
+        env.getConfig().setGlobalJobParameters((org.apache.flink.api.common.ExecutionConfig.GlobalJobParameters) parameters);
 
         String inputPath =
-                parameters.get("input", "gs://apache-beam-samples/shakespeare/kinglear.txt");
-        String outputPath = parameters.get("output", "outputBounded");
-        Integer parallelism = parameters.getInt("parallelism", 1);
-        String jobName = parameters.get("job-name", "GCS-GCS-word-count");
+                ParameterToolCompat.get(parameters, "input", "gs://apache-beam-samples/shakespeare/kinglear.txt");
+        String outputPath = ParameterToolCompat.get(parameters, "output", "outputBounded");
+        Integer parallelism = ParameterToolCompat.getInt(parameters, "parallelism", 1);
+        String jobName = ParameterToolCompat.get(parameters, "job-name", "GCS-GCS-word-count");
 
         env.setParallelism(parallelism);
 

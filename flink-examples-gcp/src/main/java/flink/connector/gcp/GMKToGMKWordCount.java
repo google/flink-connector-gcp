@@ -22,7 +22,6 @@ import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.api.java.utils.MultipleParameterTool;
 import org.apache.flink.connector.base.DeliveryGuarantee;
 import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchema;
 import org.apache.flink.connector.kafka.sink.KafkaSink;
@@ -33,6 +32,7 @@ import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsIni
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.util.Collector;
 
+import flink.connector.gcp.util.ParameterToolCompat;
 import org.apache.avro.Schema;
 
 /** Pipeline code for running word count reading from Kafka and writing to Kafka. */
@@ -40,20 +40,20 @@ public class GMKToGMKWordCount{
     static Schema schema;
 
     public static void main(String[] args) throws Exception {
-        final MultipleParameterTool parameters = MultipleParameterTool.fromArgs(args);
-        String brokers = parameters.get("brokers", "localhost:9092");
-        String kafkaUsername = parameters.get("kafka-username", "");
-        String kafkaTopic = parameters.get("kafka-topic", "my-topic");
-        String kafkaSinkTopic = parameters.get("kafka-sink-topic", "sink-topic");
-        boolean oauth = parameters.getBoolean("oauth", true); // Only oauth is supported for Kafka for Big Query authentication
-        String jobName = parameters.get("job-name", "Kafka-Kafka-word-count");
-        String project = parameters.get("project", "");
-        String secretID = parameters.get("secret-id", "");
-        String secretVersion = parameters.get("secret-version", "1");
+        final Object parameters = ParameterToolCompat.fromArgsMultiple(args);
+        String brokers = ParameterToolCompat.get(parameters, "brokers", "localhost:9092");
+        String kafkaUsername = ParameterToolCompat.get(parameters, "kafka-username", "");
+        String kafkaTopic = ParameterToolCompat.get(parameters, "kafka-topic", "my-topic");
+        String kafkaSinkTopic = ParameterToolCompat.get(parameters, "kafka-sink-topic", "sink-topic");
+        boolean oauth = ParameterToolCompat.getBoolean(parameters, "oauth", true); // Only oauth is supported for Kafka for Big Query authentication
+        String jobName = ParameterToolCompat.get(parameters, "job-name", "Kafka-Kafka-word-count");
+        String project = ParameterToolCompat.get(parameters, "project", "");
+        String secretID = ParameterToolCompat.get(parameters, "secret-id", "");
+        String secretVersion = ParameterToolCompat.get(parameters, "secret-version", "1");
         System.out.println("Starting job ".concat(jobName));
         System.out.println("Using SASL_SSL " + (oauth ? "OAUTHBEARER" : "PLAIN") + " to authenticate");
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.getConfig().setGlobalJobParameters(parameters);
+        env.getConfig().setGlobalJobParameters((org.apache.flink.api.common.ExecutionConfig.GlobalJobParameters) parameters);
 
         KafkaSourceBuilder<String> sourceBuilder = KafkaSource.<String>builder()
                     .setBootstrapServers(brokers)

@@ -18,7 +18,6 @@
 
 package flink.connector.gcp;
 
-import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.annotation.DataTypeHint;
 import org.apache.flink.table.annotation.FunctionHint;
@@ -32,6 +31,8 @@ import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 import org.apache.flink.table.functions.TableFunction;
 import org.apache.flink.types.Row;
 
+import flink.connector.gcp.util.ParameterToolCompat;
+
 import static org.apache.flink.table.api.Expressions.$;
 import static org.apache.flink.table.api.Expressions.call;
 
@@ -39,10 +40,10 @@ import static org.apache.flink.table.api.Expressions.call;
 public class GCStoGCSTableApi {
 
     public static void main(String[] args) throws Exception {
-        ParameterTool params = ParameterTool.fromArgs(args);
-        String inputPath = params.get("input");
-        String outputPath = params.get("output");
-        Integer sinkMaxFileSizeMB = params.getInt("max-file-size-mb", 1);
+        final Object params = ParameterToolCompat.fromArgs(args);
+        String inputPath = ParameterToolCompat.get(params, "input");
+        String outputPath = ParameterToolCompat.get(params, "output");
+        Integer sinkMaxFileSizeMB = ParameterToolCompat.getInt(params, "max-file-size-mb", 1);
 
         EnvironmentSettings settings = EnvironmentSettings
                 .newInstance()
@@ -50,7 +51,7 @@ public class GCStoGCSTableApi {
                 .build();
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.getConfig().setGlobalJobParameters(params);
+        env.getConfig().setGlobalJobParameters((org.apache.flink.api.common.ExecutionConfig.GlobalJobParameters) params);
 
         StreamTableEnvironment tableEnv = StreamTableEnvironment.create(env, settings);
 

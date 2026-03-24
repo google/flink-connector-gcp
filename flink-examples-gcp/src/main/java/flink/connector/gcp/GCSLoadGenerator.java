@@ -23,7 +23,6 @@ import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.serialization.SimpleStringEncoder;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.connector.source.util.ratelimit.RateLimiterStrategy;
-import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.connector.datagen.source.DataGeneratorSource;
 import org.apache.flink.connector.datagen.source.GeneratorFunction;
 import org.apache.flink.connector.file.sink.FileSink;
@@ -38,6 +37,8 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.filesystem.OutputFileConfig;
 import org.apache.flink.streaming.api.functions.sink.filesystem.rollingpolicies.DefaultRollingPolicy;
 
+import flink.connector.gcp.util.ParameterToolCompat;
+
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Random;
@@ -49,17 +50,17 @@ public class GCSLoadGenerator {
 
     public static void main(String[] args) throws Exception {
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        final ParameterTool parameters = ParameterTool.fromArgs(args);
+        final Object parameters = ParameterToolCompat.fromArgs(args);
 
         env.setRuntimeMode(RuntimeExecutionMode.STREAMING);
-        env.getConfig().setGlobalJobParameters(parameters);
+        env.getConfig().setGlobalJobParameters((org.apache.flink.api.common.ExecutionConfig.GlobalJobParameters) parameters);
 
-        String outputPath = parameters.get("output", "gs://source/");
-        int load = parameters.getInt("messageSizeKB", 10);
-        int rate = parameters.getInt("messagesPerSecond", 1000);
-        Long loadPeriod = parameters.getLong("load-period-in-second", 3600);
-        String pattern = parameters.get("pattern", "static");
-        String jobName = parameters.get("job-name", "GCS-load-gen");
+        String outputPath = ParameterToolCompat.get(parameters, "output", "gs://source/");
+        int load = ParameterToolCompat.getInt(parameters, "messageSizeKB", 10);
+        int rate = ParameterToolCompat.getInt(parameters, "messagesPerSecond", 1000);
+        Long loadPeriod = ParameterToolCompat.getLong(parameters, "load-period-in-second", 3600);
+        String pattern = ParameterToolCompat.get(parameters, "pattern", "static");
+        String jobName = ParameterToolCompat.get(parameters, "job-name", "GCS-load-gen");
         System.out.println(String.format("Message load: %d; Rate Per Sec: %d, Load pattern: %s, Load period: %d", load, rate, pattern, loadPeriod));
 
         // Source (Data Generator)

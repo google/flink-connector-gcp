@@ -50,11 +50,6 @@ under the License.
                 <enabled>false</enabled>
             </snapshots>
         </repository>
-		<repository>
-			<id>example-repo</id>
-			<name>Example Repository</name>
-			<url>file:///usr/local/google/home/${USER}/.m2/repository</url>
-		</repository>
 	</repositories>
 
  <dependencies>

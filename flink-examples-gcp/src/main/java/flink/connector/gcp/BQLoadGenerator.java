@@ -21,7 +21,6 @@ package flink.connector.gcp;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.connector.source.util.ratelimit.RateLimiterStrategy;
-import org.apache.flink.api.java.utils.MultipleParameterTool;
 import org.apache.flink.connector.base.DeliveryGuarantee;
 import org.apache.flink.connector.datagen.source.DataGeneratorSource;
 import org.apache.flink.connector.datagen.source.GeneratorFunction;
@@ -36,6 +35,7 @@ import com.google.cloud.flink.bigquery.sink.BigQuerySinkConfig;
 import com.google.cloud.flink.bigquery.sink.serializer.AvroToProtoSerializer;
 import com.google.cloud.flink.bigquery.sink.serializer.BigQuerySchemaProvider;
 import com.google.cloud.flink.bigquery.sink.serializer.BigQuerySchemaProviderImpl;
+import flink.connector.gcp.util.ParameterToolCompat;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericRecordBuilder;
@@ -48,27 +48,27 @@ public class BQLoadGenerator {
         static Schema schema;
         private static final int KB = 1024;
         public static void main(String[] args) throws Exception {
-                final MultipleParameterTool parameters = MultipleParameterTool.fromArgs(args);
-                String projectId = parameters.get("project-id");
-                String datasetName = parameters.get("dataset-name");
-                String tableName = parameters.get("table-name");
-                String bqWordFieldName = parameters.get("bq-word-field-name", "word");
-                String bqCountFieldName = parameters.get("bq-count-field-name", "countStr");
-                String jobName = parameters.get("job-name", "BQ-Load-Gen");
-                int load = parameters.getInt("messageSizeKB", 10);
-                int rate = parameters.getInt("messagesPerSecond", 1000);
-                Long maxRecords = parameters.getLong("max-records", 1_000_000_000L);
-                String pattern = parameters.get("pattern", "static");
-                Long loadPeriod = parameters.getLong("load-period-in-second", 3600);
-                Long checkpointInterval = parameters.getLong("checkpoint-interval", 60000L);
-                boolean wordGen = parameters.getBoolean("word-gen", true);
-                boolean exactlyOnce = parameters.getBoolean("exactly-once", true);
-                System.out.println("Starting job ".concat(jobName));
+                final Object parameters = ParameterToolCompat.fromArgsMultiple(args);
+                String projectId = ParameterToolCompat.get(parameters, "project-id");
+                String datasetName = ParameterToolCompat.get(parameters, "dataset-name");
+                String tableName = ParameterToolCompat.get(parameters, "table-name");
+                String bqWordFieldName = ParameterToolCompat.get(parameters, "bq-word-field-name", "word");
+                String bqCountFieldName = ParameterToolCompat.get(parameters, "bq-count-field-name", "countStr");
+                String jobName = ParameterToolCompat.get(parameters, "job-name", "BQ-Load-Gen");
+                int load = ParameterToolCompat.getInt(parameters, "messageSizeKB", 10);
+                int rate = ParameterToolCompat.getInt(parameters, "messagesPerSecond", 1000);
+                Long maxRecords = ParameterToolCompat.getLong(parameters, "max-records", 1_000_000_000L);
+                String pattern = ParameterToolCompat.get(parameters, "pattern", "static");
+                Long loadPeriod = ParameterToolCompat.getLong(parameters, "load-period-in-second", 3600);
+                Long checkpointInterval = ParameterToolCompat.getLong(parameters, "checkpoint-interval", 60000L);
+                boolean wordGen = ParameterToolCompat.getBoolean(parameters, "word-gen", true);
+                boolean exactlyOnce = ParameterToolCompat.getBoolean(parameters, "exactly-once", true);
+                int parallelism = ParameterToolCompat.getInt(parameters, "parallelism", 1);
                 final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
                 // BQ sink requires checkpointing, which is enabled by default on Big Query Engine for Apache Flink
                 // Enable checkpointing if trying to run with OSS Flink
                 env.enableCheckpointing(checkpointInterval);
-                env.getConfig().setGlobalJobParameters(parameters);
+                env.getConfig().setGlobalJobParameters((org.apache.flink.api.common.ExecutionConfig.GlobalJobParameters) parameters);
                 // BQ sink can only support up to 100 parallelism.
                 env.getConfig().setMaxParallelism(100);
 

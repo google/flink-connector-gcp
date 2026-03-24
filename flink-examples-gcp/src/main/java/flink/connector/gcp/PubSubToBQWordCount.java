@@ -22,7 +22,6 @@ import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.api.java.utils.MultipleParameterTool;
 import org.apache.flink.connector.base.DeliveryGuarantee;
 import org.apache.flink.formats.avro.typeutils.GenericRecordAvroTypeInfo;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -36,6 +35,7 @@ import com.google.cloud.flink.bigquery.sink.serializer.BigQuerySchemaProvider;
 import com.google.cloud.flink.bigquery.sink.serializer.BigQuerySchemaProviderImpl;
 import com.google.pubsub.flink.PubSubDeserializationSchema;
 import com.google.pubsub.flink.PubSubSource;
+import flink.connector.gcp.util.ParameterToolCompat;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericRecordBuilder;
@@ -45,18 +45,18 @@ public class PubSubToBQWordCount {
     static Schema schema;
 
     public static void main(String[] args) throws Exception {
-        final MultipleParameterTool parameters = MultipleParameterTool.fromArgs(args);
-        String pubsubSub = parameters.get("pubsub-subscription-name");
-        String projectId = parameters.get("project-id");
-        String datasetName = parameters.get("dataset-name");
-        String tableName = parameters.get("table-name");
-        String bqWordFieldName = parameters.get("bq-word-field-name", "word");
-        String bqCountFieldName = parameters.get("bq-count-field-name", "countStr");
-        String jobName = parameters.get("jobName", "PubSub-BQ-word-count");
+        final Object parameters = ParameterToolCompat.fromArgsMultiple(args);
+        String pubsubSub = ParameterToolCompat.get(parameters, "pubsub-subscription-name");
+        String projectId = ParameterToolCompat.get(parameters, "project-id");
+        String datasetName = ParameterToolCompat.get(parameters, "dataset-name");
+        String tableName = ParameterToolCompat.get(parameters, "table-name");
+        String bqWordFieldName = ParameterToolCompat.get(parameters, "bq-word-field-name", "word");
+        String bqCountFieldName = ParameterToolCompat.get(parameters, "bq-count-field-name", "countStr");
+        String jobName = ParameterToolCompat.get(parameters, "jobName", "PubSub-BQ-word-count");
         System.out.println("Starting job ".concat(jobName));
 
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.getConfig().setGlobalJobParameters(parameters);
+        env.getConfig().setGlobalJobParameters((org.apache.flink.api.common.ExecutionConfig.GlobalJobParameters) parameters);
 
     PubSubSource<String> source =
         PubSubSource.<String>builder()

@@ -22,7 +22,6 @@ import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.api.java.utils.MultipleParameterTool;
 import org.apache.flink.connector.base.DeliveryGuarantee;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.KafkaSourceBuilder;
@@ -37,6 +36,7 @@ import com.google.cloud.flink.bigquery.sink.BigQuerySinkConfig;
 import com.google.cloud.flink.bigquery.sink.serializer.AvroToProtoSerializer;
 import com.google.cloud.flink.bigquery.sink.serializer.BigQuerySchemaProvider;
 import com.google.cloud.flink.bigquery.sink.serializer.BigQuerySchemaProviderImpl;
+import flink.connector.gcp.util.ParameterToolCompat;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericRecordBuilder;
@@ -46,27 +46,27 @@ public class GMKToBQWordCount {
     static Schema schema;
 
     public static void main(String[] args) throws Exception {
-        final MultipleParameterTool parameters = MultipleParameterTool.fromArgs(args);
-        String brokers = parameters.get("brokers", "localhost:9092");
-        String kafkaUsername = parameters.get("kafka-username");
-        String kafkaTopic = parameters.get("kafka-topic", "my-topic");
-        String projectId = parameters.get("project-id");
-        String datasetName = parameters.get("dataset-name");
-        String tableName = parameters.get("table-name");
-        boolean oauth = parameters.getBoolean("oauth", true); // Only oauth is supported for Kafka for Big Query authentication
-        String bqWordFieldName = parameters.get("bq-word-field-name", "word");
-        String bqCountFieldName = parameters.get("bq-count-field-name", "countStr");
-        String kafkaGroupId = parameters.get("kafka-group-id", "kafka-source-of-".concat(tableName));
-        String jobName = parameters.get("job-name", "Kafka-BQ-word-count");
-        String project = parameters.get("project", "");
-        String secretID = parameters.get("secret-id", "");
-        String secretVersion = parameters.get("secret-version", "1");
+        final Object parameters = ParameterToolCompat.fromArgsMultiple(args);
+        String brokers = ParameterToolCompat.get(parameters, "brokers", "localhost:9092");
+        String kafkaUsername = ParameterToolCompat.get(parameters, "kafka-username");
+        String kafkaTopic = ParameterToolCompat.get(parameters, "kafka-topic", "my-topic");
+        String projectId = ParameterToolCompat.get(parameters, "project-id");
+        String datasetName = ParameterToolCompat.get(parameters, "dataset-name");
+        String tableName = ParameterToolCompat.get(parameters, "table-name");
+        boolean oauth = ParameterToolCompat.getBoolean(parameters, "oauth", true); // Only oauth is supported for Kafka for Big Query authentication
+        String bqWordFieldName = ParameterToolCompat.get(parameters, "bq-word-field-name", "word");
+        String bqCountFieldName = ParameterToolCompat.get(parameters, "bq-count-field-name", "countStr");
+        String kafkaGroupId = ParameterToolCompat.get(parameters, "kafka-group-id", "kafka-source-of-".concat(tableName));
+        String jobName = ParameterToolCompat.get(parameters, "job-name", "Kafka-BQ-word-count");
+        String project = ParameterToolCompat.get(parameters, "project", "");
+        String secretID = ParameterToolCompat.get(parameters, "secret-id", "");
+        String secretVersion = ParameterToolCompat.get(parameters, "secret-version", "1");
         System.out.println("Starting job ".concat(jobName).concat(" with Kafka group id: ".concat(kafkaGroupId)));
         System.out.println("Using SASL_SSL " + (oauth ? "OAUTHBEARER" : "PLAIN") + " to authenticate");
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         // BQ sink requires checkpointing, which is enabled by default on Big Query Engine for Apache Flink
         // Enable checkpointing if trying to run with OSS Flink
-        env.getConfig().setGlobalJobParameters(parameters);
+        env.getConfig().setGlobalJobParameters((org.apache.flink.api.common.ExecutionConfig.GlobalJobParameters) parameters);
         // BQ sink can only support up to 100 parallelism.
         env.getConfig().setMaxParallelism(100);
 
