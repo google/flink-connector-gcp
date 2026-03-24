@@ -41,11 +41,15 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Flink JobGraph Json Serializer.
  */
 public class JobGraphUtils {
+
+  private static final Logger LOG = Logger.getLogger(JobGraphUtils.class.getName());
 
   private static void addSerializerIfPresent(
       SimpleModule module, String className, JsonSerializer<?> serializer) {
@@ -53,7 +57,7 @@ public class JobGraphUtils {
       Class<?> clazz = Class.forName(className);
       module.addSerializer((Class<Object>) clazz, (JsonSerializer<Object>) serializer);
     } catch (ClassNotFoundException e) {
-      // ignore
+      LOG.log(Level.FINE, "Class not found: " + className, e);
     }
   }
 

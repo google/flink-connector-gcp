@@ -32,8 +32,8 @@ under the License.
   <name>Flink Beam Example</name>
 
   <properties>
-    <maven.compiler.source>7</maven.compiler.source>
-    <maven.compiler.target>7</maven.compiler.target>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <beam.version>2.58.1</beam.version>
   </properties>

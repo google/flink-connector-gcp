@@ -10,3 +10,4 @@ my*.yaml
 !versions.txt
 schema.json
 .idea/
+dependency-reduced-pom.xml
