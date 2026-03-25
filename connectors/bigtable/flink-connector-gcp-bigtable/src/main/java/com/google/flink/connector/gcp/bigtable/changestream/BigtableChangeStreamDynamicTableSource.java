@@ -36,6 +36,8 @@ import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.table.types.utils.TypeConversions;
 import org.apache.flink.types.RowKind;
 
+import java.util.Optional;
+
 /**
  * Flink SQL {@link ScanTableSource} that reads from Bigtable Change Streams.
  *
@@ -86,6 +88,9 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
 
     @Override
     public ChangelogMode getChangelogMode() {
+        // Bigtable Change Streams emit each ChangeStreamMutation as a new event — there is no
+        // notion of UPDATE or DELETE at the change stream level. Downstream operators can
+        // interpret the payload to derive changelog semantics if needed.
         return ChangelogMode.newBuilder().addContainedKind(RowKind.INSERT).build();
     }
 
@@ -102,14 +107,14 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
                         decodingFormat.createRuntimeDecoder(scanContext, physicalDataType);
 
                 // Resolve row-key field index and type
-                int rowKeyFieldIndex = -1;
+                int rowKeyFieldIndex = RowKeyInjectingDeserializationSchema.NO_ROW_KEY_INDEX;
                 LogicalTypeRoot rowKeyTypeRoot = null;
-                Object[] resolved =
+                Optional<RowKeyInjectingDeserializationSchema.RowKeyMetadata> resolved =
                         RowKeyInjectingDeserializationSchema.resolveRowKeyField(
                                 rowType, rowKeyField);
-                if (resolved != null) {
-                    rowKeyFieldIndex = (int) resolved[0];
-                    rowKeyTypeRoot = (LogicalTypeRoot) resolved[1];
+                if (resolved.isPresent()) {
+                    rowKeyFieldIndex = resolved.get().getFieldIndex();
+                    rowKeyTypeRoot = resolved.get().getTypeRoot();
                 }
 
                 RowKeyInjectingDeserializationSchema schema =
@@ -133,7 +138,7 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
                 return env.fromSource(
                                 source,
                                 WatermarkStrategy.noWatermarks(),
-                                "bigtable-changestream-source")
+                                BigtableChangeStreamDynamicTableFactory.IDENTIFIER)
                         .setParallelism(p)
                         .returns(InternalTypeInfo.of(rowType));
             }

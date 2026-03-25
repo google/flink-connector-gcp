@@ -106,6 +106,7 @@ public class BigtableChangeStreamDynamicTableFactory implements DynamicTableSour
         options.add(INSTANCE);
         options.add(TABLE);
         options.add(COLUMN_FAMILY);
+        options.add(FactoryUtil.FORMAT);
         return options;
     }
 

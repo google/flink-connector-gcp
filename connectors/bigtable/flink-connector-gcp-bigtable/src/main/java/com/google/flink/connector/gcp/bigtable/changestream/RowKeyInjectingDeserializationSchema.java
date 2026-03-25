@@ -28,6 +28,7 @@ import org.apache.flink.table.types.logical.RowType;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.Optional;
 
 /**
  * Wraps a {@link DeserializationSchema} and optionally injects the Bigtable row key into a
@@ -40,6 +41,9 @@ import java.io.Serializable;
 public class RowKeyInjectingDeserializationSchema implements Serializable {
 
     private static final long serialVersionUID = 1L;
+
+    /** Sentinel value indicating that no row-key field is configured. */
+    public static final int NO_ROW_KEY_INDEX = -1;
 
     private final DeserializationSchema<RowData> inner;
     private final int rowKeyFieldIndex;
@@ -78,7 +82,7 @@ public class RowKeyInjectingDeserializationSchema implements Serializable {
     }
 
     private void initFieldGetters() {
-        if (fieldGetters == null && rowKeyFieldIndex >= 0) {
+        if (fieldGetters == null && rowKeyFieldIndex != NO_ROW_KEY_INDEX) {
             fieldGetters = new RowData.FieldGetter[totalFields];
             for (int i = 0; i < totalFields; i++) {
                 if (i != rowKeyFieldIndex) {
@@ -101,7 +105,7 @@ public class RowKeyInjectingDeserializationSchema implements Serializable {
      */
     public RowData deserializeWithRowKey(byte[] bytes, String rowKey) throws IOException {
         RowData base = inner.deserialize(bytes);
-        if (rowKeyFieldIndex < 0 || rowKey == null || base == null) {
+        if (rowKeyFieldIndex == NO_ROW_KEY_INDEX || rowKey == null || base == null) {
             return base;
         }
 
@@ -148,19 +152,39 @@ public class RowKeyInjectingDeserializationSchema implements Serializable {
     /**
      * Resolves the row-key field index and type from the schema.
      *
-     * @return a two-element array: [fieldIndex (int), typeRoot (LogicalTypeRoot)], or null if
-     *     rowKeyField is not configured
+     * @return metadata about the row-key field, or empty if rowKeyField is not configured
+     * @throws IllegalArgumentException if the field name is specified but not found in the schema
      */
-    static Object[] resolveRowKeyField(RowType rowType, String rowKeyField) {
+    static Optional<RowKeyMetadata> resolveRowKeyField(RowType rowType, String rowKeyField) {
         if (rowKeyField == null || rowKeyField.isEmpty()) {
-            return null;
+            return Optional.empty();
         }
         for (int i = 0; i < rowType.getFieldCount(); i++) {
             if (rowType.getFields().get(i).getName().equals(rowKeyField)) {
-                return new Object[] {i, rowType.getFields().get(i).getType().getTypeRoot()};
+                return Optional.of(
+                        new RowKeyMetadata(i, rowType.getFields().get(i).getType().getTypeRoot()));
             }
         }
         throw new IllegalArgumentException(
                 "row-key-field '" + rowKeyField + "' not found in schema: " + rowType);
+    }
+
+    /** Encapsulates the resolved index and logical type of a row-key field. */
+    static final class RowKeyMetadata {
+        private final int fieldIndex;
+        private final LogicalTypeRoot typeRoot;
+
+        RowKeyMetadata(int fieldIndex, LogicalTypeRoot typeRoot) {
+            this.fieldIndex = fieldIndex;
+            this.typeRoot = typeRoot;
+        }
+
+        public int getFieldIndex() {
+            return fieldIndex;
+        }
+
+        public LogicalTypeRoot getTypeRoot() {
+            return typeRoot;
+        }
     }
 }

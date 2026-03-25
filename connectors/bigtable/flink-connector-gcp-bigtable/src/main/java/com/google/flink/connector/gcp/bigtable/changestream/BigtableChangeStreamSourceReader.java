@@ -18,6 +18,7 @@
 
 package com.google.flink.connector.gcp.bigtable.changestream;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.serialization.DeserializationSchema;
 import org.apache.flink.api.connector.source.ReaderOutput;
 import org.apache.flink.api.connector.source.SourceEvent;
@@ -56,6 +57,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 /**
  * Reads Bigtable Change Stream partitions assigned as {@link BigtableChangeStreamSplit}s.
@@ -83,6 +85,7 @@ public class BigtableChangeStreamSourceReader
     private final int startLookbackSeconds;
     private final int bufferCapacity;
     private final int grpcChannelPoolSize;
+    private final Supplier<BigtableDataClient> clientFactory;
 
     private transient BigtableDataClient client;
 
@@ -132,6 +135,17 @@ public class BigtableChangeStreamSourceReader
     private volatile boolean finished = false;
     private volatile Throwable streamError;
 
+    // gRPC timeout overrides — ReadChangeStream is a long-lived streaming RPC that can run
+    // for hours/days. The default attempt/wait timeouts cause DEADLINE_EXCEEDED on idle streams.
+    private static final java.time.Duration STREAM_IDLE_TIMEOUT = java.time.Duration.ofHours(1);
+    private static final java.time.Duration STREAM_WAIT_TIMEOUT = java.time.Duration.ofMinutes(30);
+    private static final java.time.Duration STREAM_TOTAL_TIMEOUT = java.time.Duration.ofDays(7);
+    private static final java.time.Duration STREAM_RPC_TIMEOUT = java.time.Duration.ofHours(6);
+
+    // Sliding window size for Dropwizard histogram reservoirs (notification latency, partition
+    // lifetime).
+    private static final int HISTOGRAM_RESERVOIR_SIZE = 1000;
+
     // Bounded buffer for records produced by stream threads.
     // Stream threads block on offer() when the buffer is full, providing backpressure.
     static final int DEFAULT_RECORD_BUFFER_CAPACITY = 1000;
@@ -153,6 +167,39 @@ public class BigtableChangeStreamSourceReader
             int startLookbackSeconds,
             int bufferCapacity,
             int grpcChannelPoolSize) {
+        this(
+                readerContext,
+                projectId,
+                instanceId,
+                tableId,
+                columnFamily,
+                cellColumn,
+                deserializationSchema,
+                startLookbackSeconds,
+                bufferCapacity,
+                grpcChannelPoolSize,
+                null);
+    }
+
+    /**
+     * Constructor that accepts a {@link BigtableDataClient} supplier for testability.
+     *
+     * <p>When {@code clientFactory} is non-null, {@link #start()} uses it instead of creating a
+     * client from the project/instance settings.
+     */
+    @VisibleForTesting
+    BigtableChangeStreamSourceReader(
+            SourceReaderContext readerContext,
+            String projectId,
+            String instanceId,
+            String tableId,
+            String columnFamily,
+            String cellColumn,
+            RowKeyInjectingDeserializationSchema deserializationSchema,
+            int startLookbackSeconds,
+            int bufferCapacity,
+            int grpcChannelPoolSize,
+            Supplier<BigtableDataClient> clientFactory) {
         this.readerContext = readerContext;
         this.projectId = projectId;
         this.instanceId = instanceId;
@@ -163,48 +210,49 @@ public class BigtableChangeStreamSourceReader
         this.startLookbackSeconds = startLookbackSeconds;
         this.bufferCapacity = bufferCapacity > 0 ? bufferCapacity : DEFAULT_RECORD_BUFFER_CAPACITY;
         this.grpcChannelPoolSize = grpcChannelPoolSize;
+        this.clientFactory = clientFactory;
         this.recordBuffer = new LinkedBlockingQueue<>(this.bufferCapacity);
     }
 
     @Override
     public void start() {
-        try {
-            BigtableDataSettings.Builder builder =
-                    BigtableDataSettings.newBuilder()
-                            .setProjectId(projectId)
-                            .setInstanceId(instanceId);
+        if (clientFactory != null) {
+            client = clientFactory.get();
+        } else {
+            try {
+                BigtableDataSettings.Builder builder =
+                        BigtableDataSettings.newBuilder()
+                                .setProjectId(projectId)
+                                .setInstanceId(instanceId);
 
-            if (grpcChannelPoolSize > 0) {
+                if (grpcChannelPoolSize > 0) {
+                    builder.stubSettings()
+                            .setTransportChannelProvider(
+                                    com.google.api.gax.grpc.InstantiatingGrpcChannelProvider
+                                            .newBuilder()
+                                            .setPoolSize(grpcChannelPoolSize)
+                                            .build());
+                }
+
                 builder.stubSettings()
-                        .setTransportChannelProvider(
-                                com.google.api.gax.grpc.InstantiatingGrpcChannelProvider
-                                        .newBuilder()
-                                        .setPoolSize(grpcChannelPoolSize)
+                        .readChangeStreamSettings()
+                        .setIdleTimeoutDuration(STREAM_IDLE_TIMEOUT)
+                        .setWaitTimeoutDuration(STREAM_WAIT_TIMEOUT)
+                        .setRetrySettings(
+                                builder
+                                        .stubSettings()
+                                        .readChangeStreamSettings()
+                                        .getRetrySettings()
+                                        .toBuilder()
+                                        .setTotalTimeoutDuration(STREAM_TOTAL_TIMEOUT)
+                                        .setInitialRpcTimeoutDuration(STREAM_RPC_TIMEOUT)
+                                        .setMaxRpcTimeoutDuration(STREAM_RPC_TIMEOUT)
                                         .build());
+
+                client = BigtableDataClient.create(builder.build());
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to create BigtableDataClient in reader", e);
             }
-
-            // ReadChangeStream is a long-lived streaming RPC that can run for hours/days.
-            // The default attempt timeout (5 min) and wait timeout (1 min) cause
-            // DEADLINE_EXCEEDED when no mutations arrive within that window.
-            // Override with timeouts appropriate for long-lived change streams.
-            builder.stubSettings()
-                    .readChangeStreamSettings()
-                    .setIdleTimeoutDuration(java.time.Duration.ofHours(1))
-                    .setWaitTimeoutDuration(java.time.Duration.ofMinutes(30))
-                    .setRetrySettings(
-                            builder
-                                    .stubSettings()
-                                    .readChangeStreamSettings()
-                                    .getRetrySettings()
-                                    .toBuilder()
-                                    .setTotalTimeoutDuration(java.time.Duration.ofDays(7))
-                                    .setInitialRpcTimeoutDuration(java.time.Duration.ofHours(6))
-                                    .setMaxRpcTimeoutDuration(java.time.Duration.ofHours(6))
-                                    .build());
-
-            client = BigtableDataClient.create(builder.build());
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to create BigtableDataClient in reader", e);
         }
 
         // Open the pluggable format's deserialization schema
@@ -242,7 +290,7 @@ public class BigtableChangeStreamSourceReader
                                 new DropwizardHistogramWrapper(
                                         new com.codahale.metrics.Histogram(
                                                 new com.codahale.metrics.SlidingWindowReservoir(
-                                                        1000))));
+                                                        HISTOGRAM_RESERVOIR_SIZE))));
         readerContext
                 .metricGroup()
                 .gauge(
@@ -264,7 +312,7 @@ public class BigtableChangeStreamSourceReader
                                 new DropwizardHistogramWrapper(
                                         new com.codahale.metrics.Histogram(
                                                 new com.codahale.metrics.SlidingWindowReservoir(
-                                                        1000))));
+                                                        HISTOGRAM_RESERVOIR_SIZE))));
         readerContext
                 .metricGroup()
                 .gauge("partition_lifetime_ms_latest", () -> lastPartitionLifetimeMs);
