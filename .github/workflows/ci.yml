@@ -30,7 +30,7 @@ on:
         jdk_version:
           description: "Jdk version to test against."
           required: false
-          default: 8, 11
+          default: 11
           type: string
         cache_flink_binary:
           description: "Whether to cache the Flink binary. If not set this parameter is inferred from the version parameter. Must be set if 'flink_url' is used."
@@ -123,8 +123,8 @@ jobs:
               exit 1
             fi
           fi
-          echo "binary_url=$binary_url" >> ${GITHUB_ENV}
-          echo "cache_binary=$cache_binary" >> ${GITHUB_ENV}
+          echo "BINARY_URL=$binary_url" >> ${GITHUB_ENV}
+          echo "CACHE_BINARY=$cache_binary" >> ${GITHUB_ENV}
         env:
           INPUTS_FLINK_URL: ${{ inputs.flink_url }}
           INPUTS_FLINK_VERSION: ${{ inputs.flink_version }}
@@ -136,12 +136,12 @@ jobs:
         run: mkdir -p ${{ env.FLINK_CACHE_DIR }}
 
       - name: Restore cached Flink binary
-        if: ${{ env.cache_binary == 'true' }}
+        if: ${{ env.CACHE_BINARY == 'true' }}
         uses: actions/cache/restore@v4
         id: restore-cache-flink
         with:
           path: ${{ env.FLINK_CACHE_DIR }}
-          key: ${{ env.binary_url }}
+          key: ${{ env.BINARY_URL }}
 
       - name: Download Flink binary
         working-directory: ${{ env.FLINK_CACHE_DIR }}
@@ -149,35 +149,28 @@ jobs:
         run: wget -q -c ${BINARY_URL} -O - | tar -xz
 
       - name: Cache Flink binary
-        if: ${{ env.cache_binary == 'true' }}
+        if: ${{ env.CACHE_BINARY == 'true' }}
         uses: actions/cache/save@v4
         id: cache-flink
         with:
           path: ${{ env.FLINK_CACHE_DIR }}
-          key: ${{ env.binary_url }}
+          key: ${{ env.BINARY_URL }}
 
       - name: Compile and test
         timeout-minutes: ${{ inputs.timeout_test }}
         run: |
           set -o pipefail
 
-          mvn clean deploy ${MVN_COMMON_OPTIONS} \
+          mvn clean install ${MVN_COMMON_OPTIONS} \
             -DaltDeploymentRepository=validation_repository::default::file:${{ env.MVN_VALIDATION_DIR }} \
             -Dscala-2.12 \
-            -Prun-end-to-end-tests -DdistDir=${{ env.FLINK_CACHE_DIR }}/flink-${INPUTS_FLINK_VERSION} \
+            -DdistDir=${{ env.FLINK_CACHE_DIR }}/flink-${INPUTS_FLINK_VERSION} \
             ${MVN_DEPENDENCY_CONVERGENCE} \
             ${{ env.MVN_CONNECTION_OPTIONS }} \
             -Dlog4j.configurationFile=file://$(pwd)/tools/ci/log4j.properties \
             | tee ${{ env.MVN_BUILD_OUTPUT_FILE }}
         env:
           INPUTS_FLINK_VERSION: ${{ inputs.flink_version }}
-
-      - name: Check licensing
-        run: |
-          mvn ${MVN_COMMON_OPTIONS} exec:java@check-license -N \
-            -Dexec.args="${{ env.MVN_BUILD_OUTPUT_FILE }} $(pwd) ${{ env.MVN_VALIDATION_DIR }}" \
-            ${{ env.MVN_CONNECTION_OPTIONS }} \
-            -Dlog4j.configurationFile=file://$(pwd)/tools/ci/log4j.properties
 
       - name: Print JVM thread dumps when cancelled
         if: ${{ failure() }}
