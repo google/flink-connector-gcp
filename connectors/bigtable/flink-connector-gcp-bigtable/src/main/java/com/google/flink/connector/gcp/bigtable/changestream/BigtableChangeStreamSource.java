@@ -53,6 +53,7 @@ public class BigtableChangeStreamSource
     private final int startLookbackSeconds;
     private final int bufferCapacity;
     private final int grpcChannelPoolSize;
+    private final int maxPartitionThreads;
 
     public BigtableChangeStreamSource(
             String projectId,
@@ -63,7 +64,8 @@ public class BigtableChangeStreamSource
             RowKeyInjectingDeserializationSchema deserializationSchema,
             int startLookbackSeconds,
             int bufferCapacity,
-            int grpcChannelPoolSize) {
+            int grpcChannelPoolSize,
+            int maxPartitionThreads) {
         this.projectId = projectId;
         this.instanceId = instanceId;
         this.tableId = tableId;
@@ -73,6 +75,7 @@ public class BigtableChangeStreamSource
         this.startLookbackSeconds = startLookbackSeconds;
         this.bufferCapacity = bufferCapacity;
         this.grpcChannelPoolSize = grpcChannelPoolSize;
+        this.maxPartitionThreads = maxPartitionThreads;
     }
 
     @Override
@@ -93,7 +96,8 @@ public class BigtableChangeStreamSource
                 deserializationSchema,
                 startLookbackSeconds,
                 bufferCapacity,
-                grpcChannelPoolSize);
+                grpcChannelPoolSize,
+                maxPartitionThreads);
     }
 
     @Override

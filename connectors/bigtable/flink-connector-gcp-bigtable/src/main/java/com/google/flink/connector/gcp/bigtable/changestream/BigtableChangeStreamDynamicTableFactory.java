@@ -87,6 +87,14 @@ public class BigtableChangeStreamDynamicTableFactory implements DynamicTableSour
                     .withDescription(
                             "Number of gRPC channels in the pool. 0 uses the client default.");
 
+    static final ConfigOption<Integer> MAX_PARTITION_THREADS =
+            ConfigOptions.key("max-partition-threads")
+                    .intType()
+                    .defaultValue(64)
+                    .withDescription(
+                            "Maximum number of threads for concurrent partition reading. "
+                                    + "Each thread reads one Bigtable partition.");
+
     static final ConfigOption<Integer> PARALLELISM =
             ConfigOptions.key("parallelism")
                     .intType()
@@ -118,6 +126,7 @@ public class BigtableChangeStreamDynamicTableFactory implements DynamicTableSour
         options.add(START_LOOKBACK_SECONDS);
         options.add(BUFFER_CAPACITY);
         options.add(GRPC_CHANNEL_POOL_SIZE);
+        options.add(MAX_PARTITION_THREADS);
         options.add(PARALLELISM);
         return options;
     }
@@ -147,6 +156,7 @@ public class BigtableChangeStreamDynamicTableFactory implements DynamicTableSour
                 helper.getOptions().get(START_LOOKBACK_SECONDS),
                 helper.getOptions().get(BUFFER_CAPACITY),
                 helper.getOptions().get(GRPC_CHANNEL_POOL_SIZE),
+                helper.getOptions().get(MAX_PARTITION_THREADS),
                 helper.getOptions().get(PARALLELISM));
     }
 }

@@ -57,6 +57,7 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
     private final int startLookbackSeconds;
     private final int bufferCapacity;
     private final int grpcChannelPoolSize;
+    private final int maxPartitionThreads;
     private final int parallelism;
 
     public BigtableChangeStreamDynamicTableSource(
@@ -71,6 +72,7 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
             int startLookbackSeconds,
             int bufferCapacity,
             int grpcChannelPoolSize,
+            int maxPartitionThreads,
             int parallelism) {
         this.projectId = projectId;
         this.instanceId = instanceId;
@@ -83,14 +85,17 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
         this.startLookbackSeconds = startLookbackSeconds;
         this.bufferCapacity = bufferCapacity;
         this.grpcChannelPoolSize = grpcChannelPoolSize;
+        this.maxPartitionThreads = maxPartitionThreads;
         this.parallelism = parallelism;
     }
 
     @Override
     public ChangelogMode getChangelogMode() {
         // Bigtable Change Streams emit each ChangeStreamMutation as a new event — there is no
-        // notion of UPDATE or DELETE at the change stream level. Downstream operators can
-        // interpret the payload to derive changelog semantics if needed.
+        // notion of UPDATE or DELETE at the change stream level. Delete entries (DeleteCells,
+        // DeleteFamily) within a mutation are skipped by the reader since they carry no cell
+        // value payload. Downstream operators can interpret the payload to derive changelog
+        // semantics if needed.
         return ChangelogMode.newBuilder().addContainedKind(RowKind.INSERT).build();
     }
 
@@ -131,7 +136,8 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
                                 schema,
                                 startLookbackSeconds,
                                 bufferCapacity,
-                                grpcChannelPoolSize);
+                                grpcChannelPoolSize,
+                                maxPartitionThreads);
 
                 int p = parallelism > 0 ? parallelism : env.getParallelism();
 
@@ -164,6 +170,7 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
                 startLookbackSeconds,
                 bufferCapacity,
                 grpcChannelPoolSize,
+                maxPartitionThreads,
                 parallelism);
     }
 

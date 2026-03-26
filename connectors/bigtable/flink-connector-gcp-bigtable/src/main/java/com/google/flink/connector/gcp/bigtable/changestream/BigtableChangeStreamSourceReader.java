@@ -85,6 +85,7 @@ public class BigtableChangeStreamSourceReader
     private final int startLookbackSeconds;
     private final int bufferCapacity;
     private final int grpcChannelPoolSize;
+    private final int maxPartitionThreads;
     private final Supplier<BigtableDataClient> clientFactory;
 
     private transient BigtableDataClient client;
@@ -142,6 +143,11 @@ public class BigtableChangeStreamSourceReader
     private static final java.time.Duration STREAM_TOTAL_TIMEOUT = java.time.Duration.ofDays(7);
     private static final java.time.Duration STREAM_RPC_TIMEOUT = java.time.Duration.ofHours(6);
 
+    // Heartbeat interval for the ReadChangeStream query — Bigtable sends a Heartbeat record
+    // at this interval when there are no mutations, keeping the stream alive.
+    private static final org.threeten.bp.Duration HEARTBEAT_DURATION =
+            org.threeten.bp.Duration.ofSeconds(30);
+
     // Sliding window size for Dropwizard histogram reservoirs (notification latency, partition
     // lifetime).
     private static final int HISTOGRAM_RESERVOIR_SIZE = 1000;
@@ -166,7 +172,8 @@ public class BigtableChangeStreamSourceReader
             RowKeyInjectingDeserializationSchema deserializationSchema,
             int startLookbackSeconds,
             int bufferCapacity,
-            int grpcChannelPoolSize) {
+            int grpcChannelPoolSize,
+            int maxPartitionThreads) {
         this(
                 readerContext,
                 projectId,
@@ -178,6 +185,7 @@ public class BigtableChangeStreamSourceReader
                 startLookbackSeconds,
                 bufferCapacity,
                 grpcChannelPoolSize,
+                maxPartitionThreads,
                 null);
     }
 
@@ -199,6 +207,7 @@ public class BigtableChangeStreamSourceReader
             int startLookbackSeconds,
             int bufferCapacity,
             int grpcChannelPoolSize,
+            int maxPartitionThreads,
             Supplier<BigtableDataClient> clientFactory) {
         this.readerContext = readerContext;
         this.projectId = projectId;
@@ -210,6 +219,7 @@ public class BigtableChangeStreamSourceReader
         this.startLookbackSeconds = startLookbackSeconds;
         this.bufferCapacity = bufferCapacity > 0 ? bufferCapacity : DEFAULT_RECORD_BUFFER_CAPACITY;
         this.grpcChannelPoolSize = grpcChannelPoolSize;
+        this.maxPartitionThreads = maxPartitionThreads > 0 ? maxPartitionThreads : 64;
         this.clientFactory = clientFactory;
         this.recordBuffer = new LinkedBlockingQueue<>(this.bufferCapacity);
     }
@@ -274,7 +284,8 @@ public class BigtableChangeStreamSourceReader
         }
 
         executor =
-                Executors.newCachedThreadPool(
+                Executors.newFixedThreadPool(
+                        maxPartitionThreads,
                         r -> {
                             Thread t = new Thread(r);
                             t.setDaemon(true);
@@ -286,7 +297,7 @@ public class BigtableChangeStreamSourceReader
                 readerContext
                         .metricGroup()
                         .histogram(
-                                "changestream_notification_latency_ms",
+                                "bigtable_changestream_notification_latency_ms",
                                 new DropwizardHistogramWrapper(
                                         new com.codahale.metrics.Histogram(
                                                 new com.codahale.metrics.SlidingWindowReservoir(
@@ -294,54 +305,82 @@ public class BigtableChangeStreamSourceReader
         readerContext
                 .metricGroup()
                 .gauge(
-                        "changestream_notification_latency_ms_latest",
+                        "bigtable_changestream_notification_latency_ms_latest",
                         () -> lastNotificationLatencyMs);
-        mutationsReceived = readerContext.metricGroup().counter("mutations_received");
-        recordsDeserialized = readerContext.metricGroup().counter("records_deserialized");
-        recordsSkipped = readerContext.metricGroup().counter("records_skipped");
+        mutationsReceived =
+                readerContext.metricGroup().counter("bigtable_changestream_mutations_received");
+        recordsDeserialized =
+                readerContext.metricGroup().counter("bigtable_changestream_records_deserialized");
+        recordsSkipped =
+                readerContext.metricGroup().counter("bigtable_changestream_records_skipped");
 
         // CloseStream lifecycle
-        closeStreamReceived = readerContext.metricGroup().counter("closestream_received");
-        closeStreamEmptyTokens = readerContext.metricGroup().counter("closestream_empty_tokens");
-        partitionSplitsCreated = readerContext.metricGroup().counter("partition_splits_created");
+        closeStreamReceived =
+                readerContext.metricGroup().counter("bigtable_changestream_closestream_received");
+        closeStreamEmptyTokens =
+                readerContext
+                        .metricGroup()
+                        .counter("bigtable_changestream_closestream_empty_tokens");
+        partitionSplitsCreated =
+                readerContext
+                        .metricGroup()
+                        .counter("bigtable_changestream_partition_splits_created");
         partitionLifetimeMs =
                 readerContext
                         .metricGroup()
                         .histogram(
-                                "partition_lifetime_ms",
+                                "bigtable_changestream_partition_lifetime_ms",
                                 new DropwizardHistogramWrapper(
                                         new com.codahale.metrics.Histogram(
                                                 new com.codahale.metrics.SlidingWindowReservoir(
                                                         HISTOGRAM_RESERVOIR_SIZE))));
         readerContext
                 .metricGroup()
-                .gauge("partition_lifetime_ms_latest", () -> lastPartitionLifetimeMs);
+                .gauge(
+                        "bigtable_changestream_partition_lifetime_ms_latest",
+                        () -> lastPartitionLifetimeMs);
 
         // Buffer backpressure
-        bufferFullEvents = readerContext.metricGroup().counter("buffer_full_events");
+        bufferFullEvents =
+                readerContext.metricGroup().counter("bigtable_changestream_buffer_full_events");
         readerContext
                 .metricGroup()
-                .gauge("buffer_utilization", () -> (double) recordBuffer.size() / bufferCapacity);
+                .gauge(
+                        "bigtable_changestream_buffer_utilization",
+                        () -> (double) recordBuffer.size() / bufferCapacity);
 
         // Stream thread lifecycle
-        streamThreadStarted = readerContext.metricGroup().counter("stream_thread_started");
-        streamThreadErrors = readerContext.metricGroup().counter("stream_thread_errors");
-        streamThreadCompleted = readerContext.metricGroup().counter("stream_thread_completed");
+        streamThreadStarted =
+                readerContext.metricGroup().counter("bigtable_changestream_stream_thread_started");
+        streamThreadErrors =
+                readerContext.metricGroup().counter("bigtable_changestream_stream_thread_errors");
+        streamThreadCompleted =
+                readerContext
+                        .metricGroup()
+                        .counter("bigtable_changestream_stream_thread_completed");
 
         // Error categorization
-        deserializationErrors = readerContext.metricGroup().counter("deserialization_errors");
-        nullProtoBytes = readerContext.metricGroup().counter("null_proto_bytes");
+        deserializationErrors =
+                readerContext.metricGroup().counter("bigtable_changestream_deserialization_errors");
+        nullProtoBytes =
+                readerContext.metricGroup().counter("bigtable_changestream_null_proto_bytes");
 
         // gRPC stream lifecycle
         streamExhaustedWithoutCloseStream =
-                readerContext.metricGroup().counter("stream_exhausted_without_closestream");
-        heartbeatsReceived = readerContext.metricGroup().counter("heartbeats_received");
+                readerContext
+                        .metricGroup()
+                        .counter("bigtable_changestream_stream_exhausted_without_closestream");
+        heartbeatsReceived =
+                readerContext.metricGroup().counter("bigtable_changestream_heartbeats_received");
 
         // Rebalancing
-        splitsRebalanced = readerContext.metricGroup().counter("splits_rebalanced");
+        splitsRebalanced =
+                readerContext.metricGroup().counter("bigtable_changestream_splits_rebalanced");
 
         // Active partitions gauge
-        readerContext.metricGroup().gauge("active_partitions", () -> activeSplits.size());
+        readerContext
+                .metricGroup()
+                .gauge("bigtable_changestream_active_partitions", () -> activeSplits.size());
 
         LOG.info(
                 "SourceReader started: project={}, instance={}, table={}, bufferCapacity={}, "
@@ -443,8 +482,13 @@ public class BigtableChangeStreamSourceReader
             }
 
             if (!released.isEmpty()) {
-                readerContext.sendSourceEventToCoordinator(new SplitsReleasedEvent(released));
                 LOG.info("Released {} split(s) for rebalancing", released.size());
+                // Notify the enumerator so it can re-assign these splits to other readers.
+                // The finally block in startReadingSplit() will NOT double-send because
+                // activeSplits.remove() above already claimed the split atomically —
+                // the finally block's remove() returns null, so its guard
+                // (!closedCleanly && latestSplit != null) prevents a duplicate event.
+                readerContext.sendSourceEventToCoordinator(new SplitsReleasedEvent(released));
             }
         }
     }
@@ -480,39 +524,48 @@ public class BigtableChangeStreamSourceReader
         Future<?> future =
                 executor.submit(
                         () -> {
+                            boolean closedCleanly = false;
                             try {
                                 streamThreadStarted.inc();
-                                readPartition(split);
+                                closedCleanly = readPartition(split);
                                 streamThreadCompleted.inc();
                             } catch (Exception e) {
                                 if (!finished) {
-                                    LOG.error(
-                                            "Error reading partition {}: {}",
-                                            split.splitId(),
-                                            e.getMessage(),
-                                            e);
-                                    streamThreadErrors.inc();
-                                    streamError = e;
-                                    notifyAvailable();
+                                    // InterruptedException is expected during rebalance/shutdown
+                                    if (!(e instanceof InterruptedException)) {
+                                        LOG.error(
+                                                "Error reading partition {}: {}",
+                                                split.splitId(),
+                                                e.getMessage(),
+                                                e);
+                                        streamThreadErrors.inc();
+                                        streamError = e;
+                                        notifyAvailable();
+                                    }
                                 }
                             } finally {
-                                activeSplits.remove(splitId);
+                                BigtableChangeStreamSplit latestSplit =
+                                        activeSplits.remove(splitId);
                                 splitStartTimes.remove(splitId);
                                 activeThreads.remove(splitId);
-                                // Notify enumerator that this reader finished a split
-                                readerContext.sendSourceEventToCoordinator(
-                                        new SplitsReleasedEvent(Collections.singletonList(split)));
+                                // Only send release event if the partition didn't close cleanly
+                                // via CloseStream (which already sends PartitionChangedEvent).
+                                if (!closedCleanly && latestSplit != null) {
+                                    readerContext.sendSourceEventToCoordinator(
+                                            new SplitsReleasedEvent(
+                                                    Collections.singletonList(latestSplit)));
+                                }
                             }
                         });
         activeThreads.put(splitId, future);
     }
 
-    private void readPartition(BigtableChangeStreamSplit split) {
+    private boolean readPartition(BigtableChangeStreamSplit split) {
         String splitId = split.splitId();
         ReadChangeStreamQuery query =
                 ReadChangeStreamQuery.create(tableId)
                         .streamPartition(split.getPartition())
-                        .heartbeatDuration(org.threeten.bp.Duration.ofSeconds(30));
+                        .heartbeatDuration(HEARTBEAT_DURATION);
 
         if (split.getContinuationToken() != null) {
             LOG.info("Resuming partition {} from continuation token", splitId);
@@ -639,15 +692,23 @@ public class BigtableChangeStreamSourceReader
                             + "— connection may have died",
                     splitId);
         }
+        return receivedCloseStream;
     }
 
     /**
      * Extracts the cell value bytes from the configured column family and column qualifier.
      *
+     * <p>Only {@link SetCell} entries are processed. Delete entries ({@code DeleteCells}, {@code
+     * DeleteFamily}) are intentionally skipped — delete operations do not carry a cell value
+     * payload. Mutations containing only delete entries will return {@code null} and be counted as
+     * skipped records.
+     *
      * @return the cell bytes, or {@code null} if no matching cell was found
      */
-    private byte[] extractCellBytes(ChangeStreamMutation mutation) {
+    @VisibleForTesting
+    byte[] extractCellBytes(ChangeStreamMutation mutation) {
         for (Entry entry : mutation.getEntries()) {
+            // Only SetCell entries carry a value payload; DeleteCells/DeleteFamily are skipped.
             if (entry instanceof SetCell) {
                 SetCell setCell = (SetCell) entry;
                 if (setCell.getFamilyName().equals(columnFamily)
