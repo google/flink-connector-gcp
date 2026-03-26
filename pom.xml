@@ -592,6 +592,17 @@ under the License.
                 </property>
             </activation>
             <modules>
+                <module>connectors/bigtable</module>
+            </modules>
+        </profile>
+        <profile>
+            <id>examples</id>
+            <activation>
+                <property>
+                    <name>!performRelease</name>
+                </property>
+            </activation>
+            <modules>
                 <module>flink-examples-gcp</module>
                 <module>beam-examples</module>
             </modules>

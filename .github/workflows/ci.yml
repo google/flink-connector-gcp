@@ -123,8 +123,8 @@ jobs:
               exit 1
             fi
           fi
-          echo "binary_url=$binary_url" >> ${GITHUB_ENV}
-          echo "cache_binary=$cache_binary" >> ${GITHUB_ENV}
+          echo "BINARY_URL=$binary_url" >> ${GITHUB_ENV}
+          echo "CACHE_BINARY=$cache_binary" >> ${GITHUB_ENV}
         env:
           INPUTS_FLINK_URL: ${{ inputs.flink_url }}
           INPUTS_FLINK_VERSION: ${{ inputs.flink_version }}
@@ -136,12 +136,12 @@ jobs:
         run: mkdir -p ${{ env.FLINK_CACHE_DIR }}
 
       - name: Restore cached Flink binary
-        if: ${{ env.cache_binary == 'true' }}
+        if: ${{ env.CACHE_BINARY == 'true' }}
         uses: actions/cache/restore@v4
         id: restore-cache-flink
         with:
           path: ${{ env.FLINK_CACHE_DIR }}
-          key: ${{ env.binary_url }}
+          key: ${{ env.BINARY_URL }}
 
       - name: Download Flink binary
         working-directory: ${{ env.FLINK_CACHE_DIR }}
@@ -149,12 +149,12 @@ jobs:
         run: wget -q -c ${BINARY_URL} -O - | tar -xz
 
       - name: Cache Flink binary
-        if: ${{ env.cache_binary == 'true' }}
+        if: ${{ env.CACHE_BINARY == 'true' }}
         uses: actions/cache/save@v4
         id: cache-flink
         with:
           path: ${{ env.FLINK_CACHE_DIR }}
-          key: ${{ env.binary_url }}
+          key: ${{ env.BINARY_URL }}
 
       - name: Compile and test
         timeout-minutes: ${{ inputs.timeout_test }}
