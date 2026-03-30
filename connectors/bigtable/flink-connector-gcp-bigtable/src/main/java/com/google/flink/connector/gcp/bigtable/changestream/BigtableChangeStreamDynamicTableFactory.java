@@ -30,7 +30,6 @@ import org.apache.flink.table.factories.FactoryUtil;
 import org.apache.flink.table.types.DataType;
 import org.apache.flink.table.types.logical.RowType;
 
-import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -109,26 +108,19 @@ public class BigtableChangeStreamDynamicTableFactory implements DynamicTableSour
 
     @Override
     public Set<ConfigOption<?>> requiredOptions() {
-        Set<ConfigOption<?>> options = new HashSet<>();
-        options.add(PROJECT);
-        options.add(INSTANCE);
-        options.add(TABLE);
-        options.add(COLUMN_FAMILY);
-        options.add(FactoryUtil.FORMAT);
-        return options;
+        return Set.of(PROJECT, INSTANCE, TABLE, COLUMN_FAMILY, FactoryUtil.FORMAT);
     }
 
     @Override
     public Set<ConfigOption<?>> optionalOptions() {
-        Set<ConfigOption<?>> options = new HashSet<>();
-        options.add(CELL_COLUMN);
-        options.add(ROW_KEY_FIELD);
-        options.add(START_LOOKBACK_SECONDS);
-        options.add(BUFFER_CAPACITY);
-        options.add(GRPC_CHANNEL_POOL_SIZE);
-        options.add(MAX_PARTITION_THREADS);
-        options.add(PARALLELISM);
-        return options;
+        return Set.of(
+                CELL_COLUMN,
+                ROW_KEY_FIELD,
+                START_LOOKBACK_SECONDS,
+                BUFFER_CAPACITY,
+                GRPC_CHANNEL_POOL_SIZE,
+                MAX_PARTITION_THREADS,
+                PARALLELISM);
     }
 
     @Override
