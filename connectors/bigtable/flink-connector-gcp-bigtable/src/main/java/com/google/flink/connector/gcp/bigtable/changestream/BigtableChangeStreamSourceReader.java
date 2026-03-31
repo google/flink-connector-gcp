@@ -296,10 +296,22 @@ public class BigtableChangeStreamSourceReader
                         60L,
                         TimeUnit.SECONDS,
                         new java.util.concurrent.SynchronousQueue<>(),
-                        r -> {
-                            Thread t = new Thread(r, "bigtable-changestream-partition-reader");
-                            t.setDaemon(true);
-                            return t;
+                        new java.util.concurrent.ThreadFactory() {
+                            private final java.util.concurrent.atomic.AtomicLong threadId =
+                                    new java.util.concurrent.atomic.AtomicLong(0);
+
+                            @Override
+                            public Thread newThread(Runnable r) {
+                                Thread t =
+                                        new Thread(
+                                                r,
+                                                String.format(
+                                                        "bigtable-cs-reader-%d-%d",
+                                                        readerContext.getIndexOfSubtask(),
+                                                        threadId.getAndIncrement()));
+                                t.setDaemon(true);
+                                return t;
+                            }
                         });
 
         // Register Flink metrics — histogram for Flink UI, gauge for Prometheus
