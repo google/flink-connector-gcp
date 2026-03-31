@@ -110,6 +110,11 @@ public class RowKeyInjectingDeserializationSchema implements Serializable {
      *
      * <p>For {@code VARBINARY}/{@code BINARY}, the raw bytes are returned directly. For string and
      * numeric types, the bytes are decoded as UTF-8 and parsed accordingly.
+     *
+     * <p><b>Note:</b> Numeric types ({@code BIGINT}, {@code INTEGER}, etc.) assume the row key is a
+     * UTF-8 string representation of the number (e.g. {@code "12345"}). If your row keys use
+     * binary-encoded numerics (e.g. {@code ByteBuffer.putLong()}), map the row-key field to {@code
+     * VARBINARY} instead and decode in downstream logic.
      */
     static Object parseRowKey(byte[] rowKeyBytes, LogicalTypeRoot typeRoot) {
         switch (typeRoot) {

@@ -543,42 +543,53 @@ public class BigtableChangeStreamSourceReader
         activeSplits.put(splitId, split);
         splitStartTimes.put(splitId, System.currentTimeMillis());
 
-        Future<?> future =
-                executor.submit(
-                        () -> {
-                            boolean closedCleanly = false;
-                            try {
-                                streamThreadStarted.inc();
-                                closedCleanly = readPartition(split);
-                                streamThreadCompleted.inc();
-                            } catch (Exception e) {
-                                if (!finished) {
-                                    // InterruptedException is expected during rebalance/shutdown
-                                    if (!(e instanceof InterruptedException)) {
-                                        LOG.error(
-                                                "Error reading partition {}: {}",
-                                                split.splitId(),
-                                                e.getMessage(),
-                                                e);
-                                        streamThreadErrors.inc();
-                                        streamError = e;
-                                        notifyAvailable();
+        Future<?> future;
+        try {
+            future =
+                    executor.submit(
+                            () -> {
+                                boolean closedCleanly = false;
+                                try {
+                                    streamThreadStarted.inc();
+                                    closedCleanly = readPartition(split);
+                                    streamThreadCompleted.inc();
+                                } catch (Exception e) {
+                                    if (!finished) {
+                                        if (!(e instanceof InterruptedException)) {
+                                            LOG.error(
+                                                    "Error reading partition {}: {}",
+                                                    split.splitId(),
+                                                    e.getMessage(),
+                                                    e);
+                                            streamThreadErrors.inc();
+                                            streamError = e;
+                                            notifyAvailable();
+                                        }
+                                    }
+                                } finally {
+                                    BigtableChangeStreamSplit latestSplit =
+                                            activeSplits.remove(splitId);
+                                    splitStartTimes.remove(splitId);
+                                    activeThreads.remove(splitId);
+                                    if (!closedCleanly && latestSplit != null) {
+                                        readerContext.sendSourceEventToCoordinator(
+                                                new SplitsReleasedEvent(
+                                                        Collections.singletonList(latestSplit)));
                                     }
                                 }
-                            } finally {
-                                BigtableChangeStreamSplit latestSplit =
-                                        activeSplits.remove(splitId);
-                                splitStartTimes.remove(splitId);
-                                activeThreads.remove(splitId);
-                                // Only send release event if the partition didn't close cleanly
-                                // via CloseStream (which already sends PartitionChangedEvent).
-                                if (!closedCleanly && latestSplit != null) {
-                                    readerContext.sendSourceEventToCoordinator(
-                                            new SplitsReleasedEvent(
-                                                    Collections.singletonList(latestSplit)));
-                                }
-                            }
-                        });
+                            });
+        } catch (java.util.concurrent.RejectedExecutionException e) {
+            activeSplits.remove(splitId);
+            splitStartTimes.remove(splitId);
+            throw new RuntimeException(
+                    String.format(
+                            "Cannot start reading partition %s: all %d partition reader threads "
+                                    + "are in use. Increase 'max-partition-threads' (current: %d) "
+                                    + "to match the number of Bigtable partitions assigned to "
+                                    + "this reader.",
+                            splitId, maxPartitionThreads, maxPartitionThreads),
+                    e);
+        }
         activeThreads.put(splitId, future);
     }
 
@@ -649,6 +660,11 @@ public class BigtableChangeStreamSourceReader
                         Thread.currentThread().interrupt();
                         break;
                     } catch (Exception e) {
+                        // Skip malformed records and track via metrics. This avoids failing the
+                        // entire job on a single bad record while providing visibility through
+                        // deserializationErrors and recordsSkipped counters.
+                        // TODO: Make this configurable (e.g. fail-on-deserialization-error) for
+                        //  use cases where data integrity requires failing fast.
                         LOG.error("Failed to deserialize record: {}", e.getMessage(), e);
                         deserializationErrors.inc();
                         recordsSkipped.inc();
