@@ -103,6 +103,29 @@ public class BigtableChangeStreamDynamicTableFactory implements DynamicTableSour
                     .withDescription(
                             "Source parallelism override. 0 uses the environment default.");
 
+    private static final Set<ConfigOption<?>> REQUIRED_OPTIONS;
+    private static final Set<ConfigOption<?>> OPTIONAL_OPTIONS;
+
+    static {
+        Set<ConfigOption<?>> req = new HashSet<>();
+        req.add(PROJECT);
+        req.add(INSTANCE);
+        req.add(TABLE);
+        req.add(COLUMN_FAMILY);
+        req.add(FactoryUtil.FORMAT);
+        REQUIRED_OPTIONS = Collections.unmodifiableSet(req);
+
+        Set<ConfigOption<?>> opt = new HashSet<>();
+        opt.add(CELL_COLUMN);
+        opt.add(ROW_KEY_FIELD);
+        opt.add(START_LOOKBACK_SECONDS);
+        opt.add(BUFFER_CAPACITY);
+        opt.add(GRPC_CHANNEL_POOL_SIZE);
+        opt.add(MAX_PARTITION_THREADS);
+        opt.add(PARALLELISM);
+        OPTIONAL_OPTIONS = Collections.unmodifiableSet(opt);
+    }
+
     @Override
     public String factoryIdentifier() {
         return IDENTIFIER;
@@ -110,26 +133,12 @@ public class BigtableChangeStreamDynamicTableFactory implements DynamicTableSour
 
     @Override
     public Set<ConfigOption<?>> requiredOptions() {
-        Set<ConfigOption<?>> options = new HashSet<>();
-        options.add(PROJECT);
-        options.add(INSTANCE);
-        options.add(TABLE);
-        options.add(COLUMN_FAMILY);
-        options.add(FactoryUtil.FORMAT);
-        return Collections.unmodifiableSet(options);
+        return REQUIRED_OPTIONS;
     }
 
     @Override
     public Set<ConfigOption<?>> optionalOptions() {
-        Set<ConfigOption<?>> options = new HashSet<>();
-        options.add(CELL_COLUMN);
-        options.add(ROW_KEY_FIELD);
-        options.add(START_LOOKBACK_SECONDS);
-        options.add(BUFFER_CAPACITY);
-        options.add(GRPC_CHANNEL_POOL_SIZE);
-        options.add(MAX_PARTITION_THREADS);
-        options.add(PARALLELISM);
-        return Collections.unmodifiableSet(options);
+        return OPTIONAL_OPTIONS;
     }
 
     @Override

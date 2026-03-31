@@ -288,7 +288,7 @@ public class BigtableChangeStreamSourceReader
                         maxPartitionThreads,
                         60L,
                         TimeUnit.SECONDS,
-                        new java.util.concurrent.SynchronousQueue<>(),
+                        new java.util.concurrent.LinkedBlockingQueue<>(),
                         r -> {
                             Thread t = new Thread(r);
                             t.setDaemon(true);
@@ -678,10 +678,13 @@ public class BigtableChangeStreamSourceReader
                             "CloseStream for partition {} had zero continuation tokens "
                                     + "— re-enqueueing original split",
                             splitId);
-                    // Re-enqueue the original split so the partition is not lost
+                    // Re-enqueue with the latest split (may have updated continuation
+                    // token from heartbeats/mutations) so recovery doesn't reprocess data
+                    BigtableChangeStreamSplit latestSplit = activeSplits.get(splitId);
                     readerContext.sendSourceEventToCoordinator(
                             new PartitionChangedEvent(
-                                    Collections.singletonList(split),
+                                    Collections.singletonList(
+                                            latestSplit != null ? latestSplit : split),
                                     splitId,
                                     closeStream.getStatus().toString()));
                 }

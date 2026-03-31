@@ -184,10 +184,7 @@ public class BigtableChangeStreamEnumerator
             partitionChangedEventsReceived.inc();
 
             // Decrement sender's count — the closed partition is gone
-            readerSplitCounts.merge(subtaskId, -1, Integer::sum);
-            if (readerSplitCounts.getOrDefault(subtaskId, 0) < 0) {
-                readerSplitCounts.put(subtaskId, 0);
-            }
+            readerSplitCounts.compute(subtaskId, (k, v) -> v == null ? 0 : Math.max(0, v - 1));
 
             List<BigtableChangeStreamSplit> newSplits = event.getNewSplits();
             LOG.info(
@@ -205,10 +202,8 @@ public class BigtableChangeStreamEnumerator
             splitsRebalanced.inc(released.size());
 
             // Decrement sender's count for each released split
-            readerSplitCounts.merge(subtaskId, -released.size(), Integer::sum);
-            if (readerSplitCounts.getOrDefault(subtaskId, 0) < 0) {
-                readerSplitCounts.put(subtaskId, 0);
-            }
+            readerSplitCounts.compute(
+                    subtaskId, (k, v) -> v == null ? 0 : Math.max(0, v - released.size()));
 
             LOG.info(
                     "Received SplitsReleasedEvent from subtask {}: {} split(s) released",
