@@ -282,15 +282,22 @@ public class BigtableChangeStreamSourceReader
             throw new RuntimeException("Failed to open deserialization schema", e);
         }
 
+        // SynchronousQueue is intentional here: with corePoolSize=0, ThreadPoolExecutor
+        // only creates new threads when the queue rejects a task. An unbounded queue (e.g.
+        // LinkedBlockingQueue) would never reject, so no threads would ever be created.
+        // SynchronousQueue forces immediate hand-off, creating threads on demand up to
+        // maxPartitionThreads. Idle threads are reclaimed after 60s keep-alive.
+        // If all threads are busy, submit() throws RejectedExecutionException — this
+        // indicates maxPartitionThreads is undersized for the partition count.
         executor =
                 new java.util.concurrent.ThreadPoolExecutor(
                         0,
                         maxPartitionThreads,
                         60L,
                         TimeUnit.SECONDS,
-                        new java.util.concurrent.LinkedBlockingQueue<>(),
+                        new java.util.concurrent.SynchronousQueue<>(),
                         r -> {
-                            Thread t = new Thread(r);
+                            Thread t = new Thread(r, "bigtable-changestream-partition-reader");
                             t.setDaemon(true);
                             return t;
                         });
