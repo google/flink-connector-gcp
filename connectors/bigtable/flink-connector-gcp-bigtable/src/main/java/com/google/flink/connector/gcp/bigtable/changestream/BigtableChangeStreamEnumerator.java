@@ -115,22 +115,35 @@ public class BigtableChangeStreamEnumerator
         }
 
         if (pendingSplits.isEmpty()) {
-            List<ByteStringRange> partitions = new ArrayList<>();
-            for (ByteStringRange partition :
-                    client.generateInitialChangeStreamPartitions(tableId)) {
-                partitions.add(partition);
-            }
-            LOG.info("Discovered {} initial partition(s) for table {}", partitions.size(), tableId);
-            initialPartitionsDiscovered.inc(partitions.size());
-
-            for (ByteStringRange partition : partitions) {
-                pendingSplits.add(new BigtableChangeStreamSplit(partition, null));
-            }
+            // Discover partitions asynchronously to avoid blocking the JobManager thread
+            context.callAsync(
+                    () -> {
+                        List<ByteStringRange> partitions = new ArrayList<>();
+                        for (ByteStringRange partition :
+                                client.generateInitialChangeStreamPartitions(tableId)) {
+                            partitions.add(partition);
+                        }
+                        return partitions;
+                    },
+                    (partitions, error) -> {
+                        if (error != null) {
+                            throw new RuntimeException(
+                                    "Failed to discover initial partitions", error);
+                        }
+                        LOG.info(
+                                "Discovered {} initial partition(s) for table {}",
+                                partitions.size(),
+                                tableId);
+                        initialPartitionsDiscovered.inc(partitions.size());
+                        for (ByteStringRange partition : partitions) {
+                            pendingSplits.add(new BigtableChangeStreamSplit(partition, null));
+                        }
+                        assignPendingSplits();
+                    });
         } else {
             LOG.info("Restored {} split(s) from checkpoint", pendingSplits.size());
+            assignPendingSplits();
         }
-
-        assignPendingSplits();
     }
 
     @Override

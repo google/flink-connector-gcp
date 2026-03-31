@@ -27,14 +27,17 @@ import org.apache.flink.table.types.logical.BigIntType;
 import org.apache.flink.table.types.logical.IntType;
 import org.apache.flink.table.types.logical.LogicalTypeRoot;
 import org.apache.flink.table.types.logical.RowType;
+import org.apache.flink.table.types.logical.VarBinaryType;
 import org.apache.flink.table.types.logical.VarCharType;
 
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -49,28 +52,31 @@ class RowKeyInjectingDeserializationSchemaTest {
         assertEquals(
                 123456789L,
                 RowKeyInjectingDeserializationSchema.parseRowKey(
-                        "123456789", LogicalTypeRoot.BIGINT));
+                        "123456789".getBytes(StandardCharsets.UTF_8), LogicalTypeRoot.BIGINT));
     }
 
     @Test
     void parseRowKeyInteger() {
         assertEquals(
                 42,
-                RowKeyInjectingDeserializationSchema.parseRowKey("42", LogicalTypeRoot.INTEGER));
+                RowKeyInjectingDeserializationSchema.parseRowKey(
+                        "42".getBytes(StandardCharsets.UTF_8), LogicalTypeRoot.INTEGER));
     }
 
     @Test
     void parseRowKeySmallint() {
         assertEquals(
                 (short) 7,
-                RowKeyInjectingDeserializationSchema.parseRowKey("7", LogicalTypeRoot.SMALLINT));
+                RowKeyInjectingDeserializationSchema.parseRowKey(
+                        "7".getBytes(StandardCharsets.UTF_8), LogicalTypeRoot.SMALLINT));
     }
 
     @Test
     void parseRowKeyTinyint() {
         assertEquals(
                 (byte) 3,
-                RowKeyInjectingDeserializationSchema.parseRowKey("3", LogicalTypeRoot.TINYINT));
+                RowKeyInjectingDeserializationSchema.parseRowKey(
+                        "3".getBytes(StandardCharsets.UTF_8), LogicalTypeRoot.TINYINT));
     }
 
     @Test
@@ -78,14 +84,35 @@ class RowKeyInjectingDeserializationSchemaTest {
         assertEquals(
                 StringData.fromString("my-key"),
                 RowKeyInjectingDeserializationSchema.parseRowKey(
-                        "my-key", LogicalTypeRoot.VARCHAR));
+                        "my-key".getBytes(StandardCharsets.UTF_8), LogicalTypeRoot.VARCHAR));
     }
 
     @Test
     void parseRowKeyChar() {
         assertEquals(
                 StringData.fromString("abc"),
-                RowKeyInjectingDeserializationSchema.parseRowKey("abc", LogicalTypeRoot.CHAR));
+                RowKeyInjectingDeserializationSchema.parseRowKey(
+                        "abc".getBytes(StandardCharsets.UTF_8), LogicalTypeRoot.CHAR));
+    }
+
+    @Test
+    void parseRowKeyVarbinary() {
+        byte[] binaryKey = new byte[] {0x00, 0x01, (byte) 0xFF, 0x7F};
+        assertArrayEquals(
+                binaryKey,
+                (byte[])
+                        RowKeyInjectingDeserializationSchema.parseRowKey(
+                                binaryKey, LogicalTypeRoot.VARBINARY));
+    }
+
+    @Test
+    void parseRowKeyBinary() {
+        byte[] binaryKey = new byte[] {(byte) 0xDE, (byte) 0xAD, (byte) 0xBE, (byte) 0xEF};
+        assertArrayEquals(
+                binaryKey,
+                (byte[])
+                        RowKeyInjectingDeserializationSchema.parseRowKey(
+                                binaryKey, LogicalTypeRoot.BINARY));
     }
 
     @Test
@@ -94,7 +121,7 @@ class RowKeyInjectingDeserializationSchemaTest {
                 UnsupportedOperationException.class,
                 () ->
                         RowKeyInjectingDeserializationSchema.parseRowKey(
-                                "1.5", LogicalTypeRoot.DOUBLE));
+                                "1.5".getBytes(StandardCharsets.UTF_8), LogicalTypeRoot.DOUBLE));
     }
 
     @Test
@@ -150,14 +177,15 @@ class RowKeyInjectingDeserializationSchemaTest {
                                 new RowType.RowField("row_key", new VarCharType()),
                                 new RowType.RowField("payload", new VarCharType())));
 
-        // Inner schema returns a row with null row_key and "hello" payload
         DeserializationSchema<RowData> inner = new FakeDeserializationSchema(rowType);
 
         RowKeyInjectingDeserializationSchema schema =
                 new RowKeyInjectingDeserializationSchema(
                         inner, 0, LogicalTypeRoot.VARCHAR, rowType);
 
-        RowData result = schema.deserializeWithRowKey(new byte[] {}, "my-row-key");
+        RowData result =
+                schema.deserializeWithRowKey(
+                        new byte[] {}, "my-row-key".getBytes(StandardCharsets.UTF_8));
         assertNotNull(result);
         assertEquals(StringData.fromString("my-row-key"), result.getString(0));
         assertEquals(StringData.fromString("hello"), result.getString(1));
@@ -177,9 +205,54 @@ class RowKeyInjectingDeserializationSchemaTest {
         RowKeyInjectingDeserializationSchema schema =
                 new RowKeyInjectingDeserializationSchema(inner, 0, LogicalTypeRoot.BIGINT, rowType);
 
-        RowData result = schema.deserializeWithRowKey(new byte[] {}, "999");
+        RowData result =
+                schema.deserializeWithRowKey(new byte[] {}, "999".getBytes(StandardCharsets.UTF_8));
         assertNotNull(result);
         assertEquals(999L, result.getLong(0));
+    }
+
+    @Test
+    void deserializeWithRowKeyInjectsBinaryKey() throws Exception {
+        // Schema: (row_key VARBINARY, payload VARCHAR)
+        RowType rowType =
+                new RowType(
+                        Arrays.asList(
+                                new RowType.RowField("row_key", new VarBinaryType(100)),
+                                new RowType.RowField("payload", new VarCharType())));
+
+        DeserializationSchema<RowData> inner = new FakeDeserializationSchema(rowType);
+
+        RowKeyInjectingDeserializationSchema schema =
+                new RowKeyInjectingDeserializationSchema(
+                        inner, 0, LogicalTypeRoot.VARBINARY, rowType);
+
+        byte[] binaryKey = new byte[] {0x00, 0x01, (byte) 0xFF, 0x7F};
+        RowData result = schema.deserializeWithRowKey(new byte[] {}, binaryKey);
+        assertNotNull(result);
+        assertArrayEquals(binaryKey, result.getBinary(0));
+        assertEquals(StringData.fromString("hello"), result.getString(1));
+    }
+
+    @Test
+    void deserializeWithRowKeyPreservesBinaryKeyWithNonUtf8Bytes() throws Exception {
+        // Verifies that binary row keys with non-UTF-8 bytes are not corrupted
+        RowType rowType =
+                new RowType(
+                        Arrays.asList(
+                                new RowType.RowField("row_key", new VarBinaryType(100)),
+                                new RowType.RowField("payload", new VarCharType())));
+
+        DeserializationSchema<RowData> inner = new FakeDeserializationSchema(rowType);
+
+        RowKeyInjectingDeserializationSchema schema =
+                new RowKeyInjectingDeserializationSchema(
+                        inner, 0, LogicalTypeRoot.VARBINARY, rowType);
+
+        // Key with bytes that are invalid UTF-8 sequences
+        byte[] binaryKey = new byte[] {(byte) 0xC0, (byte) 0xC1, (byte) 0xFE, (byte) 0xFF};
+        RowData result = schema.deserializeWithRowKey(new byte[] {}, binaryKey);
+        assertNotNull(result);
+        assertArrayEquals(binaryKey, result.getBinary(0));
     }
 
     @Test
@@ -196,7 +269,8 @@ class RowKeyInjectingDeserializationSchemaTest {
                         null,
                         rowType);
 
-        RowData result = schema.deserializeWithRowKey(new byte[] {}, "key");
+        RowData result =
+                schema.deserializeWithRowKey(new byte[] {}, "key".getBytes(StandardCharsets.UTF_8));
         assertNotNull(result);
         // Should return the inner result unchanged
         assertEquals(StringData.fromString("hello"), result.getString(0));
@@ -227,7 +301,9 @@ class RowKeyInjectingDeserializationSchemaTest {
         RowKeyInjectingDeserializationSchema schema =
                 new RowKeyInjectingDeserializationSchema(inner, 0, LogicalTypeRoot.BIGINT, rowType);
 
-        assertNull(schema.deserializeWithRowKey(new byte[] {}, "123"));
+        assertNull(
+                schema.deserializeWithRowKey(
+                        new byte[] {}, "123".getBytes(StandardCharsets.UTF_8)));
     }
 
     /**

@@ -53,7 +53,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -284,8 +283,12 @@ public class BigtableChangeStreamSourceReader
         }
 
         executor =
-                Executors.newFixedThreadPool(
+                new java.util.concurrent.ThreadPoolExecutor(
+                        0,
                         maxPartitionThreads,
+                        60L,
+                        TimeUnit.SECONDS,
+                        new java.util.concurrent.SynchronousQueue<>(),
                         r -> {
                             Thread t = new Thread(r);
                             t.setDaemon(true);
@@ -604,17 +607,22 @@ public class BigtableChangeStreamSourceReader
 
                 if (cellBytes != null) {
                     try {
-                        String rowKey = mutation.getRowKey().toStringUtf8();
+                        byte[] rowKeyBytes = mutation.getRowKey().toByteArray();
                         RowData row =
-                                deserializationSchema.deserializeWithRowKey(cellBytes, rowKey);
+                                deserializationSchema.deserializeWithRowKey(cellBytes, rowKeyBytes);
                         recordsDeserialized.inc();
-                        // Block if buffer is full — applies backpressure to the gRPC stream
+                        // Block if buffer is full — applies backpressure to the gRPC stream.
+                        // Count once per record that encounters a full buffer, not per retry.
+                        boolean counted = false;
                         while (!finished) {
                             if (recordBuffer.offer(
                                     row, BUFFER_OFFER_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
                                 break;
                             }
-                            bufferFullEvents.inc();
+                            if (!counted) {
+                                bufferFullEvents.inc();
+                                counted = true;
+                            }
                         }
                         activeSplits.put(splitId, split.withToken(token));
                         notifyAvailable();

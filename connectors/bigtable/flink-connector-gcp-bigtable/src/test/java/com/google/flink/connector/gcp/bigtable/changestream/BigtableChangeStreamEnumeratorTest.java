@@ -383,7 +383,14 @@ class BigtableChangeStreamEnumeratorTest {
         @Override
         public <T> void callAsync(
                 java.util.concurrent.Callable<T> callable,
-                java.util.function.BiConsumer<T, Throwable> handler) {}
+                java.util.function.BiConsumer<T, Throwable> handler) {
+            try {
+                T result = callable.call();
+                handler.accept(result, null);
+            } catch (Exception e) {
+                handler.accept(null, e);
+            }
+        }
 
         @Override
         public <T> void callAsync(

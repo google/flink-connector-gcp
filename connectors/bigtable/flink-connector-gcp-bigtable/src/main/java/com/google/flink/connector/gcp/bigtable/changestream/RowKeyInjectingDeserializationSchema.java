@@ -19,15 +19,21 @@
 package com.google.flink.connector.gcp.bigtable.changestream;
 
 import org.apache.flink.api.common.serialization.DeserializationSchema;
-import org.apache.flink.table.data.GenericRowData;
+import org.apache.flink.table.data.ArrayData;
+import org.apache.flink.table.data.DecimalData;
+import org.apache.flink.table.data.MapData;
+import org.apache.flink.table.data.RawValueData;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.table.data.StringData;
-import org.apache.flink.table.types.logical.LogicalType;
+import org.apache.flink.table.data.TimestampData;
 import org.apache.flink.table.types.logical.LogicalTypeRoot;
 import org.apache.flink.table.types.logical.RowType;
+import org.apache.flink.types.RowKind;
+import org.apache.flink.types.variant.Variant;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 /**
@@ -48,10 +54,7 @@ public class RowKeyInjectingDeserializationSchema implements Serializable {
     private final DeserializationSchema<RowData> inner;
     private final int rowKeyFieldIndex;
     private final LogicalTypeRoot rowKeyTypeRoot;
-    private final int totalFields;
     private final RowType rowType;
-
-    private transient RowData.FieldGetter[] fieldGetters;
 
     /**
      * @param inner the format-provided deserialization schema
@@ -67,7 +70,6 @@ public class RowKeyInjectingDeserializationSchema implements Serializable {
         this.inner = inner;
         this.rowKeyFieldIndex = rowKeyFieldIndex;
         this.rowKeyTypeRoot = rowKeyTypeRoot;
-        this.totalFields = rowType.getFieldCount();
         this.rowType = rowType;
     }
 
@@ -78,19 +80,6 @@ public class RowKeyInjectingDeserializationSchema implements Serializable {
 
     public void open(DeserializationSchema.InitializationContext context) throws Exception {
         inner.open(context);
-        initFieldGetters();
-    }
-
-    private void initFieldGetters() {
-        if (fieldGetters == null && rowKeyFieldIndex != NO_ROW_KEY_INDEX) {
-            fieldGetters = new RowData.FieldGetter[totalFields];
-            for (int i = 0; i < totalFields; i++) {
-                if (i != rowKeyFieldIndex) {
-                    LogicalType fieldType = rowType.getTypeAt(i);
-                    fieldGetters[i] = RowData.createFieldGetter(fieldType, i);
-                }
-            }
-        }
     }
 
     public RowData deserialize(byte[] bytes) throws IOException {
@@ -102,47 +91,42 @@ public class RowKeyInjectingDeserializationSchema implements Serializable {
      *
      * <p>If no row-key field is configured (index == -1), this is equivalent to {@link
      * #deserialize(byte[])}.
+     *
+     * @param bytes the cell value bytes to deserialize
+     * @param rowKeyBytes the raw Bigtable row key bytes (preserves binary keys without corruption)
      */
-    public RowData deserializeWithRowKey(byte[] bytes, String rowKey) throws IOException {
+    public RowData deserializeWithRowKey(byte[] bytes, byte[] rowKeyBytes) throws IOException {
         RowData base = inner.deserialize(bytes);
-        if (rowKeyFieldIndex == NO_ROW_KEY_INDEX || rowKey == null || base == null) {
+        if (rowKeyFieldIndex == NO_ROW_KEY_INDEX || rowKeyBytes == null || base == null) {
             return base;
         }
 
-        // Lazy init handles deserialization (transient field not restored)
-        initFieldGetters();
-
-        GenericRowData result = new GenericRowData(totalFields);
-        for (int i = 0; i < totalFields; i++) {
-            if (i == rowKeyFieldIndex) {
-                result.setField(i, parseRowKey(rowKey, rowKeyTypeRoot));
-            } else {
-                result.setField(i, fieldGetters[i].getFieldOrNull(base));
-            }
-        }
-        result.setRowKind(base.getRowKind());
-        return result;
+        Object parsedKey = parseRowKey(rowKeyBytes, rowKeyTypeRoot);
+        return new RowKeyInjectingRowData(base, rowKeyFieldIndex, parsedKey);
     }
 
     /**
-     * Parses a Bigtable row key string into the appropriate Flink internal type.
+     * Parses raw Bigtable row key bytes into the appropriate Flink internal type.
      *
-     * <p>Assumes the row key is a valid UTF-8 string with base-10 numeric encoding for numeric
-     * types.
+     * <p>For {@code VARBINARY}/{@code BINARY}, the raw bytes are returned directly. For string and
+     * numeric types, the bytes are decoded as UTF-8 and parsed accordingly.
      */
-    static Object parseRowKey(String rowKey, LogicalTypeRoot typeRoot) {
+    static Object parseRowKey(byte[] rowKeyBytes, LogicalTypeRoot typeRoot) {
         switch (typeRoot) {
+            case VARBINARY:
+            case BINARY:
+                return rowKeyBytes;
             case BIGINT:
-                return Long.parseLong(rowKey);
+                return Long.parseLong(new String(rowKeyBytes, StandardCharsets.UTF_8));
             case INTEGER:
-                return Integer.parseInt(rowKey);
+                return Integer.parseInt(new String(rowKeyBytes, StandardCharsets.UTF_8));
             case SMALLINT:
-                return Short.parseShort(rowKey);
+                return Short.parseShort(new String(rowKeyBytes, StandardCharsets.UTF_8));
             case TINYINT:
-                return Byte.parseByte(rowKey);
+                return Byte.parseByte(new String(rowKeyBytes, StandardCharsets.UTF_8));
             case VARCHAR:
             case CHAR:
-                return StringData.fromString(rowKey);
+                return StringData.fromString(new String(rowKeyBytes, StandardCharsets.UTF_8));
             default:
                 throw new UnsupportedOperationException(
                         "Unsupported row key type for deserialization: " + typeRoot);
@@ -167,6 +151,125 @@ public class RowKeyInjectingDeserializationSchema implements Serializable {
         }
         throw new IllegalArgumentException(
                 "row-key-field '" + rowKeyField + "' not found in schema: " + rowType);
+    }
+
+    /**
+     * Delegating {@link RowData} that overrides a single field with the injected row key value.
+     *
+     * <p>Avoids copying all fields into a new {@link GenericRowData} on every record — delegates
+     * all field access to the base row except the row-key index.
+     */
+    private static final class RowKeyInjectingRowData implements RowData {
+
+        private final RowData base;
+        private final int rowKeyIndex;
+        private final Object rowKeyValue;
+
+        RowKeyInjectingRowData(RowData base, int rowKeyIndex, Object rowKeyValue) {
+            this.base = base;
+            this.rowKeyIndex = rowKeyIndex;
+            this.rowKeyValue = rowKeyValue;
+        }
+
+        @Override
+        public int getArity() {
+            return base.getArity();
+        }
+
+        @Override
+        public RowKind getRowKind() {
+            return base.getRowKind();
+        }
+
+        @Override
+        public void setRowKind(RowKind kind) {
+            base.setRowKind(kind);
+        }
+
+        @Override
+        public boolean isNullAt(int pos) {
+            return pos == rowKeyIndex ? rowKeyValue == null : base.isNullAt(pos);
+        }
+
+        @Override
+        public boolean getBoolean(int pos) {
+            return base.getBoolean(pos);
+        }
+
+        @Override
+        public byte getByte(int pos) {
+            return pos == rowKeyIndex ? (Byte) rowKeyValue : base.getByte(pos);
+        }
+
+        @Override
+        public short getShort(int pos) {
+            return pos == rowKeyIndex ? (Short) rowKeyValue : base.getShort(pos);
+        }
+
+        @Override
+        public int getInt(int pos) {
+            return pos == rowKeyIndex ? (Integer) rowKeyValue : base.getInt(pos);
+        }
+
+        @Override
+        public long getLong(int pos) {
+            return pos == rowKeyIndex ? (Long) rowKeyValue : base.getLong(pos);
+        }
+
+        @Override
+        public float getFloat(int pos) {
+            return base.getFloat(pos);
+        }
+
+        @Override
+        public double getDouble(int pos) {
+            return base.getDouble(pos);
+        }
+
+        @Override
+        public StringData getString(int pos) {
+            return pos == rowKeyIndex ? (StringData) rowKeyValue : base.getString(pos);
+        }
+
+        @Override
+        public DecimalData getDecimal(int pos, int precision, int scale) {
+            return base.getDecimal(pos, precision, scale);
+        }
+
+        @Override
+        public TimestampData getTimestamp(int pos, int precision) {
+            return base.getTimestamp(pos, precision);
+        }
+
+        @Override
+        public <T> RawValueData<T> getRawValue(int pos) {
+            return base.getRawValue(pos);
+        }
+
+        @Override
+        public byte[] getBinary(int pos) {
+            return pos == rowKeyIndex ? (byte[]) rowKeyValue : base.getBinary(pos);
+        }
+
+        @Override
+        public ArrayData getArray(int pos) {
+            return base.getArray(pos);
+        }
+
+        @Override
+        public MapData getMap(int pos) {
+            return base.getMap(pos);
+        }
+
+        @Override
+        public RowData getRow(int pos, int numFields) {
+            return base.getRow(pos, numFields);
+        }
+
+        @Override
+        public Variant getVariant(int pos) {
+            return base.getVariant(pos);
+        }
     }
 
     /** Encapsulates the resolved index and logical type of a row-key field. */
