@@ -32,6 +32,8 @@ import org.apache.flink.util.UserCodeClassLoader;
 
 import com.google.cloud.bigtable.data.v2.BigtableDataClient;
 import com.google.cloud.bigtable.data.v2.models.ChangeStreamMutation;
+import com.google.cloud.bigtable.data.v2.models.DeleteCells;
+import com.google.cloud.bigtable.data.v2.models.DeleteFamily;
 import com.google.cloud.bigtable.data.v2.models.Range.ByteStringRange;
 import com.google.cloud.bigtable.data.v2.models.SetCell;
 import com.google.protobuf.ByteString;
@@ -42,8 +44,10 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -236,6 +240,51 @@ class BigtableChangeStreamSourceReaderTest {
         reader.close();
     }
 
+    // --- hasDeleteEntries tests ---
+
+    @Test
+    void hasDeleteEntriesReturnsTrueForDeleteCells() {
+        BigtableChangeStreamSourceReader reader = createReader();
+        ChangeStreamMutation mutation = mock(ChangeStreamMutation.class);
+        DeleteCells deleteCells = mock(DeleteCells.class);
+        doReturn(com.google.common.collect.ImmutableList.of(deleteCells))
+                .when(mutation)
+                .getEntries();
+
+        assertTrue(reader.hasDeleteEntries(mutation));
+    }
+
+    @Test
+    void hasDeleteEntriesReturnsTrueForDeleteFamily() {
+        BigtableChangeStreamSourceReader reader = createReader();
+        ChangeStreamMutation mutation = mock(ChangeStreamMutation.class);
+        DeleteFamily deleteFamily = mock(DeleteFamily.class);
+        doReturn(com.google.common.collect.ImmutableList.of(deleteFamily))
+                .when(mutation)
+                .getEntries();
+
+        assertTrue(reader.hasDeleteEntries(mutation));
+    }
+
+    @Test
+    void hasDeleteEntriesReturnsFalseForSetCellOnly() {
+        BigtableChangeStreamSourceReader reader = createReader();
+        ChangeStreamMutation mutation = mock(ChangeStreamMutation.class);
+        SetCell setCell = mock(SetCell.class);
+        doReturn(com.google.common.collect.ImmutableList.of(setCell)).when(mutation).getEntries();
+
+        assertFalse(reader.hasDeleteEntries(mutation));
+    }
+
+    @Test
+    void hasDeleteEntriesReturnsFalseForEmptyEntries() {
+        BigtableChangeStreamSourceReader reader = createReader();
+        ChangeStreamMutation mutation = mock(ChangeStreamMutation.class);
+        doReturn(com.google.common.collect.ImmutableList.of()).when(mutation).getEntries();
+
+        assertFalse(reader.hasDeleteEntries(mutation));
+    }
+
     // --- Helpers ---
 
     private BigtableChangeStreamSourceReader createReader() {
@@ -263,6 +312,7 @@ class BigtableChangeStreamSourceReaderTest {
                 PROJECT,
                 INSTANCE,
                 TABLE,
+                null,
                 COLUMN_FAMILY,
                 CELL_COLUMN,
                 schema,
@@ -292,6 +342,7 @@ class BigtableChangeStreamSourceReaderTest {
                 PROJECT,
                 INSTANCE,
                 TABLE,
+                null,
                 COLUMN_FAMILY,
                 CELL_COLUMN,
                 schema,

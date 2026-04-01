@@ -49,6 +49,7 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
     private final String projectId;
     private final String instanceId;
     private final String tableId;
+    private final String appProfileId;
     private final String columnFamily;
     private final String cellColumn;
     private final DecodingFormat<DeserializationSchema<RowData>> decodingFormat;
@@ -64,6 +65,7 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
             String projectId,
             String instanceId,
             String tableId,
+            String appProfileId,
             String columnFamily,
             String cellColumn,
             DecodingFormat<DeserializationSchema<RowData>> decodingFormat,
@@ -77,6 +79,7 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
         this.projectId = projectId;
         this.instanceId = instanceId;
         this.tableId = tableId;
+        this.appProfileId = appProfileId;
         this.columnFamily = columnFamily;
         this.cellColumn = cellColumn;
         this.decodingFormat = decodingFormat;
@@ -91,12 +94,27 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
 
     @Override
     public ChangelogMode getChangelogMode() {
-        // Bigtable Change Streams emit each ChangeStreamMutation as a new event — there is no
-        // notion of UPDATE or DELETE at the change stream level. Delete entries (DeleteCells,
-        // DeleteFamily) within a mutation are skipped by the reader since they carry no cell
-        // value payload. Downstream operators can interpret the payload to derive changelog
-        // semantics if needed.
-        return ChangelogMode.newBuilder().addContainedKind(RowKind.INSERT).build();
+        // Bigtable Change Stream entry types map to Flink RowKind as follows:
+        //
+        //   SetCell      → RowKind.INSERT  — a cell value was written; deserialize and emit.
+        //   DeleteCells  → RowKind.DELETE  — specific cells were deleted for this row.
+        //   DeleteFamily → RowKind.DELETE  — an entire column family was deleted for this row.
+        //
+        // Each ChangeStreamMutation is scoped to a single row key. A DeleteFamily does NOT
+        // fan out — application-level batch deletes produce one mutation per row, each
+        // emitting one DELETE RowData. Cardinality is always: one mutation = one emitted row.
+        //
+        // Mixed mutations (SetCell + delete entries): emit INSERT for the matching SetCell
+        // only. The delete entries are secondary (e.g. "delete old version, set new value").
+        // If no matching SetCell exists but deletes are present, emit DELETE.
+        //
+        // DELETE emission requires row-key-field to be configured — without it there is no
+        // key to identify what was deleted, and delete mutations are skipped.
+        ChangelogMode.Builder builder = ChangelogMode.newBuilder().addContainedKind(RowKind.INSERT);
+        if (rowKeyField != null && !rowKeyField.isEmpty()) {
+            builder.addContainedKind(RowKind.DELETE);
+        }
+        return builder.build();
     }
 
     @Override
@@ -131,6 +149,7 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
                                 projectId,
                                 instanceId,
                                 tableId,
+                                appProfileId,
                                 columnFamily,
                                 cellColumn,
                                 schema,
@@ -162,6 +181,7 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
                 projectId,
                 instanceId,
                 tableId,
+                appProfileId,
                 columnFamily,
                 cellColumn,
                 decodingFormat,

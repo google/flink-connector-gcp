@@ -29,6 +29,7 @@ import org.apache.flink.table.types.logical.LogicalTypeRoot;
 import org.apache.flink.table.types.logical.RowType;
 import org.apache.flink.table.types.logical.VarBinaryType;
 import org.apache.flink.table.types.logical.VarCharType;
+import org.apache.flink.types.RowKind;
 
 import org.junit.jupiter.api.Test;
 
@@ -304,6 +305,111 @@ class RowKeyInjectingDeserializationSchemaTest {
         assertNull(
                 schema.deserializeWithRowKey(
                         new byte[] {}, "123".getBytes(StandardCharsets.UTF_8)));
+    }
+
+    // --- createDeleteRow tests ---
+
+    @Test
+    void createDeleteRowWithStringKey() {
+        RowType rowType =
+                new RowType(
+                        Arrays.asList(
+                                new RowType.RowField("row_key", new VarCharType()),
+                                new RowType.RowField("payload", new VarCharType())));
+
+        RowKeyInjectingDeserializationSchema schema =
+                new RowKeyInjectingDeserializationSchema(
+                        new FakeDeserializationSchema(rowType),
+                        0,
+                        LogicalTypeRoot.VARCHAR,
+                        rowType);
+
+        RowData result = schema.createDeleteRow("my-key".getBytes(StandardCharsets.UTF_8));
+        assertNotNull(result);
+        assertEquals(RowKind.DELETE, result.getRowKind());
+        assertEquals(StringData.fromString("my-key"), result.getString(0));
+        assertTrue(result.isNullAt(1));
+        assertEquals(2, result.getArity());
+    }
+
+    @Test
+    void createDeleteRowWithBigintKey() {
+        RowType rowType =
+                new RowType(
+                        Arrays.asList(
+                                new RowType.RowField("id", new BigIntType()),
+                                new RowType.RowField("name", new VarCharType())));
+
+        RowKeyInjectingDeserializationSchema schema =
+                new RowKeyInjectingDeserializationSchema(
+                        new FakeDeserializationSchema(rowType), 0, LogicalTypeRoot.BIGINT, rowType);
+
+        RowData result = schema.createDeleteRow("42".getBytes(StandardCharsets.UTF_8));
+        assertNotNull(result);
+        assertEquals(RowKind.DELETE, result.getRowKind());
+        assertEquals(42L, result.getLong(0));
+        assertTrue(result.isNullAt(1));
+    }
+
+    @Test
+    void createDeleteRowReturnsNullWhenNoRowKeyConfigured() {
+        RowType rowType =
+                new RowType(Arrays.asList(new RowType.RowField("payload", new VarCharType())));
+
+        RowKeyInjectingDeserializationSchema schema =
+                new RowKeyInjectingDeserializationSchema(
+                        new FakeDeserializationSchema(rowType),
+                        RowKeyInjectingDeserializationSchema.NO_ROW_KEY_INDEX,
+                        null,
+                        rowType);
+
+        assertNull(schema.createDeleteRow("key".getBytes(StandardCharsets.UTF_8)));
+    }
+
+    @Test
+    void createDeleteRowReturnsNullForNullRowKeyBytes() {
+        RowType rowType =
+                new RowType(
+                        Arrays.asList(
+                                new RowType.RowField("row_key", new VarCharType()),
+                                new RowType.RowField("payload", new VarCharType())));
+
+        RowKeyInjectingDeserializationSchema schema =
+                new RowKeyInjectingDeserializationSchema(
+                        new FakeDeserializationSchema(rowType),
+                        0,
+                        LogicalTypeRoot.VARCHAR,
+                        rowType);
+
+        assertNull(schema.createDeleteRow(null));
+    }
+
+    @Test
+    void hasRowKeyFieldReturnsTrueWhenConfigured() {
+        RowType rowType =
+                new RowType(Arrays.asList(new RowType.RowField("row_key", new VarCharType())));
+
+        RowKeyInjectingDeserializationSchema schema =
+                new RowKeyInjectingDeserializationSchema(
+                        new FakeDeserializationSchema(rowType),
+                        0,
+                        LogicalTypeRoot.VARCHAR,
+                        rowType);
+        assertTrue(schema.hasRowKeyField());
+    }
+
+    @Test
+    void hasRowKeyFieldReturnsFalseWhenNotConfigured() {
+        RowType rowType =
+                new RowType(Arrays.asList(new RowType.RowField("payload", new VarCharType())));
+
+        RowKeyInjectingDeserializationSchema schema =
+                new RowKeyInjectingDeserializationSchema(
+                        new FakeDeserializationSchema(rowType),
+                        RowKeyInjectingDeserializationSchema.NO_ROW_KEY_INDEX,
+                        null,
+                        rowType);
+        assertFalse(schema.hasRowKeyField());
     }
 
     /**

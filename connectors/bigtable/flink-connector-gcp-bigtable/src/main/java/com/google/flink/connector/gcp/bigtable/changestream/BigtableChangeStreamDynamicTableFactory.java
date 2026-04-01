@@ -57,6 +57,14 @@ public class BigtableChangeStreamDynamicTableFactory implements DynamicTableSour
     static final ConfigOption<String> COLUMN_FAMILY =
             ConfigOptions.key("column-family").stringType().noDefaultValue();
 
+    static final ConfigOption<String> APP_PROFILE =
+            ConfigOptions.key("app-profile-id")
+                    .stringType()
+                    .noDefaultValue()
+                    .withDescription(
+                            "Bigtable app profile ID. Change streams require an app profile "
+                                    + "configured for single-cluster routing.");
+
     static final ConfigOption<String> CELL_COLUMN =
             ConfigOptions.key("cell-column").stringType().defaultValue("payload");
 
@@ -116,6 +124,7 @@ public class BigtableChangeStreamDynamicTableFactory implements DynamicTableSour
         REQUIRED_OPTIONS = Collections.unmodifiableSet(req);
 
         Set<ConfigOption<?>> opt = new HashSet<>();
+        opt.add(APP_PROFILE);
         opt.add(CELL_COLUMN);
         opt.add(ROW_KEY_FIELD);
         opt.add(START_LOOKBACK_SECONDS);
@@ -158,6 +167,7 @@ public class BigtableChangeStreamDynamicTableFactory implements DynamicTableSour
                 helper.getOptions().get(PROJECT),
                 helper.getOptions().get(INSTANCE),
                 helper.getOptions().get(TABLE),
+                helper.getOptions().get(APP_PROFILE),
                 helper.getOptions().get(COLUMN_FAMILY),
                 helper.getOptions().get(CELL_COLUMN),
                 decodingFormat,

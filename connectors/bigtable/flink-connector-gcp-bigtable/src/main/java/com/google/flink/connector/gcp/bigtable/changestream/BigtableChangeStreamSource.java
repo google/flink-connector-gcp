@@ -47,6 +47,7 @@ public class BigtableChangeStreamSource
     private final String projectId;
     private final String instanceId;
     private final String tableId;
+    private final String appProfileId;
     private final String columnFamily;
     private final String cellColumn;
     private final RowKeyInjectingDeserializationSchema deserializationSchema;
@@ -59,6 +60,7 @@ public class BigtableChangeStreamSource
             String projectId,
             String instanceId,
             String tableId,
+            String appProfileId,
             String columnFamily,
             String cellColumn,
             RowKeyInjectingDeserializationSchema deserializationSchema,
@@ -69,6 +71,7 @@ public class BigtableChangeStreamSource
         this.projectId = projectId;
         this.instanceId = instanceId;
         this.tableId = tableId;
+        this.appProfileId = appProfileId;
         this.columnFamily = columnFamily;
         this.cellColumn = cellColumn;
         this.deserializationSchema = deserializationSchema;
@@ -91,6 +94,7 @@ public class BigtableChangeStreamSource
                 projectId,
                 instanceId,
                 tableId,
+                appProfileId,
                 columnFamily,
                 cellColumn,
                 deserializationSchema,

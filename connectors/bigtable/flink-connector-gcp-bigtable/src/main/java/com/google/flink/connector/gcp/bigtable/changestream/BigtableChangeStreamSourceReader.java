@@ -32,16 +32,21 @@ import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.util.UserCodeClassLoader;
 
+import org.apache.flink.shaded.guava33.com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 import com.google.cloud.bigtable.data.v2.BigtableDataClient;
 import com.google.cloud.bigtable.data.v2.BigtableDataSettings;
 import com.google.cloud.bigtable.data.v2.models.ChangeStreamContinuationToken;
 import com.google.cloud.bigtable.data.v2.models.ChangeStreamMutation;
 import com.google.cloud.bigtable.data.v2.models.ChangeStreamRecord;
 import com.google.cloud.bigtable.data.v2.models.CloseStream;
+import com.google.cloud.bigtable.data.v2.models.DeleteCells;
+import com.google.cloud.bigtable.data.v2.models.DeleteFamily;
 import com.google.cloud.bigtable.data.v2.models.Entry;
 import com.google.cloud.bigtable.data.v2.models.Heartbeat;
 import com.google.cloud.bigtable.data.v2.models.ReadChangeStreamQuery;
 import com.google.cloud.bigtable.data.v2.models.SetCell;
+import com.google.protobuf.ByteString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,8 +83,10 @@ public class BigtableChangeStreamSourceReader
     private final String projectId;
     private final String instanceId;
     private final String tableId;
+    private final String appProfileId;
     private final String columnFamily;
     private final String cellColumn;
+    private final ByteString cellColumnBytes;
     private final RowKeyInjectingDeserializationSchema deserializationSchema;
     private final int startLookbackSeconds;
     private final int bufferCapacity;
@@ -129,6 +136,9 @@ public class BigtableChangeStreamSourceReader
     private transient Counter streamExhaustedWithoutCloseStream;
     private transient Counter heartbeatsReceived;
 
+    // Delete emission metrics
+    private transient Counter deleteRecordsEmitted;
+
     // Rebalancing metrics
     private transient Counter splitsRebalanced;
 
@@ -144,8 +154,10 @@ public class BigtableChangeStreamSourceReader
 
     // Heartbeat interval for the ReadChangeStream query — Bigtable sends a Heartbeat record
     // at this interval when there are no mutations, keeping the stream alive.
-    private static final org.threeten.bp.Duration HEARTBEAT_DURATION =
-            org.threeten.bp.Duration.ofSeconds(30);
+    private static final java.time.Duration HEARTBEAT_DURATION = java.time.Duration.ofSeconds(30);
+
+    // Default maximum number of concurrent partition reader threads.
+    static final int DEFAULT_MAX_PARTITION_THREADS = 64;
 
     // Sliding window size for Dropwizard histogram reservoirs (notification latency, partition
     // lifetime).
@@ -166,6 +178,7 @@ public class BigtableChangeStreamSourceReader
             String projectId,
             String instanceId,
             String tableId,
+            String appProfileId,
             String columnFamily,
             String cellColumn,
             RowKeyInjectingDeserializationSchema deserializationSchema,
@@ -178,6 +191,7 @@ public class BigtableChangeStreamSourceReader
                 projectId,
                 instanceId,
                 tableId,
+                appProfileId,
                 columnFamily,
                 cellColumn,
                 deserializationSchema,
@@ -200,6 +214,7 @@ public class BigtableChangeStreamSourceReader
             String projectId,
             String instanceId,
             String tableId,
+            String appProfileId,
             String columnFamily,
             String cellColumn,
             RowKeyInjectingDeserializationSchema deserializationSchema,
@@ -212,13 +227,16 @@ public class BigtableChangeStreamSourceReader
         this.projectId = projectId;
         this.instanceId = instanceId;
         this.tableId = tableId;
+        this.appProfileId = appProfileId;
         this.columnFamily = columnFamily;
         this.cellColumn = cellColumn;
+        this.cellColumnBytes = ByteString.copyFromUtf8(cellColumn);
         this.deserializationSchema = deserializationSchema;
         this.startLookbackSeconds = startLookbackSeconds;
         this.bufferCapacity = bufferCapacity > 0 ? bufferCapacity : DEFAULT_RECORD_BUFFER_CAPACITY;
         this.grpcChannelPoolSize = grpcChannelPoolSize;
-        this.maxPartitionThreads = maxPartitionThreads > 0 ? maxPartitionThreads : 64;
+        this.maxPartitionThreads =
+                maxPartitionThreads > 0 ? maxPartitionThreads : DEFAULT_MAX_PARTITION_THREADS;
         this.clientFactory = clientFactory;
         this.recordBuffer = new LinkedBlockingQueue<>(this.bufferCapacity);
     }
@@ -233,6 +251,10 @@ public class BigtableChangeStreamSourceReader
                         BigtableDataSettings.newBuilder()
                                 .setProjectId(projectId)
                                 .setInstanceId(instanceId);
+
+                if (appProfileId != null && !appProfileId.isEmpty()) {
+                    builder.setAppProfileId(appProfileId);
+                }
 
                 if (grpcChannelPoolSize > 0) {
                     builder.stubSettings()
@@ -296,23 +318,13 @@ public class BigtableChangeStreamSourceReader
                         60L,
                         TimeUnit.SECONDS,
                         new java.util.concurrent.SynchronousQueue<>(),
-                        new java.util.concurrent.ThreadFactory() {
-                            private final java.util.concurrent.atomic.AtomicLong threadId =
-                                    new java.util.concurrent.atomic.AtomicLong(0);
-
-                            @Override
-                            public Thread newThread(Runnable r) {
-                                Thread t =
-                                        new Thread(
-                                                r,
-                                                String.format(
-                                                        "bigtable-cs-reader-%d-%d",
-                                                        readerContext.getIndexOfSubtask(),
-                                                        threadId.getAndIncrement()));
-                                t.setDaemon(true);
-                                return t;
-                            }
-                        });
+                        new ThreadFactoryBuilder()
+                                .setNameFormat(
+                                        "bigtable-cs-reader-"
+                                                + readerContext.getIndexOfSubtask()
+                                                + "-%d")
+                                .setDaemon(true)
+                                .build());
 
         // Register Flink metrics — histogram for Flink UI, gauge for Prometheus
         notificationLatencyMs =
@@ -386,6 +398,8 @@ public class BigtableChangeStreamSourceReader
                 readerContext.metricGroup().counter("bigtable_changestream_deserialization_errors");
         nullProtoBytes =
                 readerContext.metricGroup().counter("bigtable_changestream_null_proto_bytes");
+        deleteRecordsEmitted =
+                readerContext.metricGroup().counter("bigtable_changestream_delete_records_emitted");
 
         // gRPC stream lifecycle
         streamExhaustedWithoutCloseStream =
@@ -426,25 +440,26 @@ public class BigtableChangeStreamSourceReader
             throw new RuntimeException("Error in change stream reader thread", streamError);
         }
 
-        // Single lock covers buffer check + future reset to prevent lost notifications.
+        // Lock only covers buffer check + future reset to prevent lost notifications.
+        // output.collect() is outside the lock to avoid contention with producer threads.
+        RowData row;
         synchronized (lock) {
-            RowData row = recordBuffer.poll();
-            if (row != null) {
-                output.collect(row);
-                return InputStatus.MORE_AVAILABLE;
-            }
+            row = recordBuffer.poll();
+            if (row == null) {
+                if (finished && activeSplits.isEmpty()) {
+                    return InputStatus.END_OF_INPUT;
+                }
 
-            if (finished && activeSplits.isEmpty()) {
-                return InputStatus.END_OF_INPUT;
-            }
-
-            // Reset the availability future so Flink waits for the next notification
-            if (availableFuture.isDone()) {
-                availableFuture = new CompletableFuture<>();
+                // Reset the availability future so Flink waits for the next notification
+                if (availableFuture.isDone()) {
+                    availableFuture = new CompletableFuture<>();
+                }
+                return InputStatus.NOTHING_AVAILABLE;
             }
         }
 
-        return InputStatus.NOTHING_AVAILABLE;
+        output.collect(row);
+        return InputStatus.MORE_AVAILABLE;
     }
 
     @Override
@@ -640,6 +655,11 @@ public class BigtableChangeStreamSourceReader
                         byte[] rowKeyBytes = mutation.getRowKey().toByteArray();
                         RowData row =
                                 deserializationSchema.deserializeWithRowKey(cellBytes, rowKeyBytes);
+                        if (row == null) {
+                            recordsSkipped.inc();
+                            activeSplits.put(splitId, split.withToken(token));
+                            continue;
+                        }
                         recordsDeserialized.inc();
                         // Block if buffer is full — applies backpressure to the gRPC stream.
                         // Count once per record that encounters a full buffer, not per retry.
@@ -671,9 +691,60 @@ public class BigtableChangeStreamSourceReader
                         activeSplits.put(splitId, split.withToken(token));
                     }
                 } else {
-                    nullProtoBytes.inc();
-                    recordsSkipped.inc();
-                    activeSplits.put(splitId, split.withToken(token));
+                    // No matching SetCell entry. Check for delete entries to emit as
+                    // RowKind.DELETE.
+                    //
+                    // Mutation-type-to-RowKind mapping:
+                    //   SetCell        → RowKind.INSERT (handled above)
+                    //   DeleteCells    → RowKind.DELETE (targeted cell/qualifier delete)
+                    //   DeleteFamily   → RowKind.DELETE (entire column family delete)
+                    //
+                    // Both delete types are scoped to a single row key within a single
+                    // ChangeStreamMutation — a DeleteFamily does NOT fan out into multiple
+                    // rows. Application-level batch deletes (e.g. deleting 1000 rows)
+                    // produce 1000 separate mutations, each emitting one DELETE row.
+                    //
+                    // Mixed mutations (SetCell + delete entries): the SetCell path above
+                    // already emitted an INSERT, so we only reach here when no matching
+                    // SetCell was found. This handles the "pure delete" case.
+                    //
+                    // Requires row-key-field to be configured — without it, there is no key
+                    // to identify what was deleted, so the mutation is skipped.
+                    if (deserializationSchema.hasRowKeyField() && hasDeleteEntries(mutation)) {
+                        try {
+                            byte[] rowKeyBytes = mutation.getRowKey().toByteArray();
+                            RowData deleteRow = deserializationSchema.createDeleteRow(rowKeyBytes);
+                            if (deleteRow != null) {
+                                deleteRecordsEmitted.inc();
+                                boolean counted = false;
+                                while (!finished) {
+                                    if (recordBuffer.offer(
+                                            deleteRow,
+                                            BUFFER_OFFER_TIMEOUT_MS,
+                                            TimeUnit.MILLISECONDS)) {
+                                        break;
+                                    }
+                                    if (!counted) {
+                                        bufferFullEvents.inc();
+                                        counted = true;
+                                    }
+                                }
+                                activeSplits.put(splitId, split.withToken(token));
+                                notifyAvailable();
+                            } else {
+                                nullProtoBytes.inc();
+                                recordsSkipped.inc();
+                                activeSplits.put(splitId, split.withToken(token));
+                            }
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            break;
+                        }
+                    } else {
+                        nullProtoBytes.inc();
+                        recordsSkipped.inc();
+                        activeSplits.put(splitId, split.withToken(token));
+                    }
                 }
             } else if (record instanceof Heartbeat) {
                 heartbeatsReceived.inc();
@@ -749,6 +820,13 @@ public class BigtableChangeStreamSourceReader
      * payload. Mutations containing only delete entries will return {@code null} and be counted as
      * skipped records.
      *
+     * <p>Returns the <b>first</b> matching {@code SetCell} entry. If a mutation contains multiple
+     * entries for the same column family and qualifier, only the first is returned.
+     *
+     * <p><b>Note:</b> The mutation's {@code tieBreaker} field (used to order mutations with the
+     * same commit timestamp) is not exposed. It could be added as a metadata field in a future
+     * version.
+     *
      * @return the cell bytes, or {@code null} if no matching cell was found
      */
     @VisibleForTesting
@@ -758,12 +836,26 @@ public class BigtableChangeStreamSourceReader
             if (entry instanceof SetCell) {
                 SetCell setCell = (SetCell) entry;
                 if (setCell.getFamilyName().equals(columnFamily)
-                        && setCell.getQualifier().toStringUtf8().equals(cellColumn)) {
+                        && setCell.getQualifier().equals(cellColumnBytes)) {
                     return setCell.getValue().toByteArray();
                 }
             }
         }
         return null;
+    }
+
+    /**
+     * Returns {@code true} if the mutation contains at least one delete entry ({@link DeleteCells}
+     * or {@link DeleteFamily}).
+     */
+    @VisibleForTesting
+    boolean hasDeleteEntries(ChangeStreamMutation mutation) {
+        for (Entry entry : mutation.getEntries()) {
+            if (entry instanceof DeleteCells || entry instanceof DeleteFamily) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void notifyAvailable() {

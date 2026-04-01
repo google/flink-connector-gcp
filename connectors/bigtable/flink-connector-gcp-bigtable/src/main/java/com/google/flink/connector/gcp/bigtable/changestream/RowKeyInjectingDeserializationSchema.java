@@ -21,6 +21,7 @@ package com.google.flink.connector.gcp.bigtable.changestream;
 import org.apache.flink.api.common.serialization.DeserializationSchema;
 import org.apache.flink.table.data.ArrayData;
 import org.apache.flink.table.data.DecimalData;
+import org.apache.flink.table.data.GenericRowData;
 import org.apache.flink.table.data.MapData;
 import org.apache.flink.table.data.RawValueData;
 import org.apache.flink.table.data.RowData;
@@ -103,6 +104,31 @@ public class RowKeyInjectingDeserializationSchema implements Serializable {
 
         Object parsedKey = parseRowKey(rowKeyBytes, rowKeyTypeRoot);
         return new RowKeyInjectingRowData(base, rowKeyFieldIndex, parsedKey);
+    }
+
+    /** Returns whether a row-key field is configured, enabling delete row emission. */
+    public boolean hasRowKeyField() {
+        return rowKeyFieldIndex != NO_ROW_KEY_INDEX;
+    }
+
+    /**
+     * Creates a {@link RowKind#DELETE} {@link RowData} with only the row key field populated.
+     *
+     * <p>All fields are null except the row-key field, which is set to the parsed row key value.
+     * Used for Bigtable delete entries (DeleteCells, DeleteFamily) which carry no cell value
+     * payload — only the row key identifies what was deleted.
+     *
+     * @param rowKeyBytes the raw Bigtable row key bytes
+     * @return a DELETE RowData, or {@code null} if no row-key field is configured
+     */
+    public RowData createDeleteRow(byte[] rowKeyBytes) {
+        if (rowKeyFieldIndex == NO_ROW_KEY_INDEX || rowKeyBytes == null) {
+            return null;
+        }
+        GenericRowData row = new GenericRowData(rowType.getFieldCount());
+        row.setField(rowKeyFieldIndex, parseRowKey(rowKeyBytes, rowKeyTypeRoot));
+        row.setRowKind(RowKind.DELETE);
+        return row;
     }
 
     /**
