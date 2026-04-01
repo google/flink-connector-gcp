@@ -88,6 +88,7 @@ public class BigtableChangeStreamSourceReader
     private final String cellColumn;
     private final ByteString cellColumnBytes;
     private final RowKeyInjectingDeserializationSchema deserializationSchema;
+    private final boolean emitDeletes;
     private final int startLookbackSeconds;
     private final int bufferCapacity;
     private final int grpcChannelPoolSize;
@@ -182,6 +183,7 @@ public class BigtableChangeStreamSourceReader
             String columnFamily,
             String cellColumn,
             RowKeyInjectingDeserializationSchema deserializationSchema,
+            boolean emitDeletes,
             int startLookbackSeconds,
             int bufferCapacity,
             int grpcChannelPoolSize,
@@ -195,6 +197,7 @@ public class BigtableChangeStreamSourceReader
                 columnFamily,
                 cellColumn,
                 deserializationSchema,
+                emitDeletes,
                 startLookbackSeconds,
                 bufferCapacity,
                 grpcChannelPoolSize,
@@ -218,6 +221,7 @@ public class BigtableChangeStreamSourceReader
             String columnFamily,
             String cellColumn,
             RowKeyInjectingDeserializationSchema deserializationSchema,
+            boolean emitDeletes,
             int startLookbackSeconds,
             int bufferCapacity,
             int grpcChannelPoolSize,
@@ -232,6 +236,7 @@ public class BigtableChangeStreamSourceReader
         this.cellColumn = cellColumn;
         this.cellColumnBytes = ByteString.copyFromUtf8(cellColumn);
         this.deserializationSchema = deserializationSchema;
+        this.emitDeletes = emitDeletes;
         this.startLookbackSeconds = startLookbackSeconds;
         this.bufferCapacity = bufferCapacity > 0 ? bufferCapacity : DEFAULT_RECORD_BUFFER_CAPACITY;
         this.grpcChannelPoolSize = grpcChannelPoolSize;
@@ -710,7 +715,9 @@ public class BigtableChangeStreamSourceReader
                     //
                     // Requires row-key-field to be configured — without it, there is no key
                     // to identify what was deleted, so the mutation is skipped.
-                    if (deserializationSchema.hasRowKeyField() && hasDeleteEntries(mutation)) {
+                    if (emitDeletes
+                            && deserializationSchema.hasRowKeyField()
+                            && hasDeleteEntries(mutation)) {
                         try {
                             byte[] rowKeyBytes = mutation.getRowKey().toByteArray();
                             RowData deleteRow = deserializationSchema.createDeleteRow(rowKeyBytes);

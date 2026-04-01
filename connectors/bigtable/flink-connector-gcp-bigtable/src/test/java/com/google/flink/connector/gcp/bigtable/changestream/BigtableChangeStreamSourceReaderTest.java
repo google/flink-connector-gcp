@@ -240,6 +240,43 @@ class BigtableChangeStreamSourceReaderTest {
         reader.close();
     }
 
+    // --- changelog-mode config tests ---
+
+    @Test
+    void defaultChangelogModeIsInsertOnly() {
+        assertEquals(
+                "insert-only",
+                BigtableChangeStreamDynamicTableFactory.CHANGELOG_MODE.defaultValue(),
+                "Default changelog-mode should be insert-only for backward compatibility");
+    }
+
+    // --- getChangelogMode tests ---
+
+    @Test
+    void getChangelogModeInsertOnlyByDefault() {
+        BigtableChangeStreamDynamicTableSource source =
+                createDynamicTableSource("insert-only", "my_key");
+        org.apache.flink.table.connector.ChangelogMode mode = source.getChangelogMode();
+        assertTrue(mode.contains(org.apache.flink.types.RowKind.INSERT));
+        assertFalse(mode.contains(org.apache.flink.types.RowKind.DELETE));
+    }
+
+    @Test
+    void getChangelogModeAllWithRowKeyField() {
+        BigtableChangeStreamDynamicTableSource source = createDynamicTableSource("all", "my_key");
+        org.apache.flink.table.connector.ChangelogMode mode = source.getChangelogMode();
+        assertTrue(mode.contains(org.apache.flink.types.RowKind.INSERT));
+        assertTrue(mode.contains(org.apache.flink.types.RowKind.DELETE));
+    }
+
+    @Test
+    void getChangelogModeAllWithoutRowKeyFieldFallsBackToInsertOnly() {
+        BigtableChangeStreamDynamicTableSource source = createDynamicTableSource("all", null);
+        org.apache.flink.table.connector.ChangelogMode mode = source.getChangelogMode();
+        assertTrue(mode.contains(org.apache.flink.types.RowKind.INSERT));
+        assertFalse(mode.contains(org.apache.flink.types.RowKind.DELETE));
+    }
+
     // --- hasDeleteEntries tests ---
 
     @Test
@@ -292,6 +329,30 @@ class BigtableChangeStreamSourceReaderTest {
         return createReaderWithClient(() -> mockClient);
     }
 
+    private static BigtableChangeStreamDynamicTableSource createDynamicTableSource(
+            String changelogMode, String rowKeyField) {
+        RowType rowType =
+                new RowType(
+                        Collections.singletonList(
+                                new RowType.RowField("payload", new VarCharType())));
+        return new BigtableChangeStreamDynamicTableSource(
+                PROJECT,
+                INSTANCE,
+                TABLE,
+                null,
+                COLUMN_FAMILY,
+                CELL_COLUMN,
+                null,
+                rowType,
+                rowKeyField,
+                300,
+                1000,
+                0,
+                64,
+                changelogMode,
+                0);
+    }
+
     private BigtableChangeStreamSourceReader createReaderWithClientAndThreads(
             java.util.function.Supplier<BigtableDataClient> clientFactory,
             int maxPartitionThreads) {
@@ -316,6 +377,7 @@ class BigtableChangeStreamSourceReaderTest {
                 COLUMN_FAMILY,
                 CELL_COLUMN,
                 schema,
+                false,
                 300,
                 100,
                 0,
@@ -346,6 +408,7 @@ class BigtableChangeStreamSourceReaderTest {
                 COLUMN_FAMILY,
                 CELL_COLUMN,
                 schema,
+                false,
                 300,
                 100,
                 0,

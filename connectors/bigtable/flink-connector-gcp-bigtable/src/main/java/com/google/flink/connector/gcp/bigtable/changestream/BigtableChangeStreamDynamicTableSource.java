@@ -59,6 +59,7 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
     private final int bufferCapacity;
     private final int grpcChannelPoolSize;
     private final int maxPartitionThreads;
+    private final String changelogMode;
     private final int parallelism;
 
     public BigtableChangeStreamDynamicTableSource(
@@ -75,6 +76,7 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
             int bufferCapacity,
             int grpcChannelPoolSize,
             int maxPartitionThreads,
+            String changelogMode,
             int parallelism) {
         this.projectId = projectId;
         this.instanceId = instanceId;
@@ -89,6 +91,7 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
         this.bufferCapacity = bufferCapacity;
         this.grpcChannelPoolSize = grpcChannelPoolSize;
         this.maxPartitionThreads = maxPartitionThreads;
+        this.changelogMode = changelogMode;
         this.parallelism = parallelism;
     }
 
@@ -108,10 +111,11 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
         // only. The delete entries are secondary (e.g. "delete old version, set new value").
         // If no matching SetCell exists but deletes are present, emit DELETE.
         //
-        // DELETE emission requires row-key-field to be configured — without it there is no
-        // key to identify what was deleted, and delete mutations are skipped.
+        // DELETE emission is controlled by the 'changelog-mode' option:
+        //   'insert-only' (default) — only SetCell entries are emitted as INSERT.
+        //   'all' — also emits DeleteCells/DeleteFamily as DELETE (requires row-key-field).
         ChangelogMode.Builder builder = ChangelogMode.newBuilder().addContainedKind(RowKind.INSERT);
-        if (rowKeyField != null && !rowKeyField.isEmpty()) {
+        if ("all".equals(changelogMode) && rowKeyField != null && !rowKeyField.isEmpty()) {
             builder.addContainedKind(RowKind.DELETE);
         }
         return builder.build();
@@ -144,6 +148,11 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
                         new RowKeyInjectingDeserializationSchema(
                                 innerSchema, rowKeyFieldIndex, rowKeyTypeRoot, rowType);
 
+                boolean emitDeletes =
+                        "all".equals(changelogMode)
+                                && rowKeyField != null
+                                && !rowKeyField.isEmpty();
+
                 BigtableChangeStreamSource source =
                         new BigtableChangeStreamSource(
                                 projectId,
@@ -153,6 +162,7 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
                                 columnFamily,
                                 cellColumn,
                                 schema,
+                                emitDeletes,
                                 startLookbackSeconds,
                                 bufferCapacity,
                                 grpcChannelPoolSize,
@@ -191,6 +201,7 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
                 bufferCapacity,
                 grpcChannelPoolSize,
                 maxPartitionThreads,
+                changelogMode,
                 parallelism);
     }
 

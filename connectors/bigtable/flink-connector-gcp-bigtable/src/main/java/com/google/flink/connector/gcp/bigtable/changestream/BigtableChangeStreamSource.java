@@ -51,6 +51,7 @@ public class BigtableChangeStreamSource
     private final String columnFamily;
     private final String cellColumn;
     private final RowKeyInjectingDeserializationSchema deserializationSchema;
+    private final boolean emitDeletes;
     private final int startLookbackSeconds;
     private final int bufferCapacity;
     private final int grpcChannelPoolSize;
@@ -64,6 +65,7 @@ public class BigtableChangeStreamSource
             String columnFamily,
             String cellColumn,
             RowKeyInjectingDeserializationSchema deserializationSchema,
+            boolean emitDeletes,
             int startLookbackSeconds,
             int bufferCapacity,
             int grpcChannelPoolSize,
@@ -75,6 +77,7 @@ public class BigtableChangeStreamSource
         this.columnFamily = columnFamily;
         this.cellColumn = cellColumn;
         this.deserializationSchema = deserializationSchema;
+        this.emitDeletes = emitDeletes;
         this.startLookbackSeconds = startLookbackSeconds;
         this.bufferCapacity = bufferCapacity;
         this.grpcChannelPoolSize = grpcChannelPoolSize;
@@ -98,6 +101,7 @@ public class BigtableChangeStreamSource
                 columnFamily,
                 cellColumn,
                 deserializationSchema,
+                emitDeletes,
                 startLookbackSeconds,
                 bufferCapacity,
                 grpcChannelPoolSize,

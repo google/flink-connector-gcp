@@ -104,6 +104,16 @@ public class BigtableChangeStreamDynamicTableFactory implements DynamicTableSour
                             "Maximum number of threads for concurrent partition reading. "
                                     + "Each thread reads one Bigtable partition.");
 
+    static final ConfigOption<String> CHANGELOG_MODE =
+            ConfigOptions.key("changelog-mode")
+                    .stringType()
+                    .defaultValue("insert-only")
+                    .withDescription(
+                            "Controls which Bigtable mutation types are emitted. "
+                                    + "'insert-only' emits only SetCell entries as INSERT rows. "
+                                    + "'all' also emits DeleteCells/DeleteFamily entries as DELETE "
+                                    + "rows (requires row-key-field to be set).");
+
     static final ConfigOption<Integer> PARALLELISM =
             ConfigOptions.key("parallelism")
                     .intType()
@@ -131,6 +141,7 @@ public class BigtableChangeStreamDynamicTableFactory implements DynamicTableSour
         opt.add(BUFFER_CAPACITY);
         opt.add(GRPC_CHANNEL_POOL_SIZE);
         opt.add(MAX_PARTITION_THREADS);
+        opt.add(CHANGELOG_MODE);
         opt.add(PARALLELISM);
         OPTIONAL_OPTIONS = Collections.unmodifiableSet(opt);
     }
@@ -177,6 +188,7 @@ public class BigtableChangeStreamDynamicTableFactory implements DynamicTableSour
                 helper.getOptions().get(BUFFER_CAPACITY),
                 helper.getOptions().get(GRPC_CHANNEL_POOL_SIZE),
                 helper.getOptions().get(MAX_PARTITION_THREADS),
+                helper.getOptions().get(CHANGELOG_MODE),
                 helper.getOptions().get(PARALLELISM));
     }
 }
