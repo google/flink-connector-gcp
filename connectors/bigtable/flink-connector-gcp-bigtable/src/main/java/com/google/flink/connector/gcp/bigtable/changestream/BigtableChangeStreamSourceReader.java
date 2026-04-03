@@ -25,9 +25,7 @@ import org.apache.flink.api.connector.source.SourceEvent;
 import org.apache.flink.api.connector.source.SourceReader;
 import org.apache.flink.api.connector.source.SourceReaderContext;
 import org.apache.flink.core.io.InputStatus;
-import org.apache.flink.dropwizard.metrics.DropwizardHistogramWrapper;
 import org.apache.flink.metrics.Counter;
-import org.apache.flink.metrics.Histogram;
 import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.table.data.RowData;
 import org.apache.flink.util.UserCodeClassLoader;
@@ -108,7 +106,6 @@ public class BigtableChangeStreamSourceReader
     private final List<BigtableChangeStreamSplit> pendingSplitsBeforeStart = new ArrayList<>();
 
     // Metrics
-    private transient Histogram notificationLatencyMs;
     private volatile long lastNotificationLatencyMs;
     private transient Counter mutationsReceived;
     private transient Counter recordsDeserialized;
@@ -118,7 +115,6 @@ public class BigtableChangeStreamSourceReader
     private transient Counter closeStreamReceived;
     private transient Counter closeStreamEmptyTokens;
     private transient Counter partitionSplitsCreated;
-    private transient Histogram partitionLifetimeMs;
     private volatile long lastPartitionLifetimeMs;
 
     // Buffer backpressure metrics
@@ -159,10 +155,6 @@ public class BigtableChangeStreamSourceReader
 
     // Default maximum number of concurrent partition reader threads.
     static final int DEFAULT_MAX_PARTITION_THREADS = 64;
-
-    // Sliding window size for Dropwizard histogram reservoirs (notification latency, partition
-    // lifetime).
-    private static final int HISTOGRAM_RESERVOIR_SIZE = 1000;
 
     // Bounded buffer for records produced by stream threads.
     // Stream threads block on offer() when the buffer is full, providing backpressure.
@@ -331,20 +323,11 @@ public class BigtableChangeStreamSourceReader
                                 .setDaemon(true)
                                 .build());
 
-        // Register Flink metrics — histogram for Flink UI, gauge for Prometheus
-        notificationLatencyMs =
-                readerContext
-                        .metricGroup()
-                        .histogram(
-                                "bigtable_changestream_notification_latency_ms",
-                                new DropwizardHistogramWrapper(
-                                        new com.codahale.metrics.Histogram(
-                                                new com.codahale.metrics.SlidingWindowReservoir(
-                                                        HISTOGRAM_RESERVOIR_SIZE))));
+        // Register Flink metrics
         readerContext
                 .metricGroup()
                 .gauge(
-                        "bigtable_changestream_notification_latency_ms_latest",
+                        "bigtable_changestream_notification_latency_ms",
                         () -> lastNotificationLatencyMs);
         mutationsReceived =
                 readerContext.metricGroup().counter("bigtable_changestream_mutations_received");
@@ -364,19 +347,10 @@ public class BigtableChangeStreamSourceReader
                 readerContext
                         .metricGroup()
                         .counter("bigtable_changestream_partition_splits_created");
-        partitionLifetimeMs =
-                readerContext
-                        .metricGroup()
-                        .histogram(
-                                "bigtable_changestream_partition_lifetime_ms",
-                                new DropwizardHistogramWrapper(
-                                        new com.codahale.metrics.Histogram(
-                                                new com.codahale.metrics.SlidingWindowReservoir(
-                                                        HISTOGRAM_RESERVOIR_SIZE))));
         readerContext
                 .metricGroup()
                 .gauge(
-                        "bigtable_changestream_partition_lifetime_ms_latest",
+                        "bigtable_changestream_partition_lifetime_ms",
                         () -> lastPartitionLifetimeMs);
 
         // Buffer backpressure
@@ -648,7 +622,6 @@ public class BigtableChangeStreamSourceReader
                                 0,
                                 System.currentTimeMillis()
                                         - mutation.getCommitTimestamp().toEpochMilli());
-                notificationLatencyMs.update(latency);
                 lastNotificationLatencyMs = latency;
                 mutationsReceived.inc();
 
@@ -803,7 +776,6 @@ public class BigtableChangeStreamSourceReader
                 }
 
                 long lifetime = System.currentTimeMillis() - partitionStartTimeMs;
-                partitionLifetimeMs.update(lifetime);
                 lastPartitionLifetimeMs = lifetime;
                 break;
             }
