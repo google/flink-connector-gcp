@@ -35,6 +35,7 @@ import org.apache.flink.types.variant.Variant;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -314,12 +315,16 @@ public class RowKeyInjectingDeserializationSchema implements Serializable {
             RowKeyInjectingRowData that = (RowKeyInjectingRowData) o;
             return rowKeyIndex == that.rowKeyIndex
                     && Objects.equals(base, that.base)
-                    && Objects.equals(rowKeyValue, that.rowKeyValue);
+                    && Objects.deepEquals(rowKeyValue, that.rowKeyValue);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(base, rowKeyIndex, rowKeyValue);
+            int valueHash =
+                    rowKeyValue instanceof byte[]
+                            ? Arrays.hashCode((byte[]) rowKeyValue)
+                            : Objects.hashCode(rowKeyValue);
+            return 31 * (31 * Objects.hashCode(base) + rowKeyIndex) + valueHash;
         }
     }
 

@@ -21,6 +21,7 @@ package com.google.flink.connector.gcp.bigtable.changestream;
 import org.apache.flink.api.common.serialization.DeserializationSchema;
 import org.apache.flink.configuration.ConfigOption;
 import org.apache.flink.configuration.ConfigOptions;
+import org.apache.flink.table.api.ValidationException;
 import org.apache.flink.table.connector.format.DecodingFormat;
 import org.apache.flink.table.connector.source.DynamicTableSource;
 import org.apache.flink.table.data.RowData;
@@ -114,6 +115,14 @@ public class BigtableChangeStreamDynamicTableFactory implements DynamicTableSour
                                     + "'all' also emits DeleteCells/DeleteFamily entries as DELETE "
                                     + "rows (requires row-key-field to be set).");
 
+    static final ConfigOption<Boolean> FAIL_ON_DESERIALIZATION_ERROR =
+            ConfigOptions.key("fail-on-deserialization-error")
+                    .booleanType()
+                    .defaultValue(false)
+                    .withDescription(
+                            "When true, the job fails on deserialization errors instead of "
+                                    + "skipping the malformed record. Default is false (skip and log).");
+
     static final ConfigOption<Integer> PARALLELISM =
             ConfigOptions.key("parallelism")
                     .intType()
@@ -142,6 +151,7 @@ public class BigtableChangeStreamDynamicTableFactory implements DynamicTableSour
         opt.add(GRPC_CHANNEL_POOL_SIZE);
         opt.add(MAX_PARTITION_THREADS);
         opt.add(CHANGELOG_MODE);
+        opt.add(FAIL_ON_DESERIALIZATION_ERROR);
         opt.add(PARALLELISM);
         OPTIONAL_OPTIONS = Collections.unmodifiableSet(opt);
     }
@@ -170,6 +180,14 @@ public class BigtableChangeStreamDynamicTableFactory implements DynamicTableSour
                         DeserializationFormatFactory.class, FactoryUtil.FORMAT);
         helper.validate();
 
+        String changelogMode = helper.getOptions().get(CHANGELOG_MODE);
+        String rowKeyField = helper.getOptions().get(ROW_KEY_FIELD);
+        if ("all".equals(changelogMode) && (rowKeyField == null || rowKeyField.isEmpty())) {
+            throw new ValidationException(
+                    "changelog-mode='all' requires 'row-key-field' to be set — "
+                            + "DELETE rows need a key to identify the deleted row.");
+        }
+
         DataType physicalSchema =
                 context.getCatalogTable().getResolvedSchema().toPhysicalRowDataType();
         RowType rowType = (RowType) physicalSchema.getLogicalType();
@@ -183,12 +201,13 @@ public class BigtableChangeStreamDynamicTableFactory implements DynamicTableSour
                 helper.getOptions().get(CELL_COLUMN),
                 decodingFormat,
                 rowType,
-                helper.getOptions().get(ROW_KEY_FIELD),
+                rowKeyField,
                 helper.getOptions().get(START_LOOKBACK_SECONDS),
                 helper.getOptions().get(BUFFER_CAPACITY),
                 helper.getOptions().get(GRPC_CHANNEL_POOL_SIZE),
                 helper.getOptions().get(MAX_PARTITION_THREADS),
-                helper.getOptions().get(CHANGELOG_MODE),
+                changelogMode,
+                helper.getOptions().get(FAIL_ON_DESERIALIZATION_ERROR),
                 helper.getOptions().get(PARALLELISM));
     }
 }

@@ -60,6 +60,7 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
     private final int grpcChannelPoolSize;
     private final int maxPartitionThreads;
     private final String changelogMode;
+    private final boolean failOnDeserializationError;
     private final int parallelism;
 
     public BigtableChangeStreamDynamicTableSource(
@@ -77,6 +78,7 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
             int grpcChannelPoolSize,
             int maxPartitionThreads,
             String changelogMode,
+            boolean failOnDeserializationError,
             int parallelism) {
         this.projectId = projectId;
         this.instanceId = instanceId;
@@ -92,6 +94,7 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
         this.grpcChannelPoolSize = grpcChannelPoolSize;
         this.maxPartitionThreads = maxPartitionThreads;
         this.changelogMode = changelogMode;
+        this.failOnDeserializationError = failOnDeserializationError;
         this.parallelism = parallelism;
     }
 
@@ -163,6 +166,7 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
                                 cellColumn,
                                 schema,
                                 emitDeletes,
+                                failOnDeserializationError,
                                 startLookbackSeconds,
                                 bufferCapacity,
                                 grpcChannelPoolSize,
@@ -202,6 +206,7 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
                 grpcChannelPoolSize,
                 maxPartitionThreads,
                 changelogMode,
+                failOnDeserializationError,
                 parallelism);
     }
 

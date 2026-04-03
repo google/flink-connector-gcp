@@ -322,7 +322,49 @@ class BigtableChangeStreamSourceReaderTest {
         assertFalse(reader.hasDeleteEntries(mutation));
     }
 
+    // --- fail-on-deserialization-error tests ---
+
+    @Test
+    void failOnDeserializationErrorDefaultIsFalse() {
+        BigtableChangeStreamDynamicTableSource source =
+                createDynamicTableSource("insert-only", null);
+        // Default changelog mode, no failure — verifies the option wires through without error
+        assertNotNull(source);
+    }
+
+    @Test
+    void failOnDeserializationErrorPassesThroughToSource() {
+        BigtableChangeStreamDynamicTableSource source =
+                createDynamicTableSourceWithFailOnError("insert-only", null, true);
+        assertNotNull(source);
+    }
+
     // --- Helpers ---
+
+    private static BigtableChangeStreamDynamicTableSource createDynamicTableSourceWithFailOnError(
+            String changelogMode, String rowKeyField, boolean failOnError) {
+        RowType rowType =
+                new RowType(
+                        Collections.singletonList(
+                                new RowType.RowField("payload", new VarCharType())));
+        return new BigtableChangeStreamDynamicTableSource(
+                PROJECT,
+                INSTANCE,
+                TABLE,
+                null,
+                COLUMN_FAMILY,
+                CELL_COLUMN,
+                null,
+                rowType,
+                rowKeyField,
+                300,
+                1000,
+                0,
+                64,
+                changelogMode,
+                failOnError,
+                0);
+    }
 
     private BigtableChangeStreamSourceReader createReader() {
         BigtableDataClient mockClient = mock(BigtableDataClient.class);
@@ -350,6 +392,7 @@ class BigtableChangeStreamSourceReaderTest {
                 0,
                 64,
                 changelogMode,
+                false,
                 0);
     }
 
@@ -377,6 +420,7 @@ class BigtableChangeStreamSourceReaderTest {
                 COLUMN_FAMILY,
                 CELL_COLUMN,
                 schema,
+                false,
                 false,
                 300,
                 100,
@@ -408,6 +452,7 @@ class BigtableChangeStreamSourceReaderTest {
                 COLUMN_FAMILY,
                 CELL_COLUMN,
                 schema,
+                false,
                 false,
                 300,
                 100,

@@ -87,6 +87,7 @@ public class BigtableChangeStreamSourceReader
     private final ByteString cellColumnBytes;
     private final RowKeyInjectingDeserializationSchema deserializationSchema;
     private final boolean emitDeletes;
+    private final boolean failOnDeserializationError;
     private final int startLookbackSeconds;
     private final int bufferCapacity;
     private final int grpcChannelPoolSize;
@@ -176,6 +177,7 @@ public class BigtableChangeStreamSourceReader
             String cellColumn,
             RowKeyInjectingDeserializationSchema deserializationSchema,
             boolean emitDeletes,
+            boolean failOnDeserializationError,
             int startLookbackSeconds,
             int bufferCapacity,
             int grpcChannelPoolSize,
@@ -190,6 +192,7 @@ public class BigtableChangeStreamSourceReader
                 cellColumn,
                 deserializationSchema,
                 emitDeletes,
+                failOnDeserializationError,
                 startLookbackSeconds,
                 bufferCapacity,
                 grpcChannelPoolSize,
@@ -214,6 +217,7 @@ public class BigtableChangeStreamSourceReader
             String cellColumn,
             RowKeyInjectingDeserializationSchema deserializationSchema,
             boolean emitDeletes,
+            boolean failOnDeserializationError,
             int startLookbackSeconds,
             int bufferCapacity,
             int grpcChannelPoolSize,
@@ -229,6 +233,7 @@ public class BigtableChangeStreamSourceReader
         this.cellColumnBytes = ByteString.copyFromUtf8(cellColumn);
         this.deserializationSchema = deserializationSchema;
         this.emitDeletes = emitDeletes;
+        this.failOnDeserializationError = failOnDeserializationError;
         this.startLookbackSeconds = startLookbackSeconds;
         this.bufferCapacity = bufferCapacity > 0 ? bufferCapacity : DEFAULT_RECORD_BUFFER_CAPACITY;
         this.grpcChannelPoolSize = grpcChannelPoolSize;
@@ -658,13 +663,14 @@ public class BigtableChangeStreamSourceReader
                         Thread.currentThread().interrupt();
                         break;
                     } catch (Exception e) {
-                        // Skip malformed records and track via metrics. This avoids failing the
-                        // entire job on a single bad record while providing visibility through
-                        // deserializationErrors and recordsSkipped counters.
-                        // TODO: Make this configurable (e.g. fail-on-deserialization-error) for
-                        //  use cases where data integrity requires failing fast.
-                        LOG.error("Failed to deserialize record: {}", e.getMessage(), e);
                         deserializationErrors.inc();
+                        if (failOnDeserializationError) {
+                            throw new RuntimeException(
+                                    "Failed to deserialize record (fail-on-deserialization-error"
+                                            + "=true)",
+                                    e);
+                        }
+                        LOG.error("Failed to deserialize record: {}", e.getMessage(), e);
                         recordsSkipped.inc();
                         activeSplits.put(splitId, split.withToken(token));
                     }
