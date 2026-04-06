@@ -284,10 +284,10 @@ public class BigtableChangeStreamEnumerator
         for (int count : readerSplitCounts.values()) {
             totalSplits += count;
         }
-        int ideal = totalSplits / numReaders;
+        int maxAllowed = (totalSplits + numReaders - 1) / numReaders;
 
         for (Map.Entry<Integer, Integer> entry : readerSplitCounts.entrySet()) {
-            int excess = entry.getValue() - (ideal + 1);
+            int excess = entry.getValue() - maxAllowed;
             if (excess > 0) {
                 splitsRebalanceRequested.inc();
                 context.sendEventToSourceReader(entry.getKey(), new RebalanceRequestEvent(excess));
@@ -296,7 +296,7 @@ public class BigtableChangeStreamEnumerator
                         excess,
                         entry.getKey(),
                         entry.getValue(),
-                        ideal);
+                        maxAllowed);
             }
         }
     }

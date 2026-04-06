@@ -145,14 +145,15 @@ public class BigtableChangeStreamSourceReader
 
     // gRPC timeout overrides — ReadChangeStream is a long-lived streaming RPC that can run
     // for hours/days. The default attempt/wait timeouts cause DEADLINE_EXCEEDED on idle streams.
+    // GAX retry/stream settings require java.time.Duration
     private static final java.time.Duration STREAM_IDLE_TIMEOUT = java.time.Duration.ofHours(1);
     private static final java.time.Duration STREAM_WAIT_TIMEOUT = java.time.Duration.ofMinutes(30);
     private static final java.time.Duration STREAM_TOTAL_TIMEOUT = java.time.Duration.ofDays(7);
     private static final java.time.Duration STREAM_RPC_TIMEOUT = java.time.Duration.ofHours(6);
 
-    // Heartbeat interval for the ReadChangeStream query — Bigtable sends a Heartbeat record
-    // at this interval when there are no mutations, keeping the stream alive.
-    private static final java.time.Duration HEARTBEAT_DURATION = java.time.Duration.ofSeconds(30);
+    // Bigtable SDK ReadChangeStreamQuery uses org.threeten.bp.Duration
+    private static final org.threeten.bp.Duration HEARTBEAT_DURATION =
+            org.threeten.bp.Duration.ofSeconds(30);
 
     // Default maximum number of concurrent partition reader threads.
     static final int DEFAULT_MAX_PARTITION_THREADS = 64;
@@ -616,7 +617,7 @@ public class BigtableChangeStreamSourceReader
         long partitionStartTimeMs = System.currentTimeMillis();
 
         for (ChangeStreamRecord record : client.readChangeStream(query)) {
-            if (finished) {
+            if (finished || !activeSplits.containsKey(splitId)) {
                 break;
             }
 
@@ -640,7 +641,7 @@ public class BigtableChangeStreamSourceReader
                                 deserializationSchema.deserializeWithRowKey(cellBytes, rowKeyBytes);
                         if (row == null) {
                             recordsSkipped.inc();
-                            activeSplits.put(splitId, split.withToken(token));
+                            activeSplits.replace(splitId, split.withToken(token));
                             continue;
                         }
                         recordsDeserialized.inc();
@@ -657,7 +658,7 @@ public class BigtableChangeStreamSourceReader
                                 counted = true;
                             }
                         }
-                        activeSplits.put(splitId, split.withToken(token));
+                        activeSplits.replace(splitId, split.withToken(token));
                         notifyAvailable();
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
@@ -672,7 +673,7 @@ public class BigtableChangeStreamSourceReader
                         }
                         LOG.error("Failed to deserialize record: {}", e.getMessage(), e);
                         recordsSkipped.inc();
-                        activeSplits.put(splitId, split.withToken(token));
+                        activeSplits.replace(splitId, split.withToken(token));
                     }
                 } else {
                     // No matching SetCell entry. Check for delete entries to emit as
@@ -715,12 +716,12 @@ public class BigtableChangeStreamSourceReader
                                         counted = true;
                                     }
                                 }
-                                activeSplits.put(splitId, split.withToken(token));
+                                activeSplits.replace(splitId, split.withToken(token));
                                 notifyAvailable();
                             } else {
                                 nullProtoBytes.inc();
                                 recordsSkipped.inc();
-                                activeSplits.put(splitId, split.withToken(token));
+                                activeSplits.replace(splitId, split.withToken(token));
                             }
                         } catch (InterruptedException ie) {
                             Thread.currentThread().interrupt();
@@ -729,13 +730,13 @@ public class BigtableChangeStreamSourceReader
                     } else {
                         nullProtoBytes.inc();
                         recordsSkipped.inc();
-                        activeSplits.put(splitId, split.withToken(token));
+                        activeSplits.replace(splitId, split.withToken(token));
                     }
                 }
             } else if (record instanceof Heartbeat) {
                 heartbeatsReceived.inc();
                 Heartbeat heartbeat = (Heartbeat) record;
-                activeSplits.put(
+                activeSplits.replace(
                         splitId,
                         split.withToken(heartbeat.getChangeStreamContinuationToken().getToken()));
             } else if (record instanceof CloseStream) {
