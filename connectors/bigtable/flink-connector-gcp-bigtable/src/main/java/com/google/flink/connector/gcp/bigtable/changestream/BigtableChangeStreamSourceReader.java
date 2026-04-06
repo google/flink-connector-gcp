@@ -532,8 +532,12 @@ public class BigtableChangeStreamSourceReader
         }
         if (executor != null) {
             executor.shutdownNow();
-            if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
-                LOG.warn("Executor did not terminate within 5s");
+            try {
+                if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+                    LOG.warn("Executor did not terminate within 5s");
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
             }
         }
     }
