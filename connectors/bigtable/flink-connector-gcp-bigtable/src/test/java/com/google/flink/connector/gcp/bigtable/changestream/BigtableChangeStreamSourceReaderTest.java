@@ -42,12 +42,15 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -210,20 +213,37 @@ class BigtableChangeStreamSourceReaderTest {
     @Test
     void threadPoolRejectsWhenMaxPartitionThreadsExceeded() throws Exception {
         // Create reader with maxPartitionThreads=2
+        CountDownLatch blockLatch = new CountDownLatch(1);
         BigtableDataClient mockClient = mock(BigtableDataClient.class);
+        // Make readChangeStream block so threads stay busy
+        when(mockClient.readChangeStream(
+                        any(com.google.cloud.bigtable.data.v2.models.ReadChangeStreamQuery.class)))
+                .thenAnswer(
+                        invocation -> {
+                            blockLatch.await();
+                            return Collections.emptyList();
+                        });
+
         BigtableChangeStreamSourceReader reader =
                 createReaderWithClientAndThreads(() -> mockClient, 2);
         reader.start();
 
-        // Add 3 splits — the thread pool should accept 2 but reject the 3rd
+        // Fill the pool with 2 blocking splits
         BigtableChangeStreamSplit s1 =
                 new BigtableChangeStreamSplit(ByteStringRange.create("a", "f"), "t1");
         BigtableChangeStreamSplit s2 =
                 new BigtableChangeStreamSplit(ByteStringRange.create("f", "m"), "t2");
         reader.addSplits(Arrays.asList(s1, s2));
-        // The 2 splits should be accepted (threads created for them)
-        List<BigtableChangeStreamSplit> state = reader.snapshotState(1L);
-        assertEquals(2, state.size(), "Should have 2 active splits");
+
+        // Wait for threads to start and block
+        Thread.sleep(200);
+
+        // 3rd split should be rejected — both threads are busy
+        BigtableChangeStreamSplit s3 =
+                new BigtableChangeStreamSplit(ByteStringRange.create("m", "z"), "t3");
+        assertThrows(RuntimeException.class, () -> reader.addSplits(Collections.singletonList(s3)));
+
+        blockLatch.countDown();
         reader.close();
     }
 
