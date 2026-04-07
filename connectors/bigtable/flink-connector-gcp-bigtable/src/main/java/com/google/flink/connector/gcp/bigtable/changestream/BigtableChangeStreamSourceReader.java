@@ -590,10 +590,10 @@ public class BigtableChangeStreamSourceReader
             throw new RuntimeException(
                     String.format(
                             "Cannot start reading partition %s: all %d partition reader threads "
-                                    + "are in use. Increase 'max-partition-threads' (current: %d) "
-                                    + "to match the number of Bigtable partitions assigned to "
-                                    + "this reader.",
-                            splitId, maxPartitionThreads, maxPartitionThreads),
+                                    + "are in use (active partitions: %d). Increase "
+                                    + "'max-partition-threads' to match the number of Bigtable "
+                                    + "partitions assigned to this reader.",
+                            splitId, maxPartitionThreads, activeThreads.size()),
                     e);
         }
         activeThreads.put(splitId, future);
