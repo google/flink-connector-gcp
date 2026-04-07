@@ -155,6 +155,8 @@ public class BigtableChangeStreamSourceReader
     private static final org.threeten.bp.Duration HEARTBEAT_DURATION =
             org.threeten.bp.Duration.ofSeconds(30);
 
+    private static final long EXECUTOR_SHUTDOWN_TIMEOUT_SECONDS = 5;
+
     // Default maximum number of concurrent partition reader threads.
     static final int DEFAULT_MAX_PARTITION_THREADS = 64;
 
@@ -532,7 +534,8 @@ public class BigtableChangeStreamSourceReader
         if (executor != null) {
             executor.shutdownNow();
             try {
-                if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+                if (!executor.awaitTermination(
+                        EXECUTOR_SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
                     LOG.warn("Executor did not terminate within 5s");
                 }
             } catch (InterruptedException e) {
