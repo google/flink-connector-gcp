@@ -84,12 +84,12 @@ public final class BigtableChangeStreamSplitSerializer
         DataInputStream in = new DataInputStream(new ByteArrayInputStream(serialized));
 
         int startLen = in.readInt();
-        validateLength(startLen, serialized.length, "partition start");
+        validateLength(startLen, in, "partition start");
         byte[] start = new byte[startLen];
         in.readFully(start);
 
         int endLen = in.readInt();
-        validateLength(endLen, serialized.length, "partition end");
+        validateLength(endLen, in, "partition end");
         byte[] end = new byte[endLen];
         in.readFully(end);
 
@@ -99,7 +99,7 @@ public final class BigtableChangeStreamSplitSerializer
         String token = null;
         if (in.readBoolean()) {
             int tokenLen = in.readInt();
-            validateLength(tokenLen, serialized.length, "continuation token");
+            validateLength(tokenLen, in, "continuation token");
             byte[] tokenBytes = new byte[tokenLen];
             in.readFully(tokenBytes);
             token = new String(tokenBytes, StandardCharsets.UTF_8);
@@ -113,13 +113,13 @@ public final class BigtableChangeStreamSplitSerializer
      * serialized byte array size. Protects against corrupted checkpoint data causing
      * OutOfMemoryError from oversized array allocations.
      */
-    private static void validateLength(int length, int totalBytes, String fieldName)
+    private static void validateLength(int length, DataInputStream in, String fieldName)
             throws IOException {
-        if (length < 0 || length > totalBytes) {
+        if (length < 0 || length > in.available()) {
             throw new IOException(
                     String.format(
-                            "Invalid %s length %d (total serialized bytes: %d)",
-                            fieldName, length, totalBytes));
+                            "Invalid %s length %d (available bytes: %d)",
+                            fieldName, length, in.available()));
         }
     }
 }
