@@ -161,7 +161,6 @@ public class BigtableChangeStreamSourceReader
     // Bounded buffer for records produced by stream threads.
     // Stream threads block on offer() when the buffer is full, providing backpressure.
     static final int DEFAULT_RECORD_BUFFER_CAPACITY = 1000;
-    private static final long BUFFER_OFFER_TIMEOUT_MS = 100;
     private final LinkedBlockingQueue<RowData> recordBuffer;
 
     // Guards availableFuture and recordBuffer together to prevent lost-notification races.
@@ -650,18 +649,10 @@ public class BigtableChangeStreamSourceReader
                         }
                         recordsDeserialized.inc();
                         // Block if buffer is full — applies backpressure to the gRPC stream.
-                        // Count once per record that encounters a full buffer, not per retry.
-                        boolean counted = false;
-                        while (!finished) {
-                            if (recordBuffer.offer(
-                                    row, BUFFER_OFFER_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
-                                break;
-                            }
-                            if (!counted) {
-                                bufferFullEvents.inc();
-                                counted = true;
-                            }
+                        if (recordBuffer.remainingCapacity() == 0) {
+                            bufferFullEvents.inc();
                         }
+                        recordBuffer.put(row);
                         activeSplits.replace(splitId, split.withToken(token));
                         notifyAvailable();
                     } catch (InterruptedException ie) {
@@ -707,19 +698,10 @@ public class BigtableChangeStreamSourceReader
                             RowData deleteRow = deserializationSchema.createDeleteRow(rowKeyBytes);
                             if (deleteRow != null) {
                                 deleteRecordsEmitted.inc();
-                                boolean counted = false;
-                                while (!finished) {
-                                    if (recordBuffer.offer(
-                                            deleteRow,
-                                            BUFFER_OFFER_TIMEOUT_MS,
-                                            TimeUnit.MILLISECONDS)) {
-                                        break;
-                                    }
-                                    if (!counted) {
-                                        bufferFullEvents.inc();
-                                        counted = true;
-                                    }
+                                if (recordBuffer.remainingCapacity() == 0) {
+                                    bufferFullEvents.inc();
                                 }
+                                recordBuffer.put(deleteRow);
                                 activeSplits.replace(splitId, split.withToken(token));
                                 notifyAvailable();
                             } else {
