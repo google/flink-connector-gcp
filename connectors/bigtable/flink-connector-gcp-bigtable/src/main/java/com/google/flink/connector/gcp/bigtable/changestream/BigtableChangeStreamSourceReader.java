@@ -806,28 +806,39 @@ public class BigtableChangeStreamSourceReader
      */
     @VisibleForTesting
     byte[] extractCellBytes(ChangeStreamMutation mutation) {
+        // Return the last matching SetCell — entries are in application order, so the last
+        // one represents the final state of the cell after the transaction.
+        byte[] lastValue = null;
         for (Entry entry : mutation.getEntries()) {
-            // Only SetCell entries carry a value payload; DeleteCells/DeleteFamily are skipped.
             if (entry instanceof SetCell) {
                 SetCell setCell = (SetCell) entry;
                 if (setCell.getFamilyName().equals(columnFamily)
                         && setCell.getQualifier().equals(cellColumnBytes)) {
-                    return setCell.getValue().toByteArray();
+                    lastValue = setCell.getValue().toByteArray();
                 }
             }
         }
-        return null;
+        return lastValue;
     }
 
     /**
-     * Returns {@code true} if the mutation contains at least one delete entry ({@link DeleteCells}
-     * or {@link DeleteFamily}).
+     * Returns {@code true} if the mutation contains at least one delete entry affecting the
+     * configured column family. For {@link DeleteFamily}, matches by family name. For {@link
+     * DeleteCells}, matches by both family name and column qualifier.
      */
     @VisibleForTesting
     boolean hasDeleteEntries(ChangeStreamMutation mutation) {
         for (Entry entry : mutation.getEntries()) {
-            if (entry instanceof DeleteCells || entry instanceof DeleteFamily) {
-                return true;
+            if (entry instanceof DeleteFamily) {
+                if (((DeleteFamily) entry).getFamilyName().equals(columnFamily)) {
+                    return true;
+                }
+            } else if (entry instanceof DeleteCells) {
+                DeleteCells dc = (DeleteCells) entry;
+                if (dc.getFamilyName().equals(columnFamily)
+                        && dc.getQualifier().equals(cellColumnBytes)) {
+                    return true;
+                }
             }
         }
         return false;

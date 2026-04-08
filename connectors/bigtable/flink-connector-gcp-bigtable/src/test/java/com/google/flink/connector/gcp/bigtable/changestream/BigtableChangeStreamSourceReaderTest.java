@@ -304,6 +304,8 @@ class BigtableChangeStreamSourceReaderTest {
         BigtableChangeStreamSourceReader reader = createReader();
         ChangeStreamMutation mutation = mock(ChangeStreamMutation.class);
         DeleteCells deleteCells = mock(DeleteCells.class);
+        when(deleteCells.getFamilyName()).thenReturn(COLUMN_FAMILY);
+        when(deleteCells.getQualifier()).thenReturn(ByteString.copyFromUtf8(CELL_COLUMN));
         doReturn(com.google.common.collect.ImmutableList.of(deleteCells))
                 .when(mutation)
                 .getEntries();
@@ -312,15 +314,42 @@ class BigtableChangeStreamSourceReaderTest {
     }
 
     @Test
+    void hasDeleteEntriesReturnsFalseForDeleteCellsWrongFamily() {
+        BigtableChangeStreamSourceReader reader = createReader();
+        ChangeStreamMutation mutation = mock(ChangeStreamMutation.class);
+        DeleteCells deleteCells = mock(DeleteCells.class);
+        when(deleteCells.getFamilyName()).thenReturn("other_cf");
+        doReturn(com.google.common.collect.ImmutableList.of(deleteCells))
+                .when(mutation)
+                .getEntries();
+
+        assertFalse(reader.hasDeleteEntries(mutation));
+    }
+
+    @Test
     void hasDeleteEntriesReturnsTrueForDeleteFamily() {
         BigtableChangeStreamSourceReader reader = createReader();
         ChangeStreamMutation mutation = mock(ChangeStreamMutation.class);
         DeleteFamily deleteFamily = mock(DeleteFamily.class);
+        when(deleteFamily.getFamilyName()).thenReturn(COLUMN_FAMILY);
         doReturn(com.google.common.collect.ImmutableList.of(deleteFamily))
                 .when(mutation)
                 .getEntries();
 
         assertTrue(reader.hasDeleteEntries(mutation));
+    }
+
+    @Test
+    void hasDeleteEntriesReturnsFalseForDeleteFamilyWrongFamily() {
+        BigtableChangeStreamSourceReader reader = createReader();
+        ChangeStreamMutation mutation = mock(ChangeStreamMutation.class);
+        DeleteFamily deleteFamily = mock(DeleteFamily.class);
+        when(deleteFamily.getFamilyName()).thenReturn("other_cf");
+        doReturn(com.google.common.collect.ImmutableList.of(deleteFamily))
+                .when(mutation)
+                .getEntries();
+
+        assertFalse(reader.hasDeleteEntries(mutation));
     }
 
     @Test
