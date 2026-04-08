@@ -291,7 +291,12 @@ public class BigtableChangeStreamSourceReader
 
                 client = BigtableDataClient.create(builder.build());
             } catch (IOException e) {
-                throw new RuntimeException("Failed to create BigtableDataClient in reader", e);
+                throw new RuntimeException(
+                        "Failed to create BigtableDataClient for project: "
+                                + projectId
+                                + ", instance: "
+                                + instanceId,
+                        e);
             }
         }
 

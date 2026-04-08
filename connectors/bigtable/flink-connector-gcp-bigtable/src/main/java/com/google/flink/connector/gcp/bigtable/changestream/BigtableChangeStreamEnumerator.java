@@ -125,7 +125,8 @@ public class BigtableChangeStreamEnumerator
                     (partitions, error) -> {
                         if (error != null) {
                             throw new RuntimeException(
-                                    "Failed to discover initial partitions", error);
+                                    "Failed to discover initial partitions for table: " + tableId,
+                                    error);
                         }
                         LOG.info(
                                 "Discovered {} initial partition(s) for table {}",
