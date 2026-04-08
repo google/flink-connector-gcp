@@ -60,7 +60,7 @@ public class BigtableChangeStreamEnumerator
     /** Tracks how many splits each reader currently owns, for least-loaded assignment. */
     private final Map<Integer, Integer> readerSplitCounts = new HashMap<>();
 
-    private transient BigtableDataClient client;
+    private transient volatile BigtableDataClient client;
 
     // Metrics
     private final Counter partitionChangedEventsReceived;
@@ -114,12 +114,13 @@ public class BigtableChangeStreamEnumerator
                                         .setInstanceId(instanceId)
                                         .build();
                         BigtableDataClient asyncClient = BigtableDataClient.create(settings);
+                        // Assign to volatile field immediately so close() can reach it
+                        client = asyncClient;
                         List<ByteStringRange> partitions = new ArrayList<>();
                         for (ByteStringRange partition :
                                 asyncClient.generateInitialChangeStreamPartitions(tableId)) {
                             partitions.add(partition);
                         }
-                        client = asyncClient;
                         return partitions;
                     },
                     (partitions, error) -> {

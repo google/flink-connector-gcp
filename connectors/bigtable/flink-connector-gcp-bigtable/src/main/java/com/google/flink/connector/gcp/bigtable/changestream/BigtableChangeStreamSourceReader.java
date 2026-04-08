@@ -99,7 +99,7 @@ public class BigtableChangeStreamSourceReader
     private final int maxPartitionThreads;
     private final Supplier<BigtableDataClient> clientFactory;
 
-    private transient BigtableDataClient client;
+    private transient volatile BigtableDataClient client;
 
     // Concurrent partition reading: one thread per partition
     private final ConcurrentHashMap<String, BigtableChangeStreamSplit> activeSplits =
