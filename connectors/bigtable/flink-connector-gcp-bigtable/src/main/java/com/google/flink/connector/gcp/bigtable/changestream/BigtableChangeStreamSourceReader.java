@@ -790,35 +790,43 @@ public class BigtableChangeStreamSourceReader
     /**
      * Extracts the cell value bytes from the configured column family and column qualifier.
      *
-     * <p>Only {@link SetCell} entries are processed. Delete entries ({@code DeleteCells}, {@code
-     * DeleteFamily}) are intentionally skipped — delete operations do not carry a cell value
-     * payload. Mutations containing only delete entries will return {@code null} and be counted as
-     * skipped records.
-     *
-     * <p>Returns the <b>first</b> matching {@code SetCell} entry. If a mutation contains multiple
-     * entries for the same column family and qualifier, only the first is returned.
+     * <p>Tracks the last matching entry (SetCell, DeleteCells, or DeleteFamily) in application
+     * order. If the final state is a SetCell, returns its value bytes. If the final state is a
+     * delete (or no matching entry exists), returns {@code null} — the delete path in
+     * readPartition() handles emission of DELETE rows.
      *
      * <p><b>Note:</b> The mutation's {@code tieBreaker} field (used to order mutations with the
      * same commit timestamp) is not exposed. It could be added as a metadata field in a future
      * version.
      *
-     * @return the cell bytes, or {@code null} if no matching cell was found
+     * @return the cell bytes, or {@code null} if no matching cell was found or the cell was deleted
      */
     @VisibleForTesting
     byte[] extractCellBytes(ChangeStreamMutation mutation) {
-        // Return the last matching SetCell — entries are in application order, so the last
-        // one represents the final state of the cell after the transaction.
-        byte[] lastValue = null;
+        Entry lastMatchingEntry = null;
         for (Entry entry : mutation.getEntries()) {
             if (entry instanceof SetCell) {
                 SetCell setCell = (SetCell) entry;
                 if (setCell.getFamilyName().equals(columnFamily)
                         && setCell.getQualifier().equals(cellColumnBytes)) {
-                    lastValue = setCell.getValue().toByteArray();
+                    lastMatchingEntry = entry;
+                }
+            } else if (entry instanceof DeleteCells) {
+                DeleteCells dc = (DeleteCells) entry;
+                if (dc.getFamilyName().equals(columnFamily)
+                        && dc.getQualifier().equals(cellColumnBytes)) {
+                    lastMatchingEntry = entry;
+                }
+            } else if (entry instanceof DeleteFamily) {
+                if (((DeleteFamily) entry).getFamilyName().equals(columnFamily)) {
+                    lastMatchingEntry = entry;
                 }
             }
         }
-        return lastValue;
+        if (lastMatchingEntry instanceof SetCell) {
+            return ((SetCell) lastMatchingEntry).getValue().toByteArray();
+        }
+        return null;
     }
 
     /**
