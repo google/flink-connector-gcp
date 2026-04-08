@@ -103,26 +103,23 @@ public class BigtableChangeStreamEnumerator
 
     @Override
     public void start() {
-        try {
-            BigtableDataSettings settings =
-                    BigtableDataSettings.newBuilder()
-                            .setProjectId(projectId)
-                            .setInstanceId(instanceId)
-                            .build();
-            client = BigtableDataClient.create(settings);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to create BigtableDataClient", e);
-        }
-
         if (pendingSplits.isEmpty()) {
-            // Discover partitions asynchronously to avoid blocking the JobManager thread
+            // Create client and discover partitions asynchronously to avoid blocking
+            // the JobManager thread (BigtableDataClient.create involves I/O for auth)
             context.callAsync(
                     () -> {
+                        BigtableDataSettings settings =
+                                BigtableDataSettings.newBuilder()
+                                        .setProjectId(projectId)
+                                        .setInstanceId(instanceId)
+                                        .build();
+                        BigtableDataClient asyncClient = BigtableDataClient.create(settings);
                         List<ByteStringRange> partitions = new ArrayList<>();
                         for (ByteStringRange partition :
-                                client.generateInitialChangeStreamPartitions(tableId)) {
+                                asyncClient.generateInitialChangeStreamPartitions(tableId)) {
                             partitions.add(partition);
                         }
+                        client = asyncClient;
                         return partitions;
                     },
                     (partitions, error) -> {

@@ -70,6 +70,11 @@ import java.util.function.Supplier;
  *
  * <p>Supports cooperative rebalancing via {@link RebalanceRequestEvent} and {@link
  * SplitsReleasedEvent}.
+ *
+ * <p><b>Thread safety:</b> The {@link RowKeyInjectingDeserializationSchema} (and its wrapped format
+ * deserializer) is shared across partition-reading threads. Standard Flink formats (JSON, Avro,
+ * Protobuf) are thread-safe. Custom formats must ensure their {@link
+ * org.apache.flink.api.common.serialization.DeserializationSchema} implementation is thread-safe.
  */
 public class BigtableChangeStreamSourceReader
         implements SourceReader<RowData, BigtableChangeStreamSplit> {
