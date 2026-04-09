@@ -72,9 +72,10 @@ import java.util.function.Supplier;
  * SplitsReleasedEvent}.
  *
  * <p><b>Thread safety:</b> The {@link RowKeyInjectingDeserializationSchema} (and its wrapped format
- * deserializer) is shared across partition-reading threads. Standard Flink formats (JSON, Avro,
- * Protobuf) are thread-safe. Custom formats must ensure their {@link
- * org.apache.flink.api.common.serialization.DeserializationSchema} implementation is thread-safe.
+ * deserializer) is shared across partition-reading threads. Since most Flink {@link
+ * org.apache.flink.api.common.serialization.DeserializationSchema} implementations are not
+ * thread-safe (e.g. Avro reuses mutable internal state), all deserialization calls are synchronized
+ * on the schema instance.
  */
 public class BigtableChangeStreamSourceReader
         implements SourceReader<RowData, BigtableChangeStreamSplit> {
@@ -653,8 +654,12 @@ public class BigtableChangeStreamSourceReader
                 if (cellBytes != null) {
                     try {
                         byte[] rowKeyBytes = mutation.getRowKey().toByteArray();
-                        RowData row =
-                                deserializationSchema.deserializeWithRowKey(cellBytes, rowKeyBytes);
+                        RowData row;
+                        synchronized (deserializationSchema) {
+                            row =
+                                    deserializationSchema.deserializeWithRowKey(
+                                            cellBytes, rowKeyBytes);
+                        }
                         if (row == null) {
                             recordsSkipped.inc();
                             activeSplits.replace(splitId, split.withToken(token));
@@ -708,7 +713,10 @@ public class BigtableChangeStreamSourceReader
                             && hasDeleteEntries(mutation)) {
                         try {
                             byte[] rowKeyBytes = mutation.getRowKey().toByteArray();
-                            RowData deleteRow = deserializationSchema.createDeleteRow(rowKeyBytes);
+                            RowData deleteRow;
+                            synchronized (deserializationSchema) {
+                                deleteRow = deserializationSchema.createDeleteRow(rowKeyBytes);
+                            }
                             if (deleteRow != null) {
                                 deleteRecordsEmitted.inc();
                                 if (recordBuffer.remainingCapacity() == 0) {

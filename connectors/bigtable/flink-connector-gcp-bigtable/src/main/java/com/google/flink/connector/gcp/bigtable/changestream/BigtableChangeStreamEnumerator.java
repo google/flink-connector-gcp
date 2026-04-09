@@ -61,6 +61,7 @@ public class BigtableChangeStreamEnumerator
     private final Map<Integer, Integer> readerSplitCounts = new HashMap<>();
 
     private transient volatile BigtableDataClient client;
+    private volatile boolean closed = false;
 
     // Metrics
     private final Counter partitionChangedEventsReceived;
@@ -114,8 +115,13 @@ public class BigtableChangeStreamEnumerator
                                         .setInstanceId(instanceId)
                                         .build();
                         BigtableDataClient asyncClient = BigtableDataClient.create(settings);
-                        // Assign to volatile field immediately so close() can reach it
+                        // Assign to volatile field immediately so close() can reach it.
+                        // If close() was already called, clean up the client now.
                         client = asyncClient;
+                        if (closed) {
+                            asyncClient.close();
+                            return java.util.Collections.<ByteStringRange>emptyList();
+                        }
                         List<ByteStringRange> partitions = new ArrayList<>();
                         for (ByteStringRange partition :
                                 asyncClient.generateInitialChangeStreamPartitions(tableId)) {
@@ -223,6 +229,7 @@ public class BigtableChangeStreamEnumerator
 
     @Override
     public void close() throws IOException {
+        closed = true;
         if (client != null) {
             client.close();
             LOG.info("Closed enumerator BigtableDataClient");
