@@ -118,7 +118,7 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
         //   'insert-only' (default) — only SetCell entries are emitted as INSERT.
         //   'all' — also emits DeleteCells/DeleteFamily as DELETE (requires row-key-field).
         ChangelogMode.Builder builder = ChangelogMode.newBuilder().addContainedKind(RowKind.INSERT);
-        if ("all".equals(changelogMode) && rowKeyField != null && !rowKeyField.isEmpty()) {
+        if (shouldEmitDeletes()) {
             builder.addContainedKind(RowKind.DELETE);
         }
         return builder.build();
@@ -151,10 +151,7 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
                         new RowKeyInjectingDeserializationSchema(
                                 innerSchema, rowKeyFieldIndex, rowKeyTypeRoot, rowType);
 
-                boolean emitDeletes =
-                        "all".equals(changelogMode)
-                                && rowKeyField != null
-                                && !rowKeyField.isEmpty();
+                boolean emitDeletes = shouldEmitDeletes();
 
                 BigtableChangeStreamSource source =
                         new BigtableChangeStreamSource(
@@ -216,5 +213,9 @@ public class BigtableChangeStreamDynamicTableSource implements ScanTableSource {
                 "BigtableChangeStreamSource(project=%s, instance=%s, table=%s, family=%s, "
                         + "column=%s)",
                 projectId, instanceId, tableId, columnFamily, cellColumn);
+    }
+
+    private boolean shouldEmitDeletes() {
+        return "all".equals(changelogMode) && rowKeyField != null && !rowKeyField.isEmpty();
     }
 }

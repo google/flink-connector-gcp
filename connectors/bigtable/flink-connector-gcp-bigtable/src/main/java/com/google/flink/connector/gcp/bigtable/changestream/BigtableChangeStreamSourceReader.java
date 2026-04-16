@@ -501,14 +501,15 @@ public class BigtableChangeStreamSourceReader
             List<BigtableChangeStreamSplit> released = new ArrayList<>();
             for (int i = 0; i < toRelease && i < sorted.size(); i++) {
                 String splitId = sorted.get(i).getKey();
-                BigtableChangeStreamSplit split = activeSplits.get(splitId);
+                // Use remove() to atomically get the latest split state (with the
+                // most recent continuation token) and prevent the background thread
+                // from resurrecting it via replace().
+                BigtableChangeStreamSplit split = activeSplits.remove(splitId);
                 if (split != null) {
-                    // Cancel the thread and remove tracking
                     Future<?> future = activeThreads.remove(splitId);
                     if (future != null) {
                         future.cancel(true);
                     }
-                    activeSplits.remove(splitId);
                     splitStartTimes.remove(splitId);
                     released.add(split);
                     splitsRebalanced.inc();
