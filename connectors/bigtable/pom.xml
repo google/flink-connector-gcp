@@ -22,7 +22,7 @@
     </parent>
 
     <properties>
-        <flink.version>2.1.0</flink.version>
+        <flink.version>2.3.0</flink.version>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <slf4j.version>1.7.36</slf4j.version>
