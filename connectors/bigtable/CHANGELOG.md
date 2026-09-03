@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.0](https://github.com/google/flink-connector-gcp/compare/v0.3.2...v0.4.0) (2026-09-03)
+
+
+### Features
+
+* **bigtable:** support format-agnostic serialization via Flink's format SPI ([#135](https://github.com/google/flink-connector-gcp/issues/135)) ([1a9c2ae](https://github.com/google/flink-connector-gcp/commit/1a9c2ae194f8d5d525aa5cae1e422207202ccac8))
+* **bigtable:** support non-String primary key types for row keys ([#131](https://github.com/google/flink-connector-gcp/issues/131)) ([c127991](https://github.com/google/flink-connector-gcp/commit/c1279913cb13d0ea5b528acd697dda2c673cf0a0))
+* UPSERT Support : New Changelog-mode Option for Bigtable Connector ([#130](https://github.com/google/flink-connector-gcp/issues/130)) ([d649481](https://github.com/google/flink-connector-gcp/commit/d6494813fd98ea2523ed55d4638b25e637e0305f))
+
 ## [0.3.2](https://github.com/google/flink-connector-gcp/compare/v0.3.1...v0.3.2) (2026-02-10)
 
 
